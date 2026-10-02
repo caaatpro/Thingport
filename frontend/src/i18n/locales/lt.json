@@ -1497,6 +1497,11 @@
         "failed": "Nepavyko"
       },
       "openHint": "Atidaryti modelį"
+    },
+    "scope": {
+      "mine": "Mano modeliai",
+      "shared": "Pasidalinta su manimi",
+      "all": "Visi"
     }
   }
 }

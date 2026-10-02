@@ -24,6 +24,7 @@ import RollingNumber from "../../components/RollingNumber";
 import { useFavoriteToggle } from "../../hooks/useFavoriteToggle";
 import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
 import VisibilityBadge from "../../components/VisibilityBadge";
+import { formatFileSize } from "../../utils/fileSize";
 import type { AuthUser } from "../../api/auth";
 
 type Props = {
@@ -205,6 +206,18 @@ export default function ModelCard({
             />
           )}
         </Stack>
+        {(() => {
+          const ext = item.plates[0]?.filename.split(".").pop()?.toUpperCase();
+          const parts = [
+            ext && ext.length <= 5 ? ext : null,
+            typeof item.total_size === "number" && item.total_size > 0 ? formatFileSize(item.total_size) : null,
+          ].filter(Boolean);
+          return parts.length ? (
+            <Typography variant="caption" sx={{ color: "#9aa0a6", display: "block", mt: 0.25 }}>
+              {parts.join(" · ")}
+            </Typography>
+          ) : null;
+        })()}
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.75 }}>
           <AuthorHoverCard
             authorId={author ? author.id : SELF_AUTHOR_ID}

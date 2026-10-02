@@ -57,6 +57,17 @@ export default function ModelsPage({
   const sortModeParam = searchParams.get("orderBy");
   const sortMode: PrintSortMode =
     sortModeParam === "popular" || sortModeParam === "downloads" ? sortModeParam : "newest";
+  const scopeParam = searchParams.get("scope");
+  const scope: "mine" | "shared" | "all" =
+    scopeParam === "shared" || scopeParam === "all" ? scopeParam : "mine";
+  const setScope = (next: "mine" | "shared" | "all") => {
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      if (next === "mine") p.delete("scope");
+      else p.set("scope", next);
+      return p;
+    });
+  };
 
   const setSortMode = (mode: PrintSortMode) => {
     setSearchParams((prev) => {
@@ -141,6 +152,7 @@ export default function ModelsPage({
         const result = await printsApi.list({
           category_id: categoryIdFilter,
           order_by: sortMode,
+          scope,
           limit: PAGE_SIZE,
           offset: 0,
         });
@@ -154,7 +166,7 @@ export default function ModelsPage({
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryIdFilter, printsVersion, sortMode]);
+  }, [categoryIdFilter, printsVersion, sortMode, scope]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -163,6 +175,7 @@ export default function ModelsPage({
       const result = await printsApi.list({
         category_id: categoryIdFilter,
         order_by: sortMode,
+        scope,
         limit: PAGE_SIZE,
         offset,
       });
@@ -241,7 +254,25 @@ export default function ModelsPage({
 
   return (
     <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+        <Stack direction="row" spacing={3}>
+          {(["mine", "shared", "all"] as const).map((s) => (
+            <Typography
+              key={s}
+              variant="body2"
+              onClick={() => setScope(s)}
+              sx={{
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: scope === s ? 700 : 500,
+                color: scope === s ? "primary.main" : "text.secondary",
+                "&:hover": { color: "primary.main" },
+              }}
+            >
+              {t(`scope.${s}`)}
+            </Typography>
+          ))}
+        </Stack>
         <SortTabs value={sortMode} onChange={setSortMode} />
       </Box>
       <Stack direction="row" spacing={2} alignItems="flex-start">

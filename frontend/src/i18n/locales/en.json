@@ -1489,6 +1489,11 @@
         "failed": "Failed"
       },
       "openHint": "Open model"
+    },
+    "scope": {
+      "mine": "My models",
+      "shared": "Shared with me",
+      "all": "All"
     }
   }
 }

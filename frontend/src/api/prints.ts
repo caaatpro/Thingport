@@ -128,6 +128,7 @@ export const printsApi = {
       category_id?: string | string[];
       collection_id?: string;
       author_id?: string;
+      scope?: "mine" | "shared" | "all";
       order_by?: PrintSortMode;
       limit?: number;
       offset?: number;
@@ -135,6 +136,7 @@ export const printsApi = {
   ): Promise<ListPrintsResult> => {
     const qs = new URLSearchParams();
     if (params.q) qs.set("q", params.q);
+    if (params.scope && params.scope !== "mine") qs.set("scope", params.scope);
     if (params.tags && params.tags.length) qs.set("tags", params.tags.join(","));
     if (params.category_id && params.category_id.length) {
       qs.set("category_id", Array.isArray(params.category_id) ? params.category_id.join(",") : params.category_id);
