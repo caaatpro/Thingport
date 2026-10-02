@@ -37,6 +37,7 @@ import { useToast } from "../../components/ToastProvider";
 import TagInput from "../../components/TagInput";
 import { translateCategoryDisplay } from "../../utils/translateCategoryDisplay";
 import { buildCategoryTree, flattenCategoryTree } from "../../utils/categoryTree";
+import { localId } from "../../utils/localId";
 
 type ImageItem =
   { kind: "existing"; id: string; url: string } | { kind: "new"; localId: string; file: File; previewUrl: string };
@@ -116,7 +117,7 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
     const newItems: ImageItem[] = Array.from(fileList).map((file) => {
       const previewUrl = URL.createObjectURL(file);
       createdUrlsRef.current.push(previewUrl);
-      return { kind: "new", localId: crypto.randomUUID(), file, previewUrl };
+      return { kind: "new", localId: localId(), file, previewUrl };
     });
     setImages((prev) => [...prev, ...newItems]);
     markDirty();
@@ -144,7 +145,7 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
     if (!fileList?.length) return;
     const newItems: PlateItem[] = Array.from(fileList).map((file) => ({
       kind: "new",
-      localId: crypto.randomUUID(),
+      localId: localId(),
       file,
     }));
     setPlateItems((prev) => [...prev, ...newItems]);
@@ -197,33 +198,54 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
         latest = authorRes.print ?? latest;
       }
 
-      for (const id of removedImageIds) {
-        const res = await printsApi.deletePreviewImage(print.id, id);
-        latest = res.print ?? latest;
-      }
-      const newImageFiles = images.filter((img) => img.kind === "new").map((img) => img.file);
-      let newImageIdsInOrder: string[] = [];
-      if (newImageFiles.length) {
-        const beforeIds = new Set(latest.preview_images.map((img) => img.id));
-        const uploadRes = await printsApi.addPreviewImages(print.id, newImageFiles);
-        latest = uploadRes.print;
-        newImageIdsInOrder = latest.preview_images
-          .filter((img) => !beforeIds.has(img.id))
-          .toSorted((a, b) => a.position - b.position)
-          .map((img) => img.id);
-      }
-      if (images.length) {
-        let nextNew = 0;
-        const known = images.map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]));
-        // Reorder needs an exhaustive id list; images this modal never saw go after, in their order.
-        const knownIds = new Set(known);
-        const unknown = latest.preview_images
-          .filter((img) => !knownIds.has(img.id))
-          .toSorted((a, b) => a.position - b.position)
-          .map((img) => img.id);
-        const finalOrder = [...known, ...unknown];
-        const reorderRes = await printsApi.reorderPreviewImages(print.id, finalOrder);
-        latest = reorderRes.print ?? latest;
+      // Preview images are isolated from the model-file upload below: an oversize or undecodable
+      // image used to throw here and abort the whole save, so newly added model files never got
+      // uploaded. Now a preview failure is reported but lets the rest of the save finish.
+      let previewError: string | null = null;
+      try {
+        for (const id of removedImageIds) {
+          const res = await printsApi.deletePreviewImage(print.id, id);
+          latest = res.print ?? latest;
+        }
+        const newImageFiles = images.filter((img) => img.kind === "new").map((img) => img.file);
+        let newImageIdsInOrder: string[] = [];
+        if (newImageFiles.length) {
+          const beforeIds = new Set(latest.preview_images.map((img) => img.id));
+          const uploadRes = await printsApi.addPreviewImages(print.id, newImageFiles);
+          latest = uploadRes.print;
+          newImageIdsInOrder = latest.preview_images
+            .filter((img) => !beforeIds.has(img.id))
+            .toSorted((a, b) => a.position - b.position)
+            .map((img) => img.id);
+          // The server silently skips images it can't decode, so it can return fewer ids than files
+          // sent. Tell the user instead of losing the image without a word -- and never let a missing
+          // id slip into the reorder below, where it serialises to null and 400s the request.
+          const skipped = newImageFiles.length - newImageIdsInOrder.length;
+          if (skipped > 0) {
+            showToast({ message: t("models:edit.previewImagesSkipped", { count: skipped }) });
+          }
+        }
+        if (images.length) {
+          let nextNew = 0;
+          const known = images
+            .map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]))
+            .filter((id): id is string => Boolean(id));
+          // Reorder needs an exhaustive id list; images this modal never saw go after, in their order.
+          const knownIds = new Set(known);
+          const unknown = latest.preview_images
+            .filter((img) => !knownIds.has(img.id))
+            .toSorted((a, b) => a.position - b.position)
+            .map((img) => img.id);
+          const finalOrder = [...known, ...unknown];
+          if (finalOrder.length) {
+            const reorderRes = await printsApi.reorderPreviewImages(print.id, finalOrder);
+            latest = reorderRes.print ?? latest;
+          }
+        }
+      } catch (err) {
+        if (err instanceof UnauthorizedError) throw err;
+        console.error(err);
+        previewError = err instanceof Error ? err.message : t("models:edit.previewImagesFailed");
       }
 
       // Upload before delete so a model's only file can be swapped in one save.
@@ -260,8 +282,10 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
       }
 
       onUpdated(latest);
-      showToast({ message: t("models:edit.updateSuccess") });
       onClose();
+      // Meta, tags and model files are saved by now; if only the previews failed, surface that
+      // reason instead of a blanket success so the user knows to retry just the images.
+      showToast(previewError ? { message: previewError } : { message: t("models:edit.updateSuccess") });
     } catch (err) {
       onUpdated(latest);
       if (err instanceof UnauthorizedError) {

@@ -1324,7 +1324,11 @@
       "confirmDiscard": "Atmesti visus neišsaugotus šio modelio pakeitimus?",
       "discardConfirmLabel": "Atmesti",
       "updateSuccess": "Modelis atnaujintas",
-      "updateFailed": "Nepavyko atnaujinti modelio. Bandykite dar kartą."
+      "updateFailed": "Nepavyko atnaujinti modelio. Bandykite dar kartą.",
+      "previewImagesSkipped_one": "Nepavyko apdoroti {{count}} nuotraukos, todėl ji nebuvo pridėta. Bandykite JPG arba PNG.",
+      "previewImagesSkipped_few": "Nepavyko apdoroti {{count}} nuotraukų, todėl jos nebuvo pridėtos. Bandykite JPG arba PNG.",
+      "previewImagesSkipped_other": "Nepavyko apdoroti {{count}} nuotraukų, todėl jos nebuvo pridėtos. Bandykite JPG arba PNG.",
+      "previewImagesFailed": "Kiti pakeitimai išsaugoti, bet peržiūros nuotraukų atnaujinti nepavyko."
     },
     "author": {
       "pageTitle": "Autorius",

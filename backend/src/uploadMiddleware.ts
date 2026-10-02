@@ -18,8 +18,11 @@ const defParamCharset = "utf8";
 /** Disk-backed, since model files can be large. */
 export const modelUpload = multer({ storage: diskStorage, limits: { fileSize: IMPORT_MAX_BYTES }, defParamCharset });
 
+// Kept in memory (sharp reads the buffer). 32 MB comfortably covers phone photos, screenshots and
+// render exports; past it multer raises LIMIT_FILE_SIZE, which app.ts turns into a clean 413 rather
+// than a 500 that the edit dialog surfaced as a generic failure.
 export const thumbnailUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 + 1 },
+  limits: { fileSize: 32 * 1024 * 1024 },
   defParamCharset,
 });
