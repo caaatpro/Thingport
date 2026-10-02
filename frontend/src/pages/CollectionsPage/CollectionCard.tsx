@@ -13,6 +13,7 @@ import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
 import { collectionDisplayName } from "../../utils/collectionDisplay";
 import CollectionActionsMenu from "../CollectionDetailPage/CollectionActionsMenu";
+import VisibilityBadge from "../../components/VisibilityBadge";
 
 type Props = {
   collection: Collection;
@@ -211,10 +212,17 @@ export default function CollectionCard({
               fontWeight={600}
               noWrap
               title={displayName}
-              sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}
+              sx={{ color: (muiTheme) => muiTheme.thingport.headingText, flex: 1, minWidth: 0 }}
             >
               {displayName}
             </Typography>
+            {!collection.system_key && (collection.visibility === "shared" || collection.is_owner === false) && (
+              <VisibilityBadge
+                compact
+                visibility={collection.visibility}
+                ownerName={collection.is_owner === false ? collection.owner?.display_name : null}
+              />
+            )}
           </Stack>
           <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5, color: "#858585" }}>
             <Inventory2OutlinedIcon sx={{ fontSize: 14 }} />

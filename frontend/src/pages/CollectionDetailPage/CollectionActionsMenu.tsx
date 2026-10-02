@@ -12,11 +12,13 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import ShareIcon from "@mui/icons-material/Share";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Collection, type CollectionInput, collectionsApi } from "../../api/collections";
 import { useConfirm } from "../../components/ConfirmProvider";
 import DownloadZipConfirmDialog from "../../components/DownloadZipConfirmDialog";
+import ShareDialog from "../../components/ShareDialog";
 import CollectionFormModal from "../CollectionsPage/CollectionFormModal";
 
 type Props = {
@@ -44,6 +46,7 @@ export default function CollectionActionsMenu({
   const [deleting, setDeleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const closeMenu = () => setAnchorEl(null);
 
@@ -151,6 +154,19 @@ export default function CollectionActionsMenu({
           </ListItemIcon>
           <ListItemText>{t("common:edit")}</ListItemText>
         </MenuItem>
+        {collection.is_owner !== false && (
+          <MenuItem
+            onClick={() => {
+              closeMenu();
+              setShareOpen(true);
+            }}
+          >
+            <ListItemIcon>
+              <ShareIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("models:share.menu")}</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleDelete}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
@@ -169,6 +185,21 @@ export default function CollectionActionsMenu({
         filter={{ collection_id: collection.id }}
         filename={`${collection.name || "collection"}.zip`}
         title={t("models:collections.downloadZipTitle", { name: collection.name })}
+        onUnauthorized={onUnauthorized}
+      />
+
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        name={collection.name}
+        loadShares={() => collectionsApi.listShares(collection.id)}
+        saveShares={(ids) => collectionsApi.setShares(collection.id, ids)}
+        onSaved={() => {
+          collectionsApi
+            .get(collection.id)
+            .then(onUpdated)
+            .catch(() => undefined);
+        }}
         onUnauthorized={onUnauthorized}
       />
     </>
