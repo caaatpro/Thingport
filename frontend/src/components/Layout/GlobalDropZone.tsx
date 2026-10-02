@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -11,13 +11,14 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import CloseIcon from "@mui/icons-material/Close";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { isFileDrag } from "../../utils/dragEvents";
 import { entriesFromDataTransfer } from "../../utils/uploadTree";
 import { printsApi } from "../../api/prints";
 import { UnauthorizedError } from "../../api/client";
 
 type ItemStatus = "uploading" | "ready" | "failed";
-type QueueItem = { id: string; name: string; status: ItemStatus; error?: string };
+type QueueItem = { id: string; name: string; status: ItemStatus; error?: string; printId?: string };
 
 type Props = {
   /** Currently selected category (library view); ignored when dropping on a collection page. */
@@ -42,6 +43,7 @@ function localKey(): string {
 export default function GlobalDropZone({ categoryId, onUploaded, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const location = useLocation();
+  const navigate = useNavigate();
   const [dragging, setDragging] = useState(false);
   const [items, setItems] = useState<QueueItem[]>([]);
   const dragDepth = useRef(0);
@@ -69,11 +71,11 @@ export default function GlobalDropZone({ categoryId, onUploaded, onUnauthorized 
         const entry = entries[i];
         const item = queued[i];
         try {
-          await printsApi.upload([entry.file], {
+          const res = await printsApi.upload([entry.file], {
             category_id: collectionId ? undefined : categoryId || undefined,
             collection_id: collectionId || undefined,
           });
-          update(item.id, { status: "ready" });
+          update(item.id, { status: "ready", printId: res.prints[0]?.id });
           anySucceeded = true;
         } catch (err) {
           if (err instanceof UnauthorizedError) {
@@ -193,26 +195,44 @@ export default function GlobalDropZone({ categoryId, onUploaded, onUnauthorized 
             </IconButton>
           </Stack>
           <Box sx={{ overflowY: "auto" }}>
-            {items.map((it) => (
-              <Stack
-                key={it.id}
-                direction="row"
-                alignItems="center"
-                spacing={1}
-                sx={{ px: 1.5, py: 0.75 }}
-                title={it.error || it.name}
-              >
-                {it.status === "uploading" && <CircularProgress size={16} />}
-                {it.status === "ready" && <CheckCircleIcon fontSize="small" color="success" />}
-                {it.status === "failed" && <ErrorOutlineIcon fontSize="small" color="error" />}
-                <Typography variant="body2" noWrap sx={{ flex: 1 }}>
-                  {it.name}
-                </Typography>
-                <Typography variant="caption" color={it.status === "failed" ? "error" : "text.secondary"}>
-                  {t(`models:upload.status.${it.status}`)}
-                </Typography>
-              </Stack>
-            ))}
+            {items.map((it) => {
+              const openable = it.status === "ready" && Boolean(it.printId);
+              const open = () => {
+                if (openable) navigate(`/models/${it.printId}`);
+              };
+              return (
+                <Stack
+                  key={it.id}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1}
+                  onClick={open}
+                  role={openable ? "button" : undefined}
+                  tabIndex={openable ? 0 : undefined}
+                  onKeyDown={openable ? (e) => (e.key === "Enter" || e.key === " ") && open() : undefined}
+                  sx={{
+                    px: 1.5,
+                    py: 0.75,
+                    ...(openable ? { cursor: "pointer", "&:hover": { bgcolor: "action.hover" } } : {}),
+                  }}
+                  title={it.error || (openable ? t("models:upload.openHint") : it.name)}
+                >
+                  {it.status === "uploading" && <CircularProgress size={16} />}
+                  {it.status === "ready" && <CheckCircleIcon fontSize="small" color="success" />}
+                  {it.status === "failed" && <ErrorOutlineIcon fontSize="small" color="error" />}
+                  <Typography variant="body2" noWrap sx={{ flex: 1 }}>
+                    {it.name}
+                  </Typography>
+                  {openable ? (
+                    <OpenInNewIcon fontSize="small" sx={{ color: "text.secondary", fontSize: 16 }} />
+                  ) : (
+                    <Typography variant="caption" color={it.status === "failed" ? "error" : "text.secondary"}>
+                      {t(`models:upload.status.${it.status}`)}
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })}
           </Box>
         </Paper>
       )}

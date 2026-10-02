@@ -1495,7 +1495,8 @@
         "uploading": "Įkeliama",
         "ready": "Paruošta",
         "failed": "Nepavyko"
-      }
+      },
+      "openHint": "Atidaryti modelį"
     }
   }
 }

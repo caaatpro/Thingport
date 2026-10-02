@@ -1487,7 +1487,8 @@
         "uploading": "Uploading",
         "ready": "Ready",
         "failed": "Failed"
-      }
+      },
+      "openHint": "Open model"
     }
   }
 }
