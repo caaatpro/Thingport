@@ -493,6 +493,14 @@ export async function ensurePlateThumbnail(plateId: string, srcPath: string): Pr
   return extract3mfThumbnail(plateId, srcPath);
 }
 
+/** Server-side rendered thumbnail for mesh models (STL/OBJ) with no embedded preview. */
+export async function renderPlateThumbnail(plateId: string, srcPath: string): Promise<boolean> {
+  const { renderModelThumbnail } = await import("./thumbnailRender");
+  const png = await renderModelThumbnail(srcPath);
+  if (!png) return false;
+  return saveThumbBuffer(plateId, png);
+}
+
 export function plateThumbPath(plateId: string): string {
   return path.join(THUMBS, `${plateId}.jpg`);
 }
