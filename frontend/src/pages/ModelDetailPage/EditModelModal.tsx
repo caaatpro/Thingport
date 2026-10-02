@@ -211,10 +211,20 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
           .filter((img) => !beforeIds.has(img.id))
           .toSorted((a, b) => a.position - b.position)
           .map((img) => img.id);
+        // The server silently skips images it can't decode, so it can return fewer ids than files
+        // sent. Tell the user instead of losing the image without a word -- and never let a missing
+        // id slip into the reorder below, where it serialises to null and 400s the whole save
+        // (taking the model-file upload that follows down with it).
+        const skipped = newImageFiles.length - newImageIdsInOrder.length;
+        if (skipped > 0) {
+          showToast({ message: t("models:edit.previewImagesSkipped", { count: skipped }) });
+        }
       }
       if (images.length) {
         let nextNew = 0;
-        const known = images.map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]));
+        const known = images
+          .map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]))
+          .filter((id): id is string => Boolean(id));
         // Reorder needs an exhaustive id list; images this modal never saw go after, in their order.
         const knownIds = new Set(known);
         const unknown = latest.preview_images
@@ -222,8 +232,10 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
           .toSorted((a, b) => a.position - b.position)
           .map((img) => img.id);
         const finalOrder = [...known, ...unknown];
-        const reorderRes = await printsApi.reorderPreviewImages(print.id, finalOrder);
-        latest = reorderRes.print ?? latest;
+        if (finalOrder.length) {
+          const reorderRes = await printsApi.reorderPreviewImages(print.id, finalOrder);
+          latest = reorderRes.print ?? latest;
+        }
       }
 
       // Upload before delete so a model's only file can be swapped in one save.

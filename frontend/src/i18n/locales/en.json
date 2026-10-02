@@ -1321,7 +1321,9 @@
       "confirmDiscard": "Discard all unsaved changes to this model?",
       "discardConfirmLabel": "Discard",
       "updateSuccess": "Model updated",
-      "updateFailed": "Failed to update the model. Please try again."
+      "updateFailed": "Failed to update the model. Please try again.",
+      "previewImagesSkipped_one": "Couldn't process {{count}} image, so it wasn't added. Try a JPG or PNG.",
+      "previewImagesSkipped_other": "Couldn't process {{count}} images, so they weren't added. Try JPG or PNG."
     },
     "author": {
       "pageTitle": "Author",
