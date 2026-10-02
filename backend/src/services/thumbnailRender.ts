@@ -16,13 +16,10 @@ const MAX_TRIANGLES = 600_000; // cap work on huge meshes; sample beyond this
 const BASE_COLOR = [150, 170, 190] as const; // cool neutral grey-blue
 const AMBIENT = 0.3;
 
-/** Expand a geometry's (optionally indexed) position attribute into a flat per-triangle vertex array. */
-function geometryTriangles(geometry: BufferGeometry): Float32Array | null {
-  const pos = geometry.getAttribute("position");
-  if (!pos) return null;
-  const posArr = pos.array as ArrayLike<number>;
-  const index = geometry.getIndex();
-  const triCount = index ? index.count / 3 : pos.count / 3;
+/** Expand a (optionally indexed) position array into a flat per-triangle vertex array, sampling down
+ *  if the mesh is larger than MAX_TRIANGLES. */
+function expandTriangles(posArr: ArrayLike<number>, index: ArrayLike<number> | null): Float32Array | null {
+  const triCount = index ? index.length / 3 : posArr.length / 9;
   if (triCount < 1) return null;
   const stride = Math.max(1, Math.ceil(triCount / MAX_TRIANGLES));
   const outTris = Math.ceil(triCount / stride);
@@ -30,11 +27,46 @@ function geometryTriangles(geometry: BufferGeometry): Float32Array | null {
   let o = 0;
   for (let tri = 0; tri < triCount; tri += stride) {
     for (let v = 0; v < 3; v++) {
-      const vi = index ? (index.array as ArrayLike<number>)[tri * 3 + v] : tri * 3 + v;
+      const vi = index ? index[tri * 3 + v] : tri * 3 + v;
       out[o++] = posArr[vi * 3];
       out[o++] = posArr[vi * 3 + 1];
       out[o++] = posArr[vi * 3 + 2];
     }
+  }
+  return out;
+}
+
+function geometryTriangles(geometry: BufferGeometry): Float32Array | null {
+  const pos = geometry.getAttribute("position");
+  if (!pos) return null;
+  const index = geometry.getIndex();
+  return expandTriangles(pos.array as ArrayLike<number>, index ? (index.array as ArrayLike<number>) : null);
+}
+
+type OcctModule = {
+  ReadStepFile: (data: Uint8Array, params: unknown) => { meshes?: OcctMesh[] } | null;
+};
+type OcctMesh = { attributes?: { position?: { array: ArrayLike<number> } }; index?: { array: ArrayLike<number> } };
+
+let occtPromise: Promise<OcctModule> | null = null;
+async function getOcct(): Promise<OcctModule> {
+  if (!occtPromise) {
+    const initOcct = (await import("occt-import-js")).default as (opts?: unknown) => Promise<OcctModule>;
+    // CommonJS runtime: point emscripten at the wasm shipped with the package so Node can find it.
+    const wasmPath = require.resolve("occt-import-js/dist/occt-import-js.wasm");
+    occtPromise = initOcct({ locateFile: (f: string) => (f.endsWith(".wasm") ? wasmPath : f) });
+  }
+  return occtPromise;
+}
+
+function mergeChunks(chunks: Float32Array[]): Float32Array | null {
+  if (!chunks.length) return null;
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const out = new Float32Array(total);
+  let off = 0;
+  for (const c of chunks) {
+    out.set(c, off);
+    off += c.length;
   }
   return out;
 }
@@ -58,15 +90,21 @@ async function loadTriangles(srcPath: string): Promise<Float32Array | null> {
         if (t) chunks.push(t);
       }
     });
-    if (!chunks.length) return null;
-    const total = chunks.reduce((n, c) => n + c.length, 0);
-    const out = new Float32Array(total);
-    let off = 0;
-    for (const c of chunks) {
-      out.set(c, off);
-      off += c.length;
+    return mergeChunks(chunks);
+  }
+  if (ext === ".step" || ext === ".stp") {
+    const buf = await fs.readFile(srcPath);
+    const occt = await getOcct();
+    const res = occt.ReadStepFile(new Uint8Array(buf), null);
+    if (!res || !res.meshes) return null;
+    const chunks: Float32Array[] = [];
+    for (const m of res.meshes) {
+      const pos = m.attributes?.position?.array;
+      if (!pos || !pos.length) continue;
+      const t = expandTriangles(pos, m.index?.array ?? null);
+      if (t) chunks.push(t);
     }
-    return out;
+    return mergeChunks(chunks);
   }
   return null;
 }

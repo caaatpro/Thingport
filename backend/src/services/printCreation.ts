@@ -94,7 +94,7 @@ async function thumbnailAndSniff(plateId: string, filename: string, mime: string
   } else if (ext === ".f3d" || ext === ".f3z") {
     // No in-browser 3D for Fusion files; the embedded PNG is the preview.
     await extractFusionThumbnail(plateId, effectivePath);
-  } else if (ext === ".stl" || ext === ".obj") {
+  } else if (ext === ".stl" || ext === ".obj" || ext === ".step" || ext === ".stp") {
     // No embedded preview; render one server-side. Not awaited — the CPU rasterize shouldn't hold
     // up the upload response.
     void renderPlateThumbnail(plateId, effectivePath);
