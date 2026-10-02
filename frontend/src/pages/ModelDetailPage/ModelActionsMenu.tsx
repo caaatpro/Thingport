@@ -17,6 +17,7 @@ import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import PlaylistRemoveIcon from "@mui/icons-material/PlaylistRemove";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import LaunchIcon from "@mui/icons-material/Launch";
+import ShareIcon from "@mui/icons-material/Share";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
@@ -32,6 +33,7 @@ import { useNormalizedOpen } from "./useNormalizedOpen";
 import DownloadPickerDialog from "./DownloadPickerDialog";
 import AddToCollectionModal from "./AddToCollectionModal";
 import EditModelModal from "./EditModelModal";
+import ShareDialog from "../../components/ShareDialog";
 
 type Props = {
   print: Print;
@@ -69,6 +71,7 @@ export default function ModelActionsMenu({
   const [deleting, setDeleting] = useState(false);
   const [removingFromCollection, setRemovingFromCollection] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // Driven by ?edit=<id> so links and the back button open/close it.
   const editOpen = searchParams.get("edit") === print.id;
   const {
@@ -211,6 +214,19 @@ export default function ModelActionsMenu({
           </ListItemIcon>
           <ListItemText>{t("common:edit")}</ListItemText>
         </MenuItem>
+        {print.is_owner !== false && (
+          <MenuItem
+            onClick={() => {
+              closeMenu();
+              setShareOpen(true);
+            }}
+          >
+            <ListItemIcon>
+              <ShareIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("models:share.menu")}</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleDelete}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
@@ -325,6 +341,15 @@ export default function ModelActionsMenu({
           viewer={viewer}
         />
       )}
+
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        name={print.title || print.name}
+        loadShares={() => printsApi.listShares(print.id)}
+        saveShares={(ids) => printsApi.setShares(print.id, ids).then((updated) => onUpdated?.(updated))}
+        onUnauthorized={onUnauthorized}
+      />
     </>
   );
 }

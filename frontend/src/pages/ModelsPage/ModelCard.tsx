@@ -23,6 +23,7 @@ import AuthorHoverCard from "../../components/AuthorHoverCard";
 import RollingNumber from "../../components/RollingNumber";
 import { useFavoriteToggle } from "../../hooks/useFavoriteToggle";
 import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
+import VisibilityBadge from "../../components/VisibilityBadge";
 import type { AuthUser } from "../../api/auth";
 
 type Props = {
@@ -186,15 +187,24 @@ export default function ModelCard({
         />
       </Stack>
       <Box sx={{ px: 1.5, pt: 0.75, pb: 1.5 }}>
-        <Typography
-          variant="body2"
-          fontWeight={600}
-          noWrap
-          title={item.title || item.name}
-          sx={{ color: muiTheme.thingport.headingText }}
-        >
-          {item.title || item.name}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            noWrap
+            title={item.title || item.name}
+            sx={{ color: muiTheme.thingport.headingText, flex: 1, minWidth: 0 }}
+          >
+            {item.title || item.name}
+          </Typography>
+          {(item.visibility === "shared" || item.is_owner === false) && (
+            <VisibilityBadge
+              compact
+              visibility={item.visibility}
+              ownerName={item.is_owner === false ? item.owner?.display_name : null}
+            />
+          )}
+        </Stack>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.75 }}>
           <AuthorHoverCard
             authorId={author ? author.id : SELF_AUTHOR_ID}

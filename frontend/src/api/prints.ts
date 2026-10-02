@@ -78,7 +78,15 @@ export type Print = {
   is_favorite: boolean;
   source_provider?: string | null;
   source_url?: string | null;
+  // Targeted sharing (optional: an older backend doesn't send these).
+  visibility?: "private" | "shared";
+  is_owner?: boolean;
+  owner?: { id: string; display_name: string } | null;
+  shared_with_count?: number;
 };
+
+export type ShareUser = { user_id: string; display_name: string; email: string };
+export type DirectoryUser = { id: string; display_name: string; email: string };
 
 export type ListPrintsResult = {
   items: Print[];
@@ -379,6 +387,24 @@ export const printsApi = {
     const res = await fetch(`${apiBase()}/print/${id}/author-reset`, { method: "POST", headers: authHeaders() });
     if (res.status === 401) throw new UnauthorizedError();
     if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to reset author"));
+    return res.json();
+  },
+
+  listShares: async (id: string): Promise<ShareUser[]> => {
+    const res = await fetch(`${apiBase()}/print/${id}/shares`, { headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to load sharing"));
+    return res.json();
+  },
+
+  setShares: async (id: string, userIds: string[]): Promise<Print> => {
+    const res = await fetch(`${apiBase()}/print/${id}/shares`, {
+      method: "PUT",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ user_ids: userIds }),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to update sharing"));
     return res.json();
   },
 

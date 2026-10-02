@@ -1458,6 +1458,22 @@
         "catIdsHelp": "Separate multiple IDs with \";\" -- matches if an import's category is any of these",
         "dragToMove": "Drag to move"
       }
+    },
+    "visibility": {
+      "private": "Private",
+      "shared": "Shared",
+      "sharedBy": "Shared by {{name}}"
+    },
+    "share": {
+      "menu": "Share…",
+      "title": "Share \"{{name}}\"",
+      "summaryPrivate": "Private — only you can see this.",
+      "summaryShared_one": "Shared with {{count}} person.",
+      "summaryShared_other": "Shared with {{count}} people.",
+      "searchPlaceholder": "Search members…",
+      "empty": "No other members to share with yet.",
+      "loadFailed": "Couldn't load sharing.",
+      "saveFailed": "Couldn't update sharing."
     }
   }
 }

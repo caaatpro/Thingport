@@ -1,6 +1,6 @@
 import { authHeaders } from "../utils/auth";
-import { apiBase, assertOk, readErrorMessage } from "./client";
-import type { Print } from "./prints";
+import { apiBase, assertOk, readErrorMessage, UnauthorizedError } from "./client";
+import type { Print, ShareUser } from "./prints";
 
 export type SystemCollectionKey = "favorites" | "history";
 
@@ -16,6 +16,11 @@ export type Collection = {
   system_key: SystemCollectionKey | null;
   /** Always false for a system pseudo-collection. */
   bookmarked: boolean;
+  // Targeted sharing (optional: an older backend doesn't send these).
+  visibility?: "private" | "shared";
+  is_owner?: boolean;
+  owner?: { id: string; display_name: string } | null;
+  shared_with_count?: number;
 };
 
 export type CollectionInput = {
@@ -99,5 +104,22 @@ export const collectionsApi = {
   unbookmark: async (id: string): Promise<void> => {
     const res = await fetch(`${apiBase()}/collection/${id}/bookmark`, { method: "DELETE", headers: authHeaders() });
     assertOk(res, "Failed to remove bookmark");
+  },
+
+  listShares: async (id: string): Promise<ShareUser[]> => {
+    const res = await fetch(`${apiBase()}/collection/${id}/shares`, { headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to load sharing"));
+    return res.json();
+  },
+
+  setShares: async (id: string, userIds: string[]): Promise<void> => {
+    const res = await fetch(`${apiBase()}/collection/${id}/shares`, {
+      method: "PUT",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ user_ids: userIds }),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to update sharing"));
   },
 };
