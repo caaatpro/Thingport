@@ -464,6 +464,29 @@ export async function extract3mfThumbnail(plateId: string, srcPath: string): Pro
   return false;
 }
 
+/** Extracts Fusion 360's embedded preview PNG from a .f3d/.f3z zip (a PNG under a "Previews" folder).
+ *  There is no reliable open-source 3D rendering for these, so this static image is the preview. */
+export async function extractFusionThumbnail(plateId: string, srcPath: string): Promise<boolean> {
+  const lower = srcPath.toLowerCase();
+  if (!lower.endsWith(".f3d") && !lower.endsWith(".f3z")) return false;
+  try {
+    const entries = await listZipEntries(srcPath);
+    const candidates = entries
+      .filter((e) => !e.isDirectory)
+      .filter((e) => /\.png$/i.test(e.name) && /previews?\//i.test(e.name))
+      .filter((e) => e.size > 0 && e.size <= 16 * 1024 * 1024)
+      // Fusion stores several sizes; the largest makes the best card image.
+      .toSorted((a, b) => b.size - a.size);
+    for (const entry of candidates) {
+      const buf = await readZipEntry(srcPath, entry.name, 16 * 1024 * 1024);
+      if (buf && (await saveThumbBuffer(plateId, buf))) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 export async function ensurePlateThumbnail(plateId: string, srcPath: string): Promise<boolean> {
   const existing = path.join(THUMBS, `${plateId}.jpg`);
   if (fsSync.existsSync(existing)) return true;

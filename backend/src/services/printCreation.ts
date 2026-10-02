@@ -10,6 +10,7 @@ import {
   availableModelName,
   availablePlateFilename,
   ensurePlateThumbnail,
+  extractFusionThumbnail,
   managedPlatePath,
   pruneEmptyStorageDirs,
   renderPlateStoragePath,
@@ -89,6 +90,9 @@ async function thumbnailAndSniff(plateId: string, filename: string, mime: string
     await ensurePlateThumbnail(plateId, effectivePath);
     // "on-demand" builds the preview on first view, "disabled" never. Not awaited: it can be slow.
     if ((await getPreviewMode()) === "automatic") void generateModelPreviewGlb(plateId, effectivePath);
+  } else if (ext === ".f3d" || ext === ".f3z") {
+    // No in-browser 3D for Fusion files; the embedded PNG is the preview.
+    await extractFusionThumbnail(plateId, effectivePath);
   }
 }
 

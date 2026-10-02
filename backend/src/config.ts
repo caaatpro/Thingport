@@ -51,7 +51,20 @@ export const PUBLIC_URL = (process.env.PUBLIC_URL || "").trim().replace(/\/+$/, 
 export const AUTH_SECRET = process.env.AUTH_SECRET || "changeme-secret";
 export const AUTH_ALGO = "HS256" as const;
 
-export const IMPORT_ALLOWED_EXTS = new Set([".stl", ".3mf", ".step", ".stp", ".obj", ".lbrn", ".lbrn2", ".zip"]);
+// .f3d/.f3z (Autodesk Fusion) are stored & downloadable with an embedded-thumbnail preview, but are
+// NOT renderable (proprietary kernel; no in-browser 3D). Users export STEP for interactive viewing.
+export const IMPORT_ALLOWED_EXTS = new Set([
+  ".stl",
+  ".3mf",
+  ".step",
+  ".stp",
+  ".obj",
+  ".lbrn",
+  ".lbrn2",
+  ".zip",
+  ".f3d",
+  ".f3z",
+]);
 // Mirrors frontend's MODEL_EXTS. Other files in a multi-file upload become SUPPORTING files.
 export const RENDERABLE_MODEL_EXTS = new Set([".stl", ".3mf", ".step", ".stp", ".obj"]);
 export const IMPORT_EXT_PRIORITY = [".3mf", ".stl", ".step", ".stp", ".lbrn2", ".lbrn", ".zip"];

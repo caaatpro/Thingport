@@ -172,7 +172,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
       type="file"
       onChange={onFilePick}
       multiple
-      accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.svg,.stl,.step,.stp,.3mf,.obj,.f3d,.lbrn,.lbrn2,.zip"
+      accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.svg,.stl,.step,.stp,.3mf,.obj,.f3d,.f3z,.lbrn,.lbrn2,.zip"
       hidden
     />
   );
