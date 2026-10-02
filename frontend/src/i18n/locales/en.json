@@ -1323,7 +1323,8 @@
       "updateSuccess": "Model updated",
       "updateFailed": "Failed to update the model. Please try again.",
       "previewImagesSkipped_one": "Couldn't process {{count}} image, so it wasn't added. Try a JPG or PNG.",
-      "previewImagesSkipped_other": "Couldn't process {{count}} images, so they weren't added. Try JPG or PNG."
+      "previewImagesSkipped_other": "Couldn't process {{count}} images, so they weren't added. Try JPG or PNG.",
+      "previewImagesFailed": "Your other changes were saved, but the preview images couldn't be updated."
     },
     "author": {
       "pageTitle": "Author",

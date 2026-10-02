@@ -1,5 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
+import { MulterError } from "multer";
 import { resolveCorsOrigins } from "./cors";
 import { HttpError } from "./utils/fileUtils";
 
@@ -64,6 +65,16 @@ export function createApp(): Express {
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
       res.status(err.status).json({ detail: err.message, ...(err.code ? { code: err.code } : {}) });
+      return;
+    }
+    // multer rejects (e.g. a file over the size limit) are the client's fault, not a 500. Turn them
+    // into a clear 4xx so the UI can show "File too large" instead of a generic server error.
+    if (err instanceof MulterError) {
+      const tooLarge = err.code === "LIMIT_FILE_SIZE";
+      res.status(tooLarge ? 413 : 400).json({
+        detail: tooLarge ? "File is too large." : `Upload rejected: ${err.message}`,
+        code: err.code,
+      });
       return;
     }
     console.error(err);
