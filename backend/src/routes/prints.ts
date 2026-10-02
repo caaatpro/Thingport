@@ -15,7 +15,7 @@ import { previewImagePath, deleteAllPreviewImages } from "../services/previewIma
 import { deleteAuthorIfOrphaned, getLinkedAuthorIds } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
-import { printReadWhere } from "../services/access";
+import { printReadWhere, collectionReadWhere } from "../services/access";
 import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
 import { RENDERABLE_MODEL_EXTS } from "../config";
 import { estimateDownloadSize, resolvePrintsForDownload, sendPrintsZip } from "../services/downloadZip";
@@ -91,7 +91,23 @@ async function buildPrintWhere(req: Request): Promise<Prisma.PrintWhereInput> {
     const systemKey = systemCollectionKeyForId(collectionId);
     if (systemKey === "favorites") where.favoritedAt = { not: null };
     else if (systemKey === "history") where.lastViewedAt = { not: null };
-    else where.collectionItems = { some: { collectionId } };
+    else {
+      where.collectionItems = { some: { collectionId } };
+      // A real collection you can see is yours or shared with you. When it's shared (not yours), show
+      // the models in it that are readable to you, replacing the "my models" base — your own models
+      // aren't in someone else's collection.
+      const coll = await prisma.collection.findFirst({
+        where: { id: collectionId, ...collectionReadWhere(me) },
+        select: { userId: true },
+      });
+      if (!coll) {
+        where.id = "__no_access__";
+      } else if (coll.userId !== me) {
+        delete (where as { userId?: unknown }).userId;
+        delete (where as { OR?: unknown }).OR;
+        andClauses.push(printReadWhere(me));
+      }
+    }
   }
   if (q) {
     andClauses.push({

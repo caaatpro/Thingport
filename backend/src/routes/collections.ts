@@ -23,7 +23,8 @@ import {
 import { printOutsByIds } from "../services/printLoader";
 import { relocatePrintsForToken } from "../services/printService";
 import { createLog } from "../services/auditLog";
-import { toCollectionOut, type PrintOut } from "../dto";
+import { collectionReadWhere } from "../services/access";
+import { toCollectionOut, type PrintOut, type CollectionAccessCtx } from "../dto";
 
 const router = Router();
 router.use(requireAuth);
@@ -47,11 +48,13 @@ router.get(
     const [systemCollections, collections, bookmarkedIds] = await Promise.all([
       listSystemCollectionOuts(req.userId!),
       prisma.collection.findMany({
-        where: { userId: req.userId },
+        where: collectionReadWhere(req.userId!),
         orderBy: { createdAt: "desc" },
         include: {
           _count: { select: { items: true } },
           items: { orderBy: { position: "asc" }, take: COVER_ITEM_LIMIT },
+          user: { select: { id: true, displayName: true } },
+          shares: { select: { sharedWithUserId: true } },
         },
       }),
       listBookmarkedCollectionIdSet(req.userId!),
@@ -66,6 +69,7 @@ router.get(
           c._count.items,
           c.items.map((i) => printOuts.get(i.printId)).filter((p): p is PrintOut => Boolean(p)),
           bookmarkedIds.has(c.id),
+          { viewerId: req.userId, shares: c.shares, owner: { id: c.user.id, display_name: c.user.displayName } },
         ),
       ),
     ]);
@@ -105,8 +109,12 @@ router.get(
       return;
     }
     const collection = await prisma.collection.findFirst({
-      where: { id: req.params.id, userId: req.userId },
-      include: { _count: { select: { items: true } } },
+      where: { id: req.params.id, ...collectionReadWhere(req.userId!) },
+      include: {
+        _count: { select: { items: true } },
+        user: { select: { id: true, displayName: true } },
+        shares: { select: { sharedWithUserId: true } },
+      },
     });
     if (!collection) throw new HttpError(404, "Collection not found");
     const bookmarked = Boolean(
@@ -114,7 +122,12 @@ router.get(
         where: { userId: req.userId, type: "COLLECTION", collectionId: collection.id },
       }),
     );
-    res.json(toCollectionOut(collection, collection._count.items, [], bookmarked));
+    const access: CollectionAccessCtx = {
+      viewerId: req.userId,
+      shares: collection.shares,
+      owner: { id: collection.user.id, display_name: collection.user.displayName },
+    };
+    res.json(toCollectionOut(collection, collection._count.items, [], bookmarked, access));
   }),
 );
 
@@ -256,6 +269,58 @@ router.get(
       include: { items: { where: { printId: print.id }, select: { id: true } } },
     });
     res.json(collections.map((c) => ({ id: c.id, name: c.name, in_collection: c.items.length > 0 })));
+  }),
+);
+
+// --- Targeted sharing (owner-only). Note: a model inside a shared collection stays governed by its
+// own PrintShare, so sharing a collection does not expose its private models. ------------------------
+
+async function assertOwnedCollection(collectionId: string, userId: string) {
+  if (isSystemCollectionId(collectionId)) throw new HttpError(400, "This collection can't be shared");
+  const collection = await prisma.collection.findFirst({ where: { id: collectionId, userId } });
+  if (!collection) throw new HttpError(404, "Collection not found");
+  return collection;
+}
+
+router.get(
+  "/collection/:id/shares",
+  asyncHandler(async (req, res) => {
+    await assertOwnedCollection(req.params.id, req.userId!);
+    const shares = await prisma.collectionShare.findMany({
+      where: { collectionId: req.params.id },
+      include: { sharedWithUser: { select: { id: true, displayName: true, email: true } } },
+    });
+    res.json(
+      shares.map((s) => ({ user_id: s.sharedWithUserId, display_name: s.sharedWithUser.displayName, email: s.sharedWithUser.email })),
+    );
+  }),
+);
+
+const setSharesSchema = z.object({ user_ids: z.array(z.string()).default([]) });
+router.put(
+  "/collection/:id/shares",
+  asyncHandler(async (req, res) => {
+    await assertOwnedCollection(req.params.id, req.userId!);
+    const body = parseBody(setSharesSchema, req.body);
+    const targetIds = [...new Set(body.user_ids)].filter((id) => id !== req.userId);
+    if (targetIds.length) {
+      const count = await prisma.user.count({ where: { id: { in: targetIds } } });
+      if (count !== targetIds.length) throw new HttpError(400, "Share list contains an unknown user");
+    }
+    await prisma.$transaction([
+      prisma.collectionShare.deleteMany({
+        where: { collectionId: req.params.id, ...(targetIds.length ? { sharedWithUserId: { notIn: targetIds } } : {}) },
+      }),
+      ...targetIds.map((uid) =>
+        prisma.collectionShare.upsert({
+          where: { collectionId_sharedWithUserId: { collectionId: req.params.id, sharedWithUserId: uid } },
+          create: { collectionId: req.params.id, sharedWithUserId: uid },
+          update: {},
+        }),
+      ),
+    ]);
+    void createLog({ userId: req.userId!, action: "collection_shared", targetId: req.params.id, details: { count: targetIds.length } });
+    res.json({ ok: true });
   }),
 );
 
