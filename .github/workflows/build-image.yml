@@ -10,9 +10,14 @@ on:
         required: true
         type: string
       image_name:
-        description: "Fully-qualified image name, e.g. ghcr.io/owner/thingport-backend"
+        description: "Fully-qualified image name, e.g. registry.caaat.pro/thingport/backend"
         required: true
         type: string
+      registry:
+        description: "Container registry host to log in to and push to"
+        required: false
+        type: string
+        default: registry.caaat.pro
       context:
         description: "Docker build context"
         required: true
@@ -25,6 +30,11 @@ on:
         description: "GHA cache scope, so backend/frontend caches don't collide"
         required: true
         type: string
+      platforms:
+        description: "Target platforms for the image build"
+        required: false
+        type: string
+        default: linux/amd64
       push:
         description: "Whether to log in and push (false for PR validation builds)"
         required: false
@@ -36,7 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,13 +77,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to the container registry
         if: inputs.push
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Compute image tags
         id: meta
@@ -92,8 +101,7 @@ jobs:
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
-          # arm64 covers Apple Silicon and most ARM NAS units, built via QEMU on amd64 runners.
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ inputs.platforms }}
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

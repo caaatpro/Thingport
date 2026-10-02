@@ -3,7 +3,7 @@ name: Frontend image
 # Runs when frontend/ or the build workflow changes. Use "Manual image publish" to force a build.
 on:
   push:
-    branches: [main]
+    branches: [main, "feat/**"]
     tags: ["v*.*.*"]
     paths:
       - "frontend/**"
@@ -24,11 +24,10 @@ jobs:
   build:
     permissions:
       contents: read
-      packages: write
     uses: ./.github/workflows/build-image.yml
     with:
       project_dir: frontend
-      image_name: ghcr.io/${{ github.repository_owner }}/thingport-frontend
+      image_name: registry.caaat.pro/thingport/frontend
       context: ./frontend
       dockerfile: frontend/Dockerfile
       cache_scope: frontend

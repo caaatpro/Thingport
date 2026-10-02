@@ -3,7 +3,7 @@ name: Backend image
 # Runs when backend/ or the build workflow changes. Use "Manual image publish" to force a build.
 on:
   push:
-    branches: [main]
+    branches: [main, "feat/**"]
     tags: ["v*.*.*"]
     paths:
       - "backend/**"
@@ -63,11 +63,10 @@ jobs:
     needs: test
     permissions:
       contents: read
-      packages: write
     uses: ./.github/workflows/build-image.yml
     with:
       project_dir: backend
-      image_name: ghcr.io/${{ github.repository_owner }}/thingport-backend
+      image_name: registry.caaat.pro/thingport/backend
       context: ./backend
       dockerfile: backend/Dockerfile
       cache_scope: backend
