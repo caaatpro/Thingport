@@ -1474,6 +1474,20 @@
       "empty": "No other members to share with yet.",
       "loadFailed": "Couldn't load sharing.",
       "saveFailed": "Couldn't update sharing."
+    },
+    "upload": {
+      "dropHere": "Drop models to upload",
+      "dropHint": "They'll be added to your library",
+      "dropToCollection": "They'll be added to this collection",
+      "uploadingCount_one": "Uploading {{count}} file…",
+      "uploadingCount_other": "Uploading {{count}} files…",
+      "done": "Upload complete",
+      "unauthorized": "Session expired",
+      "status": {
+        "uploading": "Uploading",
+        "ready": "Ready",
+        "failed": "Failed"
+      }
     }
   }
 }

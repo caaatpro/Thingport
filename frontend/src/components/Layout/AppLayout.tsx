@@ -8,6 +8,7 @@ import Alert from "@mui/material/Alert";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import ImportProgressBar from "./ImportProgressBar";
+import GlobalDropZone from "./GlobalDropZone";
 import BackToTopButton from "./BackToTopButton";
 import { ConfirmProvider } from "../ConfirmProvider";
 import { ToastProvider } from "../ToastProvider";
@@ -184,6 +185,7 @@ function AppLayoutShell({
         </Box>
       </Box>
       <ImportProgressBar />
+      <GlobalDropZone categoryId={categoryId} onUploaded={onPrintsChanged} onUnauthorized={onUnauthorized} />
       <BackToTopButton />
     </ImportJobProvider>
   );

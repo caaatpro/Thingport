@@ -19,7 +19,7 @@ import { printReadWhere, collectionReadWhere } from "../services/access";
 import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
 import { RENDERABLE_MODEL_EXTS } from "../config";
 import { estimateDownloadSize, resolvePrintsForDownload, sendPrintsZip } from "../services/downloadZip";
-import { systemCollectionKeyForId } from "../services/collectionService";
+import { systemCollectionKeyForId, addPrintsToCollection } from "../services/collectionService";
 import { createLog } from "../services/auditLog";
 import { isNormalizable3mf, normalize3mfStatus, normalized3mfFor } from "../services/normalized3mfCache";
 import type { Prisma } from "@prisma/client";
@@ -187,6 +187,12 @@ router.post(
           targetId: print.id,
           details: { name: print.name },
         });
+      }
+      // Collection-aware upload (drag & drop onto a collection page). Owned, non-system only.
+      const collectionId = (body.collection_id || "").trim();
+      if (collectionId && !systemCollectionKeyForId(collectionId) && printsOut.length) {
+        const owned = await prisma.collection.findFirst({ where: { id: collectionId, userId: req.userId } });
+        if (owned) await addPrintsToCollection(collectionId, printsOut.map((p) => p.id));
       }
       res.json({ prints: printsOut });
     } finally {

@@ -1481,6 +1481,21 @@
       "empty": "Kol kas nėra kitų narių, su kuriais galėtumėte pasidalinti.",
       "loadFailed": "Nepavyko įkelti bendrinimo.",
       "saveFailed": "Nepavyko atnaujinti bendrinimo."
+    },
+    "upload": {
+      "dropHere": "Nuvilkite modelius įkėlimui",
+      "dropHint": "Jie bus pridėti į jūsų biblioteką",
+      "dropToCollection": "Jie bus pridėti į šią kolekciją",
+      "uploadingCount_one": "Įkeliamas {{count}} failas…",
+      "uploadingCount_few": "Įkeliami {{count}} failai…",
+      "uploadingCount_other": "Įkeliama {{count}} failų…",
+      "done": "Įkėlimas baigtas",
+      "unauthorized": "Sesija pasibaigė",
+      "status": {
+        "uploading": "Įkeliama",
+        "ready": "Paruošta",
+        "failed": "Nepavyko"
+      }
     }
   }
 }

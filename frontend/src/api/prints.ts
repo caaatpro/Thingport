@@ -189,6 +189,7 @@ export const printsApi = {
       notes?: string;
       tags?: string[];
       category_id?: string;
+      collection_id?: string;
       mode?: "separate" | "multiplate";
     } = {},
   ): Promise<UploadPrintsResult> => {
@@ -200,6 +201,7 @@ export const printsApi = {
     if (opts.notes) fd.set("notes", opts.notes);
     if (opts.tags && opts.tags.length) fd.set("tags", opts.tags.join(","));
     if (opts.category_id) fd.set("category_id", opts.category_id);
+    if (opts.collection_id) fd.set("collection_id", opts.collection_id);
     if (opts.mode && files.length > 1) fd.set("mode", opts.mode);
     const res = await fetch(`${apiBase()}/upload`, {
       method: "POST",
