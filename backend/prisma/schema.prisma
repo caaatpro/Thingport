@@ -45,6 +45,9 @@ model User {
   authorLinks              AuthorLink[]
   bookmarks                Bookmark[]
   invitationsSent          Invitation[]
+  // Targeted sharing: models/collections other users have shared with this user.
+  printSharesReceived      PrintShare[]      @relation("PrintShareRecipient")
+  collectionSharesReceived CollectionShare[] @relation("CollectionShareRecipient")
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 }
@@ -120,6 +123,10 @@ model Print {
   preparedFile     PrintFile?               @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
   preparedMetadata Json?
   collectionItems  CollectionItem[]
+  // Targeted sharing. A model is PRIVATE (owner only) when it has no shares; "Shared" in the UI
+  // means shares.length > 0. The model's own share list is authoritative even inside a shared
+  // collection, so a private model in a shared collection stays hidden from others.
+  shares           PrintShare[]
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
   // Generated column (name A, tags B, notes C, creator D) created with its GIN index in a
@@ -146,6 +153,8 @@ model Collection {
   tags           String[]                 @default([])
   items          CollectionItem[]
   bookmarks      Bookmark[]
+  // Targeted sharing of the collection listing (see Print.shares for the per-model rule).
+  shares         CollectionShare[]
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
   // Generated column (name A, tags B, description C); see Print.searchVector.
@@ -297,12 +306,18 @@ model Plate {
   sourceInstanceId String?
   // Computed lazily; plate files are never rewritten in place.
   contentSha256    String?
+  // Async post-upload processing (thumbnail/metadata/preview). Existing rows default to READY; new
+  // uploads are set QUEUED and advanced by the ProcessingJob worker. Processing never blocks upload.
+  processingStatus PlateProcessingStatus @default(READY)
+  processingError  String?
+  processingJobs   ProcessingJob[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   @@unique([printId, position])
   @@unique([printId, sourceInstanceId])
   @@index([printId])
+  @@index([processingStatus])
 }
 
 /// A photo of the finished model, stored as a normalized JPEG keyed by id. Position 0 is the
@@ -356,4 +371,62 @@ model Log {
 
   @@index([userId, createdAt])
   @@index([createdAt])
+}
+
+enum PlateProcessingStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ProcessingJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  ERROR
+}
+
+/// Grants one user read access to another user's Print (targeted, Google-Drive-style sharing).
+/// Absence of any share = PRIVATE (owner only). Writes always stay owner-only.
+model PrintShare {
+  id               String   @id @default(cuid())
+  printId          String
+  print            Print    @relation(fields: [printId], references: [id], onDelete: Cascade)
+  sharedWithUserId String
+  sharedWithUser   User     @relation("PrintShareRecipient", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+
+  @@unique([printId, sharedWithUserId])
+  @@index([sharedWithUserId])
+}
+
+/// Grants one user visibility of another user's Collection listing. Per-model access inside it is
+/// still governed by PrintShare, so a private model in a shared collection stays hidden.
+model CollectionShare {
+  id               String     @id @default(cuid())
+  collectionId     String
+  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  sharedWithUserId String
+  sharedWithUser   User       @relation("CollectionShareRecipient", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  createdAt        DateTime   @default(now())
+
+  @@unique([collectionId, sharedWithUserId])
+  @@index([sharedWithUserId])
+}
+
+/// Durable post-upload processing job for one plate (thumbnail/metadata/preview). Generalizes the
+/// import-job pattern but, unlike imports, is re-enqueued on restart so work is never abandoned.
+model ProcessingJob {
+  id        String              @id @default(cuid())
+  plateId   String
+  plate     Plate               @relation(fields: [plateId], references: [id], onDelete: Cascade)
+  status    ProcessingJobStatus @default(QUEUED)
+  attempts  Int                 @default(0)
+  error     String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([status])
+  @@index([plateId])
 }
