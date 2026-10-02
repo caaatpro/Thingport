@@ -15,6 +15,7 @@ import { previewImagePath, deleteAllPreviewImages } from "../services/previewIma
 import { deleteAuthorIfOrphaned, getLinkedAuthorIds } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
+import { printReadWhere } from "../services/access";
 import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
 import { RENDERABLE_MODEL_EXTS } from "../config";
 import { estimateDownloadSize, resolvePrintsForDownload, sendPrintsZip } from "../services/downloadZip";
@@ -57,8 +58,19 @@ async function buildPrintWhere(req: Request): Promise<Prisma.PrintWhereInput> {
     .filter(Boolean);
   const collectionId = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
   const authorId = typeof req.query.author_id === "string" ? req.query.author_id.trim() : "";
+  // scope: "mine" (default, owner-only — unchanged behavior), "shared" (shared with me by others),
+  // or "all" (both). Favourites/History are inherently personal, so they force "mine".
+  const scopeParam = typeof req.query.scope === "string" ? req.query.scope : "mine";
+  const me = req.userId!;
+  const systemCollection = collectionId ? systemCollectionKeyForId(collectionId) : null;
+  const scope = systemCollection ? "mine" : scopeParam;
 
-  const where: Prisma.PrintWhereInput = { userId: req.userId };
+  const where: Prisma.PrintWhereInput =
+    scope === "shared"
+      ? { userId: { not: me }, shares: { some: { sharedWithUserId: me } } }
+      : scope === "all"
+        ? { OR: [{ userId: me }, { shares: { some: { sharedWithUserId: me } } }] }
+        : { userId: me };
   // AND clauses so the self-author and search OR groups don't clobber each other.
   const andClauses: Prisma.PrintWhereInput[] = [];
   if (categoryIds.length === 1) where.categoryId = categoryIds[0];
@@ -200,6 +212,8 @@ router.get(
         plates: { orderBy: { position: "asc" } },
         previewImages: { orderBy: { position: "asc" } },
         author: true,
+        user: { select: { id: true, displayName: true } },
+        shares: { select: { sharedWithUserId: true } },
       },
     });
     const prints = tagList.length ? allMatching.filter((p) => matchesTagList(p.tags, tagList)) : allMatching;
@@ -245,7 +259,11 @@ router.get(
     const out = paged.map((p) => {
       const printFiles = filesByPrint.get(p.id) ?? [];
       const preparedFile = p.preparedFileId ? (printFiles.find((f) => f.id === p.preparedFileId) ?? null) : null;
-      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages);
+      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, undefined, {
+        viewerId: req.userId,
+        shares: p.shares,
+        owner: { id: p.user.id, display_name: p.user.displayName },
+      });
     });
     res.json(out);
   }),
@@ -383,7 +401,7 @@ router.get(
   "/print/:id/plate/:plateId/file/:filename",
   asyncHandler(async (req, res) => {
     const plate = await prisma.plate.findFirst({
-      where: { id: req.params.plateId, printId: req.params.id, print: { userId: req.userId } },
+      where: { id: req.params.plateId, printId: req.params.id, print: printReadWhere(req.userId!) },
       include: { print: { select: { preparedMetadata: true } } },
     });
     if (!plate) throw new HttpError(404, "Not found");
@@ -405,7 +423,7 @@ router.post(
   "/print/:id/plate/:plateId/normalize",
   asyncHandler(async (req, res) => {
     const plate = await prisma.plate.findFirst({
-      where: { id: req.params.plateId, printId: req.params.id, print: { userId: req.userId } },
+      where: { id: req.params.plateId, printId: req.params.id, print: printReadWhere(req.userId!) },
       include: { print: { select: { preparedMetadata: true } } },
     });
     if (!plate) throw new HttpError(404, "Not found");
@@ -422,7 +440,7 @@ router.get(
   "/print/:id/thumb.jpg",
   asyncHandler(async (req, res) => {
     const plate0 = await prisma.plate.findFirst({
-      where: { printId: req.params.id, print: { userId: req.userId } },
+      where: { printId: req.params.id, print: printReadWhere(req.userId!) },
       orderBy: { position: "asc" },
     });
     if (!plate0) throw new HttpError(404, "Not found");
@@ -438,7 +456,7 @@ router.get(
   "/preview-image/:id/file.jpg",
   asyncHandler(async (req, res) => {
     const image = await prisma.previewImage.findFirst({
-      where: { id: req.params.id, print: { userId: req.userId } },
+      where: { id: req.params.id, print: printReadWhere(req.userId!) },
     });
     if (!image) throw new HttpError(404, "Not found");
     const filePath = previewImagePath(image.id);
@@ -569,6 +587,8 @@ router.delete(
   "/print/:id",
   asyncHandler(async (req, res) => {
     const full = await loadFullPrint(req.userId!, req.params.id);
+    // loadFullPrint authorizes shared readers too; deleting is owner-only.
+    if (full.print.userId !== req.userId) throw new HttpError(404, "Print not found");
     await deleteAllPrintFiles(req.params.id);
     await deleteAllPreviewImages(req.params.id);
     await prisma.print.delete({ where: { id: req.params.id } });
@@ -583,6 +603,56 @@ router.delete(
       targetId: req.params.id,
       details: { name: full.print.name },
     });
+  }),
+);
+
+// --- Targeted sharing (owner-only) ---------------------------------------------------------------
+
+async function assertOwnedPrint(printId: string, userId: string) {
+  const print = await prisma.print.findFirst({ where: { id: printId, userId } });
+  if (!print) throw new HttpError(404, "Print not found");
+  return print;
+}
+
+router.get(
+  "/print/:id/shares",
+  asyncHandler(async (req, res) => {
+    await assertOwnedPrint(req.params.id, req.userId!);
+    const shares = await prisma.printShare.findMany({
+      where: { printId: req.params.id },
+      include: { sharedWithUser: { select: { id: true, displayName: true, email: true } } },
+    });
+    res.json(
+      shares.map((s) => ({ user_id: s.sharedWithUserId, display_name: s.sharedWithUser.displayName, email: s.sharedWithUser.email })),
+    );
+  }),
+);
+
+const setSharesSchema = z.object({ user_ids: z.array(z.string()).default([]) });
+router.put(
+  "/print/:id/shares",
+  asyncHandler(async (req, res) => {
+    await assertOwnedPrint(req.params.id, req.userId!);
+    const body = parseBody(setSharesSchema, req.body);
+    const targetIds = [...new Set(body.user_ids)].filter((id) => id !== req.userId);
+    if (targetIds.length) {
+      const count = await prisma.user.count({ where: { id: { in: targetIds } } });
+      if (count !== targetIds.length) throw new HttpError(400, "Share list contains an unknown user");
+    }
+    await prisma.$transaction([
+      prisma.printShare.deleteMany({
+        where: { printId: req.params.id, ...(targetIds.length ? { sharedWithUserId: { notIn: targetIds } } : {}) },
+      }),
+      ...targetIds.map((uid) =>
+        prisma.printShare.upsert({
+          where: { printId_sharedWithUserId: { printId: req.params.id, sharedWithUserId: uid } },
+          create: { printId: req.params.id, sharedWithUserId: uid },
+          update: {},
+        }),
+      ),
+    ]);
+    void createLog({ userId: req.userId!, action: "model_shared", targetId: req.params.id, details: { count: targetIds.length } });
+    res.json(await printOutById(req.userId!, req.params.id));
   }),
 );
 

@@ -15,6 +15,7 @@ import {
 } from "../services/printFileService";
 import { toPrintFileOut } from "../dto";
 import { printOutById } from "../services/printLoader";
+import { printReadWhere } from "../services/access";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,7 +23,7 @@ router.use(requireAuth);
 router.get(
   "/print/:id/files",
   asyncHandler(async (req, res) => {
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, ...printReadWhere(req.userId!) } });
     if (!print) throw new HttpError(404, "Print not found");
     const files = await listSupportingFiles(print.id);
     res.json(files.map(toPrintFileOut));
@@ -49,7 +50,7 @@ router.post(
 router.get(
   "/print/:id/files/:fileId",
   asyncHandler(async (req, res) => {
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, ...printReadWhere(req.userId!) } });
     if (!print) throw new HttpError(404, "Not found");
     const record = await prisma.printFile.findUnique({ where: { id: req.params.fileId } });
     if (!record || record.printId !== print.id || record.role !== "SUPPORTING") {
@@ -74,7 +75,7 @@ router.delete(
 router.get(
   "/print/:id/prepared-print",
   asyncHandler(async (req, res) => {
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, ...printReadWhere(req.userId!) } });
     if (!print || !print.preparedFileId) throw new HttpError(404, "Not found");
     const record = await prisma.printFile.findUnique({ where: { id: print.preparedFileId } });
     if (!record || record.printId !== print.id || record.role !== "PREPARED") throw new HttpError(404, "Not found");

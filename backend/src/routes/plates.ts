@@ -8,6 +8,7 @@ import { HttpError, sanitizeFilename, mimeFromContentType } from "../utils/fileU
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import { modelUpload, thumbnailUpload } from "../uploadMiddleware";
+import { printReadWhere } from "../services/access";
 import {
   addPlatesToPrint,
   deletePlateFiles,
@@ -134,7 +135,7 @@ router.get(
   "/plate/:plateId/thumb.jpg",
   asyncHandler(async (req, res) => {
     const plate = await prisma.plate.findFirst({
-      where: { id: req.params.plateId, print: { userId: req.userId } },
+      where: { id: req.params.plateId, print: printReadWhere(req.userId!) },
     });
     if (!plate) throw new HttpError(404, "Not found");
     const thumbPath = plateThumbPath(plate.id);
@@ -149,7 +150,7 @@ router.get(
   "/plate/:plateId/preview.glb",
   asyncHandler(async (req, res) => {
     const plate = await prisma.plate.findFirst({
-      where: { id: req.params.plateId, print: { userId: req.userId } },
+      where: { id: req.params.plateId, print: printReadWhere(req.userId!) },
     });
     if (!plate) throw new HttpError(404, "Not found");
     const glbPath = modelPreviewGlbPath(plate.id);

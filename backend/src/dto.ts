@@ -135,6 +135,18 @@ export type PrintOut = {
   // source_url is the reconstructed original model page.
   source_provider: string | null;
   source_url: string | null;
+  // Targeted sharing. "shared" iff the model has at least one PrintShare. is_owner is false when the
+  // viewer only has shared access; owner is populated only then (so the UI can show "shared by X").
+  visibility: "private" | "shared";
+  is_owner: boolean;
+  owner: { id: string; display_name: string } | null;
+  shared_with_count: number;
+};
+
+export type PrintAccessCtx = {
+  viewerId?: string;
+  shares?: { sharedWithUserId: string }[];
+  owner?: { id: string; display_name: string } | null;
 };
 
 export type CategoryOut = {
@@ -220,6 +232,7 @@ export function toPrintOut(
   author?: Author | null,
   previewImages: PreviewImage[] = [],
   category?: Category | null,
+  access?: PrintAccessCtx,
 ): PrintOut {
   const sortedPlates = plates.toSorted((a, b) => a.position - b.position);
   const plateOuts = sortedPlates.map((p) => toPlateOut(print.id, p));
@@ -290,6 +303,10 @@ export function toPrintOut(
     is_favorite: print.favoritedAt !== null,
     source_provider: print.sourceProvider,
     source_url: buildImportSourceUrl(print.sourceProvider, print.sourceExternalId),
+    visibility: (access?.shares?.length ?? 0) > 0 ? "shared" : "private",
+    is_owner: access?.viewerId ? print.userId === access.viewerId : true,
+    owner: access?.viewerId && print.userId !== access.viewerId ? (access.owner ?? null) : null,
+    shared_with_count: access?.shares?.length ?? 0,
   };
 }
 
@@ -307,6 +324,16 @@ export type CollectionOut = {
   system_key: SystemCollectionKey | null;
   /** Always false for a system pseudo-collection, which can't be bookmarked. */
   bookmarked: boolean;
+  visibility: "private" | "shared";
+  is_owner: boolean;
+  owner: { id: string; display_name: string } | null;
+  shared_with_count: number;
+};
+
+export type CollectionAccessCtx = {
+  viewerId?: string;
+  shares?: { sharedWithUserId: string }[];
+  owner?: { id: string; display_name: string } | null;
 };
 
 /** `coverPrints`: up to 4, in item position order. */
@@ -315,6 +342,7 @@ export function toCollectionOut(
   itemCount: number,
   coverPrints: PrintOut[],
   bookmarked: boolean,
+  access?: CollectionAccessCtx,
 ): CollectionOut {
   return {
     id: collection.id,
@@ -326,6 +354,10 @@ export function toCollectionOut(
     created_at: collection.createdAt.toISOString(),
     system_key: null,
     bookmarked,
+    visibility: (access?.shares?.length ?? 0) > 0 ? "shared" : "private",
+    is_owner: access?.viewerId ? collection.userId === access.viewerId : true,
+    owner: access?.viewerId && collection.userId !== access.viewerId ? (access.owner ?? null) : null,
+    shared_with_count: access?.shares?.length ?? 0,
   };
 }
 
@@ -347,6 +379,10 @@ export function toSystemCollectionOut(
     created_at: new Date(0).toISOString(),
     system_key: key,
     bookmarked: false,
+    visibility: "private",
+    is_owner: true,
+    owner: null,
+    shared_with_count: 0,
   };
 }
 

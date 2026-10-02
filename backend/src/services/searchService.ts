@@ -38,7 +38,9 @@ async function searchPrintIds(userId: string, tsQuery: string, limit: number): P
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id"
     FROM "Print"
-    WHERE "userId" = ${userId} AND "searchVector" @@ to_tsquery('simple'::regconfig, ${tsQuery})
+    WHERE ("userId" = ${userId}
+           OR EXISTS (SELECT 1 FROM "PrintShare" ps WHERE ps."printId" = "Print"."id" AND ps."sharedWithUserId" = ${userId}))
+      AND "searchVector" @@ to_tsquery('simple'::regconfig, ${tsQuery})
     ORDER BY ts_rank("searchVector", to_tsquery('simple'::regconfig, ${tsQuery})) DESC, "name" ASC
     LIMIT ${limit}
   `;
@@ -54,7 +56,9 @@ async function searchCollections(
     SELECT c."id", c."name", count(ci."id")::bigint AS item_count
     FROM "Collection" c
     LEFT JOIN "CollectionItem" ci ON ci."collectionId" = c."id"
-    WHERE c."userId" = ${userId} AND c."searchVector" @@ to_tsquery('simple'::regconfig, ${tsQuery})
+    WHERE (c."userId" = ${userId}
+           OR EXISTS (SELECT 1 FROM "CollectionShare" cs WHERE cs."collectionId" = c."id" AND cs."sharedWithUserId" = ${userId}))
+      AND c."searchVector" @@ to_tsquery('simple'::regconfig, ${tsQuery})
     GROUP BY c."id", c."name", c."searchVector"
     ORDER BY ts_rank(c."searchVector", to_tsquery('simple'::regconfig, ${tsQuery})) DESC, c."name" ASC
     LIMIT ${limit}
