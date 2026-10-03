@@ -36,11 +36,16 @@ function expandTriangles(posArr: ArrayLike<number>, index: ArrayLike<number> | n
   return out;
 }
 
-function geometryTriangles(geometry: BufferGeometry): Float32Array | null {
+type LoadedMesh = { tris: Float32Array; triangleCount: number };
+
+function geometryTriangles(geometry: BufferGeometry): LoadedMesh | null {
   const pos = geometry.getAttribute("position");
   if (!pos) return null;
   const index = geometry.getIndex();
-  return expandTriangles(pos.array as ArrayLike<number>, index ? (index.array as ArrayLike<number>) : null);
+  const tris = expandTriangles(pos.array as ArrayLike<number>, index ? (index.array as ArrayLike<number>) : null);
+  if (!tris) return null;
+  const triangleCount = index ? index.count / 3 : pos.count / 3;
+  return { tris, triangleCount };
 }
 
 type OcctModule = {
@@ -59,19 +64,21 @@ async function getOcct(): Promise<OcctModule> {
   return occtPromise;
 }
 
-function mergeChunks(chunks: Float32Array[]): Float32Array | null {
+function mergeMeshes(chunks: LoadedMesh[]): LoadedMesh | null {
   if (!chunks.length) return null;
-  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const total = chunks.reduce((n, c) => n + c.tris.length, 0);
   const out = new Float32Array(total);
   let off = 0;
+  let triangleCount = 0;
   for (const c of chunks) {
-    out.set(c, off);
-    off += c.length;
+    out.set(c.tris, off);
+    off += c.tris.length;
+    triangleCount += c.triangleCount;
   }
-  return out;
+  return { tris: out, triangleCount };
 }
 
-async function loadTriangles(srcPath: string): Promise<Float32Array | null> {
+async function loadMesh(srcPath: string): Promise<LoadedMesh | null> {
   const ext = path.extname(srcPath).toLowerCase();
   if (ext === ".stl") {
     const buf = await fs.readFile(srcPath);
@@ -82,31 +89,68 @@ async function loadTriangles(srcPath: string): Promise<Float32Array | null> {
   if (ext === ".obj") {
     const text = await fs.readFile(srcPath, "utf8");
     const group = new OBJLoader().parse(text);
-    const chunks: Float32Array[] = [];
+    const chunks: LoadedMesh[] = [];
     group.traverse((child) => {
       const mesh = child as Mesh;
       if (mesh.isMesh && mesh.geometry) {
-        const t = geometryTriangles(mesh.geometry as BufferGeometry);
-        if (t) chunks.push(t);
+        const m = geometryTriangles(mesh.geometry as BufferGeometry);
+        if (m) chunks.push(m);
       }
     });
-    return mergeChunks(chunks);
+    return mergeMeshes(chunks);
   }
   if (ext === ".step" || ext === ".stp") {
     const buf = await fs.readFile(srcPath);
     const occt = await getOcct();
     const res = occt.ReadStepFile(new Uint8Array(buf), null);
     if (!res || !res.meshes) return null;
-    const chunks: Float32Array[] = [];
+    const chunks: LoadedMesh[] = [];
     for (const m of res.meshes) {
       const pos = m.attributes?.position?.array;
       if (!pos || !pos.length) continue;
-      const t = expandTriangles(pos, m.index?.array ?? null);
-      if (t) chunks.push(t);
+      const idx = m.index?.array ?? null;
+      const tris = expandTriangles(pos, idx);
+      if (tris) chunks.push({ tris, triangleCount: idx ? idx.length / 3 : pos.length / 9 });
     }
-    return mergeChunks(chunks);
+    return mergeMeshes(chunks);
   }
   return null;
+}
+
+export type ModelDimensions = { x: number; y: number; z: number };
+
+function measureDims(tris: Float32Array): ModelDimensions {
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (let i = 0; i < tris.length; i += 3) {
+    const x = tris[i];
+    const y = tris[i + 1];
+    const z = tris[i + 2];
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z;
+    if (z > maxZ) maxZ = z;
+  }
+  return { x: maxX - minX, y: maxY - minY, z: maxZ - minZ };
+}
+
+export type ModelMeasure = { dims: ModelDimensions; triangleCount: number };
+
+/** Loads a mesh/CAD model and returns its bounding-box size + triangle count, without rendering. */
+export async function measureModel(srcPath: string): Promise<ModelMeasure | null> {
+  try {
+    const mesh = await loadMesh(srcPath);
+    if (!mesh || mesh.tris.length < 9) return null;
+    return { dims: measureDims(mesh.tris), triangleCount: mesh.triangleCount };
+  } catch {
+    return null;
+  }
 }
 
 /** Renders the triangles to an RGBA buffer (RES×RES) via an isometric flat-shaded rasterizer. */
@@ -225,16 +269,19 @@ function rasterize(tris: Float32Array): Buffer {
   return Buffer.from(rgba.buffer);
 }
 
-/** Returns a PNG buffer thumbnail for a mesh model, or null if it can't be rendered. */
-export async function renderModelThumbnail(srcPath: string): Promise<Buffer | null> {
+export type RenderedThumbnail = { png: Buffer; measure: ModelMeasure };
+
+/** Renders a PNG thumbnail for a mesh/CAD model and measures it, or null if it can't be rendered. */
+export async function renderModelThumbnail(srcPath: string): Promise<RenderedThumbnail | null> {
   try {
-    const tris = await loadTriangles(srcPath);
-    if (!tris || tris.length < 9) return null;
-    const raw = rasterize(tris);
-    return await sharp(raw, { raw: { width: RES, height: RES, channels: 4 } })
+    const mesh = await loadMesh(srcPath);
+    if (!mesh || mesh.tris.length < 9) return null;
+    const raw = rasterize(mesh.tris);
+    const png = await sharp(raw, { raw: { width: RES, height: RES, channels: 4 } })
       .resize(OUT, OUT, { fit: "inside" })
       .png()
       .toBuffer();
+    return { png, measure: { dims: measureDims(mesh.tris), triangleCount: mesh.triangleCount } };
   } catch {
     return null;
   }

@@ -208,9 +208,12 @@ export default function ModelCard({
         </Stack>
         {(() => {
           const ext = item.plates[0]?.filename.split(".").pop()?.toUpperCase();
+          const d = item.plates[0]?.dim_mm;
+          const dims = d ? `${Math.round(d.x)}×${Math.round(d.y)}×${Math.round(d.z)} mm` : null;
           const parts = [
             ext && ext.length <= 5 ? ext : null,
             typeof item.total_size === "number" && item.total_size > 0 ? formatFileSize(item.total_size) : null,
+            dims,
           ].filter(Boolean);
           return parts.length ? (
             <Typography variant="caption" sx={{ color: "#9aa0a6", display: "block", mt: 0.25 }}>

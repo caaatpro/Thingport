@@ -306,6 +306,12 @@ model Plate {
   sourceInstanceId String?
   // Computed lazily; plate files are never rewritten in place.
   contentSha256    String?
+  // Geometry bounding box (model units, mm by 3D-printing convention) + triangle count, filled when
+  // the server renders a thumbnail for a mesh/CAD model. Null for files we don't measure.
+  dimXmm           Float?
+  dimYmm           Float?
+  dimZmm           Float?
+  triangleCount    Int?
   // Async post-upload processing (thumbnail/metadata/preview). Existing rows default to READY; new
   // uploads are set QUEUED and advanced by the ProcessingJob worker. Processing never blocks upload.
   processingStatus PlateProcessingStatus @default(READY)

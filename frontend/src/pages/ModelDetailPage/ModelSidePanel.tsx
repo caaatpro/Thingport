@@ -10,6 +10,7 @@ import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import FolderIcon from "@mui/icons-material/Folder";
 import StorageIcon from "@mui/icons-material/Storage";
+import StraightenIcon from "@mui/icons-material/Straighten";
 import LaunchIcon from "@mui/icons-material/Launch";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -180,6 +181,25 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
               <StorageIcon fontSize="small" />
               <Typography variant="body2" fontWeight={600}>
                 {formatFileSize(print.total_size)}
+              </Typography>
+            </Stack>
+          </Box>
+        )}
+
+        {print.plates?.[0]?.dim_mm && (
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+              {t("models:detail.dimensions")}
+            </Typography>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={0.75}
+              sx={{ width: "fit-content", color: (muiTheme) => muiTheme.thingport.headingText }}
+            >
+              <StraightenIcon fontSize="small" />
+              <Typography variant="body2" fontWeight={600}>
+                {`${Math.round(print.plates[0].dim_mm.x)} × ${Math.round(print.plates[0].dim_mm.y)} × ${Math.round(print.plates[0].dim_mm.z)} mm`}
               </Typography>
             </Stack>
           </Box>

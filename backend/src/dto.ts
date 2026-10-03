@@ -91,6 +91,9 @@ export type PlateOut = {
   thumb_url: string | null;
   /** Null until generated, and always for non-3MF plates; the viewer then parses the file itself. */
   preview_glb_url: string | null;
+  /** Bounding-box size in model units (mm by convention); null for files we haven't measured. */
+  dim_mm: { x: number; y: number; z: number } | null;
+  triangle_count: number | null;
 };
 
 export type PrintFileOut = {
@@ -189,6 +192,11 @@ export function toPlateOut(printId: string, plate: Plate): PlateOut {
     url: `/print/${printId}/plate/${plate.id}/file/${encodeURIComponent(plate.filename)}`,
     thumb_url: plateThumbUrl(plate.id),
     preview_glb_url: previewGlbUrl(plate),
+    dim_mm:
+      plate.dimXmm != null && plate.dimYmm != null && plate.dimZmm != null
+        ? { x: plate.dimXmm, y: plate.dimYmm, z: plate.dimZmm }
+        : null,
+    triangle_count: plate.triangleCount ?? null,
   };
 }
 

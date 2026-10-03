@@ -493,12 +493,39 @@ export async function ensurePlateThumbnail(plateId: string, srcPath: string): Pr
   return extract3mfThumbnail(plateId, srcPath);
 }
 
-/** Server-side rendered thumbnail for mesh models (STL/OBJ) with no embedded preview. */
+function round2(n: number): number {
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+}
+
+async function persistPlateMeasure(
+  plateId: string,
+  m: { dims: { x: number; y: number; z: number }; triangleCount: number },
+): Promise<void> {
+  await prisma.plate
+    .update({
+      where: { id: plateId },
+      data: { dimXmm: round2(m.dims.x), dimYmm: round2(m.dims.y), dimZmm: round2(m.dims.z), triangleCount: m.triangleCount },
+    })
+    .catch(() => undefined);
+}
+
+/** Server-side rendered thumbnail for mesh/CAD models (STL/OBJ/STEP); also persists dimensions. */
 export async function renderPlateThumbnail(plateId: string, srcPath: string): Promise<boolean> {
   const { renderModelThumbnail } = await import("./thumbnailRender");
-  const png = await renderModelThumbnail(srcPath);
-  if (!png) return false;
-  return saveThumbBuffer(plateId, png);
+  const result = await renderModelThumbnail(srcPath);
+  if (!result) return false;
+  const ok = await saveThumbBuffer(plateId, result.png);
+  await persistPlateMeasure(plateId, result.measure);
+  return ok;
+}
+
+/** Measures a mesh/CAD model's bounding box + triangle count without rendering (for backfill). */
+export async function measurePlate(plateId: string, srcPath: string): Promise<boolean> {
+  const { measureModel } = await import("./thumbnailRender");
+  const m = await measureModel(srcPath);
+  if (!m) return false;
+  await persistPlateMeasure(plateId, m);
+  return true;
 }
 
 export function plateThumbPath(plateId: string): string {
