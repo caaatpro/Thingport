@@ -25,6 +25,14 @@ function isBlockedIp(address: string): boolean {
   return false;
 }
 
+/** True for makerworld.com and its subdomains only. A bare `endsWith("makerworld.com")` also matches
+ *  lookalikes such as "evilmakerworld.com", which would get the stored MakerWorld session cookie
+ *  attached to requests sent there. */
+export function isMakerworldHost(hostname: string): boolean {
+  const h = (hostname || "").toLowerCase();
+  return h === "makerworld.com" || h.endsWith(".makerworld.com");
+}
+
 export async function validateRemoteHost(host: string): Promise<void> {
   if (!host) throw new HttpError(400, "Invalid URL host");
   const lowered = host.toLowerCase();

@@ -8,6 +8,7 @@ import healthRoutes from "./routes/health";
 import captchaRoutes from "./routes/captcha";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
+import tokensRoutes from "./routes/tokens";
 import printsRoutes from "./routes/prints";
 import authorsRoutes from "./routes/authors";
 import platesRoutes from "./routes/plates";
@@ -43,6 +44,7 @@ export function createApp(): Express {
   app.use("/api", captchaRoutes);
   app.use("/api", authRoutes);
   app.use("/api", usersRoutes);
+  app.use("/api", tokensRoutes);
   app.use("/api", settingsRoutes);
   app.use("/api", printsRoutes);
   app.use("/api", authorsRoutes);

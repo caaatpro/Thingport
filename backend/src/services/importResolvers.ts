@@ -18,6 +18,7 @@ import {
   shouldProxyHost,
 } from "./flaresolverr";
 
+import { isMakerworldHost } from "../utils/urlUtils";
 export type ImportCookies = {
   makerworld_cookie?: string | null;
 };
@@ -542,7 +543,7 @@ export function emptyImportedPageMetadata(): ImportedPageMetadata {
 /** Best-effort metadata for a landing page. Only MakerWorld has more than a title. */
 export function extractPageMetadata(html: string, pageHost: string): ImportedPageMetadata {
   const meta = emptyImportedPageMetadata();
-  if (pageHost.endsWith("makerworld.com")) {
+  if (isMakerworldHost(pageHost)) {
     const fromDesign = makerworldMetaFromDesign(getPath(extractNextDataJson(html), "props", "pageProps", "design"));
     if (!fromDesign.title) fromDesign.title = genericTitleFromHtml(html);
     return fromDesign;

@@ -136,15 +136,16 @@ describe("captcha on login", () => {
     expect(res.body.code).toBe("CAPTCHA_REQUIRED");
   });
 
-  it("isn't asked of Thingport Grab", async () => {
+  it("can't be skipped by claiming to be Thingport Grab (header or extension Origin)", async () => {
     await setCaptchaSettings({ login: true });
-    expect((await login().set("X-Thingport-Client", "grab")).status).toBe(200);
-  });
-
-  it("isn't asked of older Thingport Grab versions, recognized by their extension Origin", async () => {
-    await setCaptchaSettings({ login: true });
-    expect((await login().set("Origin", "chrome-extension://kahfidpmojfocohinlmglnfoaimocbol")).status).toBe(200);
-    expect((await login().set("Origin", "moz-extension://1b2c3d4e-0000-4000-8000-123456789abc")).status).toBe(200);
+    // Any script can send these, so they must not waive the captcha that guards password guessing.
+    expect((await login().set("X-Thingport-Client", "grab")).body.code).toBe("CAPTCHA_REQUIRED");
+    expect(
+      (await login().set("Origin", "chrome-extension://kahfidpmojfocohinlmglnfoaimocbol")).body.code,
+    ).toBe("CAPTCHA_REQUIRED");
+    expect((await login().set("Origin", "moz-extension://1b2c3d4e-0000-4000-8000-123456789abc")).body.code).toBe(
+      "CAPTCHA_REQUIRED",
+    );
   });
 
   it("is still asked of the web app's own requests", async () => {
@@ -245,7 +246,7 @@ describe("captcha on import", () => {
     expect(status.body.code).not.toBe("CAPTCHA_REQUIRED");
   });
 
-  it("lets an import through with a solved captcha, or from Thingport Grab", async () => {
+  it("lets an import through with a solved captcha, or with an API token", async () => {
     await setCaptchaSettings({ import: true });
     // Nothing listens here, so the import fails, but only after the captcha.
     const body = { url: "http://127.0.0.1:9/model.stl" };
@@ -255,10 +256,21 @@ describe("captcha on import", () => {
       .set(auth(memberToken))
       .send({ ...body, ...solved() });
     expect(captchaCodes).not.toContain(withCaptcha.body.code);
+
+    // A token the user created on purpose is a credential in its own right: no captcha.
+    const created = await request(app).post("/api/tokens").set(auth(memberToken)).send({ name: "captcha test" });
+    expect(created.status).toBe(201);
     const fromGrab = await request(app)
+      .post("/api/import")
+      .set({ Authorization: `Bearer ${created.body.token}` })
+      .send(body);
+    expect(captchaCodes).not.toContain(fromGrab.body.code);
+
+    // ...but merely sending the old Grab header with a normal session doesn't waive it.
+    const forged = await request(app)
       .post("/api/import")
       .set({ ...auth(memberToken), "X-Thingport-Client": "grab" })
       .send(body);
-    expect(captchaCodes).not.toContain(fromGrab.body.code);
+    expect(forged.body.code).toBe("CAPTCHA_REQUIRED");
   });
 });

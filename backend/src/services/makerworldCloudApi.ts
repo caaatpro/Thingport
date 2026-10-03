@@ -20,6 +20,7 @@ import {
   noteCaptchaChallenge,
 } from "./makerworldCaptcha";
 
+import { isMakerworldHost } from "../utils/urlUtils";
 export {
   MAKERWORLD_CAPTCHA_MESSAGE,
   makerworldCaptchaCooloffActive,
@@ -147,7 +148,7 @@ export function parseMakerworldModelUrl(url: string): { designId: string; reques
   } catch {
     return null;
   }
-  if (!parsed.hostname.toLowerCase().endsWith("makerworld.com")) return null;
+  if (!isMakerworldHost(parsed.hostname)) return null;
   const designMatch = parsed.pathname.match(/\/models?\/(\d+)/i);
   if (!designMatch) return null;
   const hashMatch = parsed.hash.match(/profileid-(\d+)/i);

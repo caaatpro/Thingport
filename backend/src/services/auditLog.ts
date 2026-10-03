@@ -13,6 +13,8 @@ export type LogAction =
   | "import_completed"
   | "model_edited"
   | "model_deleted"
+  | "token_created"
+  | "token_revoked"
   | "model_shared"
   | "collection_shared"
   | "collection_created"

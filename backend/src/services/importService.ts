@@ -19,7 +19,6 @@ import {
   mimeFromContentType,
   sanitizeFilename,
 } from "../utils/fileUtils";
-import { validateRemoteUrl } from "../utils/urlUtils";
 import { maybeSleep, sleep } from "../utils/concurrency";
 import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock, shouldProxyHost } from "./flaresolverr";
 import {
@@ -73,6 +72,7 @@ import { prisma } from "../db";
 import { Prisma } from "@prisma/client";
 import type { Author, Plate, PreviewImage, Print } from "@prisma/client";
 
+import { isMakerworldHost, validateRemoteUrl } from "../utils/urlUtils";
 function isUniqueConstraintError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }
@@ -314,13 +314,13 @@ export async function openImportResponse(
   }
 
   // Only at depth 0, so a resolved download URL isn't treated as a model page on recursion.
-  if (depth === 0 && host.endsWith("makerworld.com") && !body.resolved_download_url) {
+  if (depth === 0 && isMakerworldHost(host) && !body.resolved_download_url) {
     const cloudResolved = await tryMakerworldCloudApi(validatedUrl, body);
     if (cloudResolved) {
       return openImportResponse(cloudResolved.downloadUrl, body, validatedUrl, depth + 1, cloudResolved.meta);
     }
   }
-  if (depth === 0 && host.endsWith("makerworld.com") && body.resolved_download_url) {
+  if (depth === 0 && isMakerworldHost(host) && body.resolved_download_url) {
     const fromExtension = await makerworldMetaFromExtension(validatedUrl, body);
     if (fromExtension) {
       return openImportResponse(body.resolved_download_url, body, validatedUrl, depth + 1, fromExtension);
@@ -329,7 +329,7 @@ export async function openImportResponse(
 
   const headers: Record<string, string> = { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" };
   let makerworldCookie: string | null = null;
-  if (host.endsWith("makerworld.com")) {
+  if (isMakerworldHost(host)) {
     makerworldCookie = resolveMakerworldCookie(body);
     Object.assign(headers, makerworldHtmlHeaders(referer || validatedUrl, makerworldCookie));
   }
@@ -366,10 +366,10 @@ export async function openImportResponse(
       categorySite: extracted.categorySite ?? inheritedMeta.categorySite,
       makerworldProfile: inheritedMeta.makerworldProfile,
     };
-    if (pageHost.endsWith("makerworld.com") && extracted.author) {
+    if (isMakerworldHost(pageHost) && extracted.author) {
       resolvedMeta.author = await completeMakerworldAuthor(extracted.author, body.makerworldPaceMs);
     }
-    if (pageHost.endsWith("makerworld.com")) {
+    if (isMakerworldHost(pageHost)) {
       // Skipped for an extension-resolved URL: these calls can trip the CAPTCHA cooloff.
       if (body.resolved_download_url) {
         downloadUrl = body.resolved_download_url;

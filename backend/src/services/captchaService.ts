@@ -53,19 +53,18 @@ export function verifyCaptcha(id: unknown, answer: unknown): boolean {
   return entry.answer.toLowerCase() === answer.trim().toLowerCase();
 }
 
-// MV3 service worker requests carry chrome-extension://<id> as Origin.
-const EXTENSION_ORIGIN = /^(chrome|moz|safari-web)-extension:\/\//i;
-
-/** The extension has nowhere to show a captcha. Recognized by X-Thingport-Client or, for older
- *  versions, its Origin. Anything outside a browser can fake either, so this isn't a security
- *  boundary. */
-export function isExtensionRequest(req: Request): boolean {
-  return req.get("x-thingport-client") === "grab" || EXTENSION_ORIGIN.test(req.get("origin") ?? "");
+/** An API token is already a revocable, scoped credential the user created on purpose, and a client
+ *  such as the browser extension has nowhere to show a captcha. So a request authenticated with one
+ *  skips the captcha. The login and register forms never do: the old "X-Thingport-Client: grab" header
+ *  and chrome-extension Origin bypass were removed because any script can send those, which made the
+ *  login captcha pointless against password guessing. */
+export function skipsCaptcha(req: Request): boolean {
+  return Boolean(req.apiToken);
 }
 
 /** With several places (one request changing several things), one captcha covers whichever are on. */
 export async function checkCaptcha(req: Request, place: CaptchaPlace | CaptchaPlace[]): Promise<void> {
-  if (isExtensionRequest(req)) return;
+  if (skipsCaptcha(req)) return;
   const enabled = await Promise.all((Array.isArray(place) ? place : [place]).map(isCaptchaEnabled));
   if (!enabled.includes(true)) return;
   const body = (req.body ?? {}) as { captcha_id?: unknown; captcha_answer?: unknown };

@@ -14,6 +14,7 @@ import {
   noteCaptchaChallenge,
 } from "./makerworldCaptcha";
 
+import { isMakerworldHost } from "../utils/urlUtils";
 // Not behind Cloudflare. Private collections return 403 without the bearer token, so it's sent
 // whenever available.
 const COLLECTION_API_BASE = "https://makerworld.com/api/v1/design-service/favorites";
@@ -95,7 +96,7 @@ export function parseMakerworldCollectionUrl(url: string): { collectionId: strin
   } catch {
     return null;
   }
-  if (!parsed.hostname.toLowerCase().endsWith("makerworld.com")) return null;
+  if (!isMakerworldHost(parsed.hostname)) return null;
   const match = parsed.pathname.match(/\/collections\/(\d+)/i);
   return match ? { collectionId: match[1] } : null;
 }

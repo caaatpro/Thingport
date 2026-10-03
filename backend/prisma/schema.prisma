@@ -48,6 +48,7 @@ model User {
   // Targeted sharing: models/collections other users have shared with this user.
   printSharesReceived      PrintShare[]      @relation("PrintShareRecipient")
   collectionSharesReceived CollectionShare[] @relation("CollectionShareRecipient")
+  apiTokens                ApiToken[]
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 }
@@ -435,4 +436,24 @@ model ProcessingJob {
 
   @@index([status])
   @@index([plateId])
+}
+
+/// A revocable credential for non-browser clients such as the Thingport Grab extension, so they never
+/// need the account password. Only the SHA-256 of the secret is stored: a database leak can't be used
+/// to act as the user, and a token is revoked by deleting its row.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  // First characters of the secret, so a token can be told apart in the UI. Not enough to use it.
+  prefix     String
+  tokenHash  String    @unique
+  // What the token may call. "grab" = only the endpoints the browser extension needs.
+  scope      String    @default("grab")
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+
+  @@index([userId, createdAt])
 }
