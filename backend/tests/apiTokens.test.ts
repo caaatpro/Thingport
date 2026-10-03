@@ -115,7 +115,7 @@ describe("authenticating with a token", () => {
       ["get", "/api/tokens"],
     ] as const) {
       const res = await request(app)[method](path).set(bearer);
-      expect(res.status, `${method} ${path}`).toBe(403);
+      expect({ call: `${method} ${path}`, status: res.status }).toEqual({ call: `${method} ${path}`, status: 403 });
     }
   });
 
@@ -136,7 +136,7 @@ describe("authenticating with a token", () => {
     const created = await createToken(ownerSession, { name: "real" });
     for (const bad of ["tpg_notarealtoken", "tpg_", created.body.token.slice(0, -1), `tpg_${"a".repeat(500)}`]) {
       const res = await request(app).get("/api/collections").set({ Authorization: `Bearer ${bad}` });
-      expect(res.status, bad.slice(0, 20)).toBe(401);
+      expect({ token: bad.slice(0, 20), status: res.status }).toEqual({ token: bad.slice(0, 20), status: 401 });
     }
   });
 
@@ -184,9 +184,9 @@ describe("revoking tokens", () => {
   });
 });
 
-describe("the grab scope's allow-list", () => {
-  const allowed = (method: string, path: string) => isRequestAllowedForScope("grab", method, path);
+const allowed = (method: string, path: string) => isRequestAllowedForScope("grab", method, path);
 
+describe("the grab scope's allow-list", () => {
   it("allows what the extension uses", () => {
     expect(allowed("GET", "/collections")).toBe(true);
     expect(allowed("POST", "/collections")).toBe(true);
