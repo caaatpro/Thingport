@@ -1516,7 +1516,10 @@
       "processing": "Apdorojama",
       "failed": "Apdorojimas nepavyko",
       "prepared": "Paruoštas spausdinimui",
-      "supporting": "Papildomas failas"
+      "supporting": "Papildomas failas",
+      "triangles_one": "{{formatted}} trikampis",
+      "triangles_few": "{{formatted}} trikampiai",
+      "triangles_other": "{{formatted}} trikampių"
     }
   }
 }

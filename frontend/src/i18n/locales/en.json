@@ -1506,7 +1506,9 @@
       "processing": "Processing",
       "failed": "Processing failed",
       "prepared": "Prepared print",
-      "supporting": "Supporting file"
+      "supporting": "Supporting file",
+      "triangles_one": "{{formatted}} triangle",
+      "triangles_other": "{{formatted}} triangles"
     }
   }
 }

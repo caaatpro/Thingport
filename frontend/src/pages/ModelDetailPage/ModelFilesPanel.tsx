@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
@@ -27,7 +28,7 @@ type Props = {
   onUpdated?: (print: Print) => void;
 };
 
-function plateMeta(plate: Plate): string {
+function plateMeta(plate: Plate, t: TFunction): string {
   const parts: string[] = [];
   const type = extOf(plate.filename).toUpperCase();
   if (type) parts.push(type);
@@ -35,7 +36,11 @@ function plateMeta(plate: Plate): string {
   if (plate.dim_mm) {
     parts.push(`${Math.round(plate.dim_mm.x)}×${Math.round(plate.dim_mm.y)}×${Math.round(plate.dim_mm.z)} mm`);
   }
-  if (plate.triangle_count) parts.push(`${plate.triangle_count.toLocaleString()} △`);
+  if (plate.triangle_count) {
+    parts.push(
+      t("models:files.triangles", { count: plate.triangle_count, formatted: plate.triangle_count.toLocaleString() }),
+    );
+  }
   return parts.join(" · ");
 }
 
@@ -120,7 +125,7 @@ export default function ModelFilesPanel({ print, onUnauthorized, onUpdated }: Pr
                   {plate.filename}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-                  {plateMeta(plate)}
+                  {plateMeta(plate, t)}
                 </Typography>
               </Box>
               {pending && (
