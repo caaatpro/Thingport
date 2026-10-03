@@ -1,11 +1,12 @@
 // Provider URL recognition, duplicated from the frontend and backend parsers. Keep in sync by hand.
 
-export type Provider = "makerworld" | "thingiverse" | "printables";
+export type Provider = "makerworld" | "thingiverse" | "printables" | "cults3d";
 
 export type Classification =
   | { kind: "single"; provider: "makerworld"; type: "model" }
   | { kind: "single"; provider: "thingiverse"; type: "thing" }
   | { kind: "single"; provider: "printables"; type: "model" }
+  | { kind: "single"; provider: "cults3d"; type: "model" }
   | { kind: "batch"; provider: "makerworld"; type: "collection" }
   | { kind: "batch"; provider: "thingiverse"; type: "likes" | "collection" }
   | { kind: "batch"; provider: "printables"; type: "collection" };
@@ -30,7 +31,7 @@ function isDomainOrSubdomain(hostname: string, domain: string): boolean {
   return host === domain || host.endsWith(`.${domain}`);
 }
 
-const PROVIDER_DOMAINS = ["thingiverse.com", "makerworld.com", "printables.com"];
+const PROVIDER_DOMAINS = ["thingiverse.com", "makerworld.com", "printables.com", "cults3d.com"];
 
 /** Whether `url` is a page on a site this extension runs on. Used to accept messages only from the
  *  content scripts it injects there. */
@@ -94,6 +95,14 @@ export function isPrintablesCollectionUrl(url: string): boolean {
   return Boolean(parsed && isHost(parsed, "printables.com") && /\/collections\/\d+/i.test(parsed.pathname));
 }
 
+/** `/en/3d-model/<category>/<slug>`, with or without a locale prefix. Mirrors the backend's parser. */
+export function parseCults3dModelUrl(url: string): { slug: string; category: string } | null {
+  const parsed = parse(url);
+  if (!parsed || !isDomainOrSubdomain(parsed.hostname, "cults3d.com")) return null;
+  const m = parsed.pathname.match(/^(?:\/[a-z]{2}(?:-[a-z]{2})?)?\/3d-model\/([^/]+)\/([^/?#]+?)\/?$/i);
+  return m ? { category: m[1].toLowerCase(), slug: m[2].toLowerCase() } : null;
+}
+
 /** Null keeps the icon hidden. "single" pages get a dedup check; "batch" pages always show it. */
 export function classifyUrl(url: string): Classification | null {
   if (isMakerworldCollectionUrl(url)) return { kind: "batch", provider: "makerworld", type: "collection" };
@@ -103,5 +112,6 @@ export function classifyUrl(url: string): Classification | null {
   if (parseMakerworldModelUrl(url)) return { kind: "single", provider: "makerworld", type: "model" };
   if (parseThingiverseThingUrl(url)) return { kind: "single", provider: "thingiverse", type: "thing" };
   if (parsePrintablesModelUrl(url)) return { kind: "single", provider: "printables", type: "model" };
+  if (parseCults3dModelUrl(url)) return { kind: "single", provider: "cults3d", type: "model" };
   return null;
 }

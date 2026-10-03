@@ -30,6 +30,8 @@ export type ResolvedDownload = {
   downloadUrl: string;
   instanceId: string | null;
   design?: Record<string, unknown> | null;
+  /** Cults3D: title/description/image read off the page. */
+  pageMeta?: Record<string, unknown> | null;
 };
 
 export type ImportSinglePayload = {

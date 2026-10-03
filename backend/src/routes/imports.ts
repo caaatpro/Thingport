@@ -67,6 +67,8 @@ const importRequestSchema = z.object({
   resolved_download_url: z.string().nullable().optional(),
   resolved_instance_id: z.string().nullable().optional(),
   makerworld_design: z.record(z.unknown()).nullable().optional(),
+  // Cults3D: title/description/image the extension read off the page.
+  page_meta: z.record(z.unknown()).nullable().optional(),
 });
 
 // Falls back to the cookie saved in Settings when the request doesn't carry one.

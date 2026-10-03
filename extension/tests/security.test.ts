@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isApiCallAllowed } from "../src/shared/apiPolicy";
 import { instanceUrlProblem, isApiToken, isPrivateHost } from "../src/shared/storage";
-import { isMakerworldUrl, isProviderPageUrl, parseMakerworldModelUrl } from "../src/shared/urls";
+import { isMakerworldUrl, isProviderPageUrl, parseMakerworldModelUrl, parseCults3dModelUrl, classifyUrl } from "../src/shared/urls";
 
 describe("isApiCallAllowed (the endpoints the extension may call)", () => {
   it("allows exactly what the extension uses", () => {
@@ -152,5 +152,27 @@ describe("provider URL matching", () => {
     assert.equal(isMakerworldUrl("https://makerworld.com/en/models/123-benchy"), true);
     assert.equal(isMakerworldUrl("https://evilmakerworld.com/en/models/123-benchy"), false);
     assert.equal(parseMakerworldModelUrl("https://notmakerworld.com/en/models/123"), null);
+  });
+});
+
+describe("Cults3D URLs", () => {
+  it("recognises model pages with and without a locale prefix", () => {
+    const expected = { category: "various", slug: "begode-t4-rear-handle" };
+    assert.deepEqual(parseCults3dModelUrl("https://cults3d.com/en/3d-model/various/begode-t4-rear-handle"), expected);
+    assert.deepEqual(parseCults3dModelUrl("https://cults3d.com/ru/3d-model/various/Begode-T4-Rear-Handle/"), expected);
+    assert.deepEqual(parseCults3dModelUrl("https://cults3d.com/3d-model/various/begode-t4-rear-handle?x=1"), expected);
+    assert.deepEqual(classifyUrl("https://cults3d.com/en/3d-model/various/begode-t4-rear-handle"), {
+      kind: "single",
+      provider: "cults3d",
+      type: "model",
+    });
+  });
+
+  it("ignores other Cults3D pages and lookalike domains", () => {
+    assert.equal(parseCults3dModelUrl("https://cults3d.com/en/users/someone/creations"), null);
+    assert.equal(parseCults3dModelUrl("https://cults3d.com/en/3d-model/various"), null);
+    assert.equal(parseCults3dModelUrl("https://evilcults3d.com/en/3d-model/various/x"), null);
+    assert.equal(isProviderPageUrl("https://cults3d.com/en"), true);
+    assert.equal(isProviderPageUrl("https://cults3d.com.evil.example/en"), false);
   });
 });

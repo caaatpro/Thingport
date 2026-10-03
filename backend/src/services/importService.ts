@@ -73,6 +73,13 @@ import { Prisma } from "@prisma/client";
 import type { Author, Plate, PreviewImage, Print } from "@prisma/client";
 
 import { isMakerworldHost, validateRemoteUrl } from "../utils/urlUtils";
+import { listZipEntries, readZipEntry } from "../utils/zipReader";
+import {
+  CULTS3D_MODEL_URL_PREFIX,
+  cults3dMetaFromExtension,
+  isCults3dHost,
+  parseCults3dModelUrl,
+} from "./cults3dApi";
 function isUniqueConstraintError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }
@@ -92,6 +99,8 @@ export type ImportRequestBody = ImportCookies & {
   /** The page's MakerWorld design data, so the backend needn't fetch a Cloudflare-gated page.
    *  Client-supplied -- see makerworldMetaFromExtension. */
   makerworld_design?: Record<string, unknown> | null;
+  /** Cults3D page metadata read by the extension. Client-supplied -- see cults3dMetaFromExtension. */
+  page_meta?: Record<string, unknown> | null;
   /** Internal only: per-request delay for MakerWorld collection imports. Never from the body. */
   makerworldPaceMs?: number;
 };
@@ -327,6 +336,17 @@ export async function openImportResponse(
     }
   }
 
+  // Cults3D only gives files to a signed-in browser, so the extension must have resolved the link.
+  if (depth === 0 && isCults3dHost(host)) {
+    if (!body.resolved_download_url) {
+      throw new HttpError(
+        400,
+        "Cults3D only lets signed-in users download files. Open the model in a browser where you are logged in to Cults3D and import it with the Thingport Grab extension.",
+      );
+    }
+    return openImportResponse(body.resolved_download_url, body, validatedUrl, depth + 1, cults3dMetaFromExtension(body.page_meta));
+  }
+
   const headers: Record<string, string> = { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" };
   let makerworldCookie: string | null = null;
   if (isMakerworldHost(host)) {
@@ -351,6 +371,12 @@ export async function openImportResponse(
       pageHost = (new URL(finalUrl).hostname || "").toLowerCase();
     } catch {
       pageHost = "";
+    }
+    if (isCults3dHost(pageHost)) {
+      throw new HttpError(
+        400,
+        "Cults3D answered with a web page instead of the model file (the download link needs your browser session). Make sure you are logged in to Cults3D and try again.",
+      );
     }
     const extracted = extractPageMetadata(html, pageHost);
     const resolvedMeta: ImportedPageMetadata = {
@@ -563,6 +589,8 @@ export function identifySourceModel(url: string): { provider: string; externalId
   if (thingiverse) return { provider: "thingiverse", externalId: thingiverse.thingId };
   const printables = parsePrintablesModelUrl(url);
   if (printables) return { provider: "printables", externalId: printables.modelId };
+  const cults = parseCults3dModelUrl(url);
+  if (cults) return { provider: "cults3d", externalId: `${cults.category}/${cults.slug}` };
   return null;
 }
 
@@ -603,6 +631,7 @@ export function buildImportSourceUrl(provider: string | null, externalId: string
   if (provider === "makerworld") return `https://makerworld.com/en/models/${externalId}`;
   if (provider === "thingiverse") return `https://www.thingiverse.com/thing:${externalId}`;
   if (provider === "printables") return `https://www.printables.com/model/${externalId}`;
+  if (provider === "cults3d") return `${CULTS3D_MODEL_URL_PREFIX}${externalId}`;
   return null;
 }
 
@@ -976,12 +1005,23 @@ export async function importPrintFromUrl(
     sourceExternalId: source?.externalId ?? null,
   };
 
+  const unpackedTemps: string[] = [];
   try {
     let result: { print: Print; plates: Plate[] };
     try {
-      result = await createPrint(userId, printMeta, path.parse(filename).name, [
-        { filename, mime, tempFilePath: tempPath, sourceInstanceId: meta.makerworldProfile?.instanceId ?? null },
-      ]);
+      // Cults3D ships most models as a zip of STLs: every model file becomes a plate of one Print.
+      const unpacked =
+        source?.provider === "cults3d" && path.extname(filename).toLowerCase() === ".zip"
+          ? await unpackZipToPlateInputs(tempPath, unpackedTemps)
+          : [];
+      result = await createPrint(
+        userId,
+        printMeta,
+        path.parse(filename).name,
+        unpacked.length
+          ? unpacked
+          : [{ filename, mime, tempFilePath: tempPath, sourceInstanceId: meta.makerworldProfile?.instanceId ?? null }],
+      );
     } catch (err) {
       // Race guard: a concurrent import of the same source model won.
       if (source && isUniqueConstraintError(err)) {
@@ -1003,6 +1043,27 @@ export async function importPrintFromUrl(
     });
     return { ...result, author, previewImages, alreadyImported: false };
   } finally {
-    if (fsSync.existsSync(tempPath)) await fs.rm(tempPath, { force: true }).catch(() => undefined);
+    for (const tmp of [tempPath, ...unpackedTemps]) {
+      if (fsSync.existsSync(tmp)) await fs.rm(tmp, { force: true }).catch(() => undefined);
+    }
   }
+}
+
+/** Model files inside a zip as plate inputs (temp files tracked in `temps` for cleanup). Empty when the
+ *  archive holds none, so the caller keeps the zip itself. */
+async function unpackZipToPlateInputs(zipPath: string, temps: string[]): Promise<NewPlateInput[]> {
+  const inputs: NewPlateInput[] = [];
+  for (const entry of await listZipEntries(zipPath)) {
+    const name = entry.name;
+    if (entry.isDirectory || name.startsWith("__MACOSX/") || path.basename(name).startsWith(".")) continue;
+    if (!MULTI_FILE_PLATE_EXTS.has(path.extname(name).toLowerCase())) continue;
+    const buffer = await readZipEntry(zipPath, name, IMPORT_MAX_BYTES);
+    if (!buffer) continue;
+    const tempFilePath = path.join(os.tmpdir(), `thingport-cults3d-${crypto.randomBytes(8).toString("hex")}`);
+    await fs.writeFile(tempFilePath, buffer);
+    temps.push(tempFilePath);
+    const filename = sanitizeFilename(path.basename(name));
+    inputs.push({ filename, mime: guessMimeFromPath(filename), tempFilePath });
+  }
+  return inputs;
 }

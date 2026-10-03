@@ -41,6 +41,7 @@ const SITE_NAMES: Record<string, string> = {
   makerworld: "MakerWorld",
   printables: "Printables",
   thingiverse: "Thingiverse",
+  cults3d: "Cults3D",
 };
 
 function showPageLinks(title: string, hint: string): void {

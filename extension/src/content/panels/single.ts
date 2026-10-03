@@ -4,6 +4,7 @@
 import type { InspectResult, ZipEntriesResult } from "../../shared/api";
 import { request } from "../../shared/messages";
 import { ctx } from "../context";
+import { resolveCults3dDownloadUrl } from "../cults3d/downloadResolver";
 import { resolveMakerworldDownloadUrl, resolveMakerworldProfileDownload } from "../makerworld/downloadResolver";
 import {
   currentMakerworldProfileTitle,
@@ -75,7 +76,8 @@ export async function loadSingleItem(): Promise<void> {
   const skipInspect =
     (provider === "thingiverse" && type === "thing") ||
     (provider === "printables" && type === "model") ||
-    (provider === "makerworld" && type === "model");
+    (provider === "makerworld" && type === "model") ||
+    (provider === "cults3d" && type === "model");
 
   let zipFilename: string | null = null;
   if (skipInspect) {
@@ -176,7 +178,9 @@ async function runDirectImport(opts?: { entries?: string[] }): Promise<void> {
   const resolved =
     classification.provider === "makerworld" && classification.type === "model"
       ? await resolveMakerworldDownloadUrl(url).catch(() => null)
-      : null;
+      : classification.provider === "cults3d"
+        ? await resolveCults3dDownloadUrl().catch(() => null)
+        : null;
   try {
     // One message so import and collection filing finish even if the page is gone.
     const print = await request("IMPORT_SINGLE", { url, entries: opts?.entries, collectionId, resolved, title });
@@ -202,6 +206,9 @@ async function runDirectImport(opts?: { entries?: string[] }): Promise<void> {
 /** MakerWorld only hands out files to a logged-in browser session, which is by far the most common
  *  reason an import from it fails. */
 function importErrorHint(): string | undefined {
+  if (ctx().classification.provider === "cults3d") {
+    return "Cults3D only gives files to signed-in users, and only free models can be imported. Log in to cults3d.com in this browser, check the page has a free Download button, reload it and try again.";
+  }
   return ctx().classification.provider === "makerworld"
     ? "MakerWorld only lets signed-in users download files. Log in to makerworld.com in this browser, make sure “Share my MakerWorld session” is on in the Thingport Grab popup, reload the page and try again."
     : undefined;

@@ -29,6 +29,7 @@ export async function importSingle({
         resolved_download_url: resolved.downloadUrl,
         resolved_instance_id: resolved.instanceId || null,
         makerworld_design: resolved.design ?? null,
+        page_meta: resolved.pageMeta ?? null,
       }
     : null;
 

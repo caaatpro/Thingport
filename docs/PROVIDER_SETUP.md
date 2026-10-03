@@ -32,3 +32,12 @@ The [Thingport Grab](../extension/README.md) browser extension captures this aut
 If there's no cookie named `token` (MakerWorld occasionally renames things), use the **Network** tab instead: reload the page, click any request to `makerworld.com`, open its Request Headers, and copy the whole `cookie:` value. Thingport only pulls the `token=...` part out of it and ignores the rest, so pasting the entire header works too.
 
 This is your own MakerWorld login session -- don't share it, and expect to redo this occasionally, since MakerWorld sessions eventually expire.
+
+## Cults3D
+
+No setup on the server -- but Cults3D only gives files to a signed-in browser, so it can be imported **only through the Thingport Grab extension**, and only **free** models:
+
+1. Log in to cults3d.com in the same browser.
+2. Open a model page that has a free **Download** button and click the Thingport icon, then **Import**.
+
+The extension presses the page's own Download button, hands the resulting link to Thingport, and Thingport fetches the file. A zip of several STL/3MF files becomes one model with a plate per file. Paid models can't be imported.

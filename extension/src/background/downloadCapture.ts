@@ -9,6 +9,14 @@ const DOWNLOAD_CAPTURE_TIMEOUT_MS = 8000;
 let pending: { resolve: (url: string | null) => void; timeoutId: ReturnType<typeof setTimeout> } | null = null;
 let currentCapture: Promise<string | null> | null = null;
 
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+}
+
 chrome.downloads.onCreated.addListener((item) => {
   if (!pending) return;
   const { resolve, timeoutId } = pending;
@@ -16,8 +24,10 @@ chrome.downloads.onCreated.addListener((item) => {
   clearTimeout(timeoutId);
   chrome.downloads.cancel(item.id).catch(() => undefined);
   chrome.downloads.erase({ id: item.id }).catch(() => undefined);
-  // A blob: URL isn't fetchable by the backend, so it counts as nothing captured.
-  resolve(/^https?:\/\//i.test(item.url) ? item.url : null);
+  // Prefer where a cross-host redirect ended up (a POST form such as Cults3D's answers with one); the
+  // backend can only GET. A blob: URL isn't fetchable by the backend, so it counts as nothing captured.
+  const target = item.finalUrl && hostOf(item.finalUrl) !== hostOf(item.url) ? item.finalUrl : item.url;
+  resolve(/^https?:\/\//i.test(target) ? target : null);
 });
 
 export function armDownloadCapture(): null {
