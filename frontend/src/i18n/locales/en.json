@@ -1307,8 +1307,7 @@
       "sizeHint": "Total size of all this model's files in storage",
       "author": "Author",
       "downloadModelFiles": "Download model files",
-      "imported": "Imported {{date}}",
-      "dimensions": "Dimensions"
+      "imported": "Imported {{date}}"
     },
     "edit": {
       "title": "Edit model",
