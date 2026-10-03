@@ -13,6 +13,7 @@ import LanguagePicker from "./LanguagePicker";
 import MakerworldCookieSection from "./MakerworldCookieSection";
 import SlicerPicker from "./SlicerPicker";
 import AuthorPreviewSetting from "./AuthorPreviewSetting";
+import ApiTokensSection from "./ApiTokensSection";
 
 type Props = {
   user: AuthUser | null;
@@ -84,6 +85,9 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
 
       <Divider />
       <AuthorPreviewSetting onUnauthorized={onUnauthorized} />
+
+      <Divider />
+      <ApiTokensSection onUnauthorized={onUnauthorized} />
     </Stack>
   );
 }

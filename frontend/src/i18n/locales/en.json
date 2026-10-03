@@ -192,6 +192,35 @@
         "description": "Show a preview card with the author's cover, details and latest models when you hover an author's name or avatar.",
         "label": "Show author preview on hover",
         "failed": "Failed to save -- try again."
+      },
+      "apiTokens": {
+        "title": "API tokens",
+        "description": "Tokens let tools such as the Thingport Grab browser extension use your account without your password. A token can only do what that tool needs, and you can revoke it at any time.",
+        "none": "No tokens yet.",
+        "nameLabel": "Token name",
+        "namePlaceholder": "e.g. Chrome on my laptop",
+        "expiryLabel": "Expires",
+        "expiry": {
+          "never": "Never",
+          "days30": "In 30 days",
+          "days90": "In 90 days",
+          "year1": "In 1 year"
+        },
+        "create": "Create token",
+        "created": "Token \"{{name}}\" created",
+        "copyNow": "Copy it now: for security it is shown only once and can't be retrieved later.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "revoke": "Revoke",
+        "confirmRevoke": "Revoke \"{{name}}\"? Anything using it will stop working immediately.",
+        "expired": "Expired",
+        "createdAt": "Created {{date}}",
+        "lastUsed": "Last used {{date}}",
+        "neverUsed": "Never used",
+        "expiresAt": "Expires {{date}}",
+        "loadFailed": "Couldn't load your tokens.",
+        "createFailed": "Couldn't create the token.",
+        "revokeFailed": "Couldn't revoke the token."
       }
     },
     "addMenu": {

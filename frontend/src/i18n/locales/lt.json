@@ -192,6 +192,35 @@
         "description": "Užvedus pelę ant autoriaus vardo ar avataro, rodyti kortelę su autoriaus viršelio nuotrauka, informacija ir naujausiais modeliais.",
         "label": "Rodyti autoriaus peržiūrą užvedus pelę",
         "failed": "Nepavyko išsaugoti -- bandykite dar kartą."
+      },
+      "apiTokens": {
+        "title": "API raktai",
+        "description": "Raktai leidžia tokioms priemonėms kaip „Thingport Grab“ naršyklės plėtinys naudoti jūsų paskyrą be slaptažodžio. Raktas gali tik tai, ko reikia priemonei, ir bet kada galite jį atšaukti.",
+        "none": "Raktų dar nėra.",
+        "nameLabel": "Rakto pavadinimas",
+        "namePlaceholder": "pvz., Chrome mano nešiojamajame",
+        "expiryLabel": "Galioja iki",
+        "expiry": {
+          "never": "Neribotai",
+          "days30": "30 dienų",
+          "days90": "90 dienų",
+          "year1": "1 metus"
+        },
+        "create": "Sukurti raktą",
+        "created": "Raktas „{{name}}“ sukurtas",
+        "copyNow": "Nukopijuokite dabar: saugumo sumetimais jis rodomas tik vieną kartą ir vėliau jo atkurti nebegalima.",
+        "copy": "Kopijuoti",
+        "copied": "Nukopijuota",
+        "revoke": "Atšaukti",
+        "confirmRevoke": "Atšaukti „{{name}}“? Viskas, kas jį naudoja, iškart nustos veikti.",
+        "expired": "Nebegalioja",
+        "createdAt": "Sukurtas {{date}}",
+        "lastUsed": "Paskutinį kartą naudotas {{date}}",
+        "neverUsed": "Dar nenaudotas",
+        "expiresAt": "Galioja iki {{date}}",
+        "loadFailed": "Nepavyko įkelti raktų.",
+        "createFailed": "Nepavyko sukurti rakto.",
+        "revokeFailed": "Nepavyko atšaukti rakto."
       }
     },
     "addMenu": {
