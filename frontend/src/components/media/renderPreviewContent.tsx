@@ -51,12 +51,17 @@ export function renderPreviewContent(
       : plate.thumb_url
         ? printsApi.fileUrl(plate.thumb_url)
         : null;
+  // A user-set / imported cover (first gallery image) wins over the generated plate thumbnail, so the
+  // card reflects the preview the user actually uploaded.
+  const coverUrl =
+    variant === "card" && print.preview_images?.length ? printsApi.fileUrl(print.preview_images[0].url) : null;
   const is3d = MODEL_EXTS.has(ext);
   const isLightBurn = LIGHTBURN_EXTS.has(ext);
 
   if (variant === "card") {
-    if (thumbUrl) {
-      return <Box component="img" src={thumbUrl} alt={plate.filename} sx={imgSx} />;
+    const cardImage = coverUrl || thumbUrl;
+    if (cardImage) {
+      return <Box component="img" src={cardImage} alt={plate.filename} sx={imgSx} />;
     }
     if (ext === "svg") {
       return <Box component="img" src={plateUrl} alt={plate.filename} sx={imgSx} />;
