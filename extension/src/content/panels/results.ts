@@ -12,7 +12,9 @@ export function successHtml(link: string, note?: string | null, title = "Importe
   `;
 }
 
-export function errorHtml(err: unknown): string {
+export function errorHtml(err: unknown, hint?: string): string {
   const message = err instanceof Error ? err.message : String(err);
-  return `<div class="tg-title tg-title--error">Something went wrong</div><div class="tg-hint">${escapeHtml(message)}</div>`;
+  return `<div class="tg-title tg-title--error">Something went wrong</div><div class="tg-hint">${escapeHtml(message)}</div>${
+    hint ? `<div class="tg-hint">${escapeHtml(hint)}</div>` : ""
+  }`;
 }

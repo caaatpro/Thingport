@@ -69,8 +69,13 @@ export async function loadSingleItem(): Promise<void> {
   }
   renderPanel(statusHtml("Checking link…"));
   const { provider, type } = ctx().classification;
+  // A MakerWorld model is always one 3MF (the download is resolved on the page at import time), so
+  // inspecting only made the user wait ~20 s for nothing -- and fail outright when MakerWorld
+  // wouldn't hand the file to the server.
   const skipInspect =
-    (provider === "thingiverse" && type === "thing") || (provider === "printables" && type === "model");
+    (provider === "thingiverse" && type === "thing") ||
+    (provider === "printables" && type === "model") ||
+    (provider === "makerworld" && type === "model");
 
   let zipFilename: string | null = null;
   if (skipInspect) {
@@ -190,8 +195,16 @@ async function runDirectImport(opts?: { entries?: string[] }): Promise<void> {
       renderPanel(successHtml(link));
     }
   } catch (err) {
-    renderPanel(errorHtml(err));
+    renderPanel(errorHtml(err, importErrorHint()));
   }
+}
+
+/** MakerWorld only hands out files to a logged-in browser session, which is by far the most common
+ *  reason an import from it fails. */
+function importErrorHint(): string | undefined {
+  return ctx().classification.provider === "makerworld"
+    ? "MakerWorld only lets signed-in users download files. Log in to makerworld.com in this browser, make sure “Share my MakerWorld session” is on in the Thingport Grab popup, reload the page and try again."
+    : undefined;
 }
 
 /** The first profile creates (or finds) the model; later ones are added as files. Stops on a
@@ -239,7 +252,7 @@ async function runProfilesImport(scope: MakerworldProfileScope, collectionId: st
   }
 
   if (!printId) {
-    renderPanel(errorHtml(lastError ?? new Error("Import failed")));
+    renderPanel(errorHtml(lastError ?? new Error("Import failed"), importErrorHint()));
     return;
   }
   const parts = [`${added} print profile${added === 1 ? "" : "s"} imported`];

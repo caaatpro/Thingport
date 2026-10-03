@@ -32,6 +32,11 @@ export function buildManifest(target: Target, pkg: { version: string; descriptio
     // including one that was already open when the extension was installed (browsers don't inject
     // content scripts into those until a reload).
     permissions: ["storage", "cookies", "downloads", "activeTab", "scripting"],
+    // chrome.cookies can only read a site's cookies with host access to that site, and without it the
+    // MakerWorld session was silently never sent to the instance (so MakerWorld imports failed with
+    // "No downloadable model file found"). The content script already runs on this site, so this adds
+    // no new install warning.
+    host_permissions: ["*://*.makerworld.com/*"],
     // The user's instance origin, requested at setup.
     optional_host_permissions: ["*://*/*"],
     content_scripts: [{ matches: PROVIDER_MATCHES, js: ["content.js"], run_at: "document_idle" }],
