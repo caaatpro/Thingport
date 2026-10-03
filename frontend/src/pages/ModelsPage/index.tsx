@@ -169,6 +169,22 @@ export default function ModelsPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryIdFilter, printsVersion, sortMode, scope]);
 
+  // Live-refresh cards whose files are still being processed (thumbnail/preview/geometry), so a
+  // freshly dropped model flips from a placeholder to its preview without a manual reload.
+  useEffect(() => {
+    const processingIds = items
+      .filter((it) => it.plates?.some((p) => p.processing_status === "queued" || p.processing_status === "processing"))
+      .map((it) => it.id);
+    if (!processingIds.length) return;
+    const timer = setTimeout(async () => {
+      const updated = await Promise.all(processingIds.map((id) => printsApi.get(id).catch(() => null)));
+      const byId = new Map(updated.filter((u): u is Print => Boolean(u)).map((u) => [u.id, u]));
+      if (byId.size) setItems((prev) => prev.map((it) => byId.get(it.id) ?? it));
+    }, 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);

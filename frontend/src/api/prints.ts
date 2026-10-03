@@ -23,6 +23,7 @@ export type Plate = {
   preview_glb_url?: string | null; // /plate/{plateId}/preview.glb?v=... once background pre-render finishes
   dim_mm?: { x: number; y: number; z: number } | null; // bounding box in model units (mm by convention)
   triangle_count?: number | null;
+  processing_status?: string; // "queued" | "processing" | "ready" | "failed"
 };
 
 export type PrintFile = {
