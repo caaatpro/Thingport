@@ -5,6 +5,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import Skeleton from "@mui/material/Skeleton";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type Category, type CategoryMetaInput, categoriesApi } from "../../api/categories";
@@ -295,9 +296,26 @@ export default function ModelsPage({
             </Box>
           )}
           {loading ? (
-            <Stack alignItems="center" sx={{ py: 8 }}>
-              <CircularProgress size={22} />
-            </Stack>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                columnGap: "20px",
+                rowGap: "20px",
+                "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(4, 1fr)" },
+                "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(3, 1fr)" },
+                "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+                "@media (max-width: 860px)": { gridTemplateColumns: "repeat(1, 1fr)" },
+              }}
+            >
+              {Array.from({ length: 10 }).map((_, i) => (
+                <Box key={i}>
+                  <Skeleton variant="rounded" sx={{ width: "100%", aspectRatio: "4 / 3", borderRadius: "12px" }} />
+                  <Skeleton variant="text" sx={{ mt: 1, width: "70%" }} />
+                  <Skeleton variant="text" sx={{ width: "40%" }} />
+                </Box>
+              ))}
+            </Box>
           ) : items.length ? (
             <Stack spacing={2}>
               <Box
