@@ -9,6 +9,8 @@ export type ImportContext = {
   instanceUrl: string;
   classification: Classification;
   library: LibraryState | null;
+  /** The whole model is already in the library, so the panel just says so and links to it. */
+  alreadyImported?: { printId: string | null };
   title?: string | null;
 };
 

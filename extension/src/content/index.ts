@@ -13,7 +13,7 @@ import { loadPanel } from "./panels";
 import { errorHtml } from "./panels/results";
 import { api } from "./runtime";
 import { closeSetupModal, openSetupModal } from "./setupModal";
-import { mountFab, mountHost, mountPanel, renderPanel, setPanelOpen, unmountHost } from "./shell";
+import { isPanelOpen, mountFab, mountHost, mountPanel, renderPanel, setPanelOpen, unmountHost } from "./shell";
 
 declare global {
   interface Window {
@@ -24,11 +24,15 @@ declare global {
 // Bumped on every re-init so stale in-flight checks don't mount an icon for the wrong URL.
 let initToken = 0;
 
+// Toggles the import panel; set while the icon is mounted, so the popup's button can open it.
+let togglePanelRef: (() => void) | null = null;
+
 function reportTabIconState(active: boolean): void {
   void send("SET_TAB_ICON_STATE", { active });
 }
 
 function unmount(): void {
+  togglePanelRef = null;
   closeSetupModal();
   unmountNormalizedDownload();
   unmountHost();
@@ -80,16 +84,18 @@ async function init(): Promise<void> {
   }
 
   let library: LibraryState | null = null;
+  let alreadyImported: { printId: string | null } | undefined;
   if (classification.kind === "single") {
     try {
       const status = await api<ImportStatus>("GET", `/import/status?url=${encodeURIComponent(url)}`);
       if (isStale()) return;
-      if (status.already_imported) {
-        reportTabIconState(false);
-        return;
-      }
+      // Nothing to import, but still show the icon (with a check) instead of vanishing: a missing
+      // icon reads as "the extension isn't working".
       if (status.state === "profile_missing" || status.state === "profile_unknown") {
+        // The model is in the library but this print profile may not be: offer to add it.
         library = { state: status.state, printId: status.print_id ?? null };
+      } else if (status.already_imported) {
+        alreadyImported = { printId: status.print_id ?? null };
       }
     } catch {
       // Show the icon anyway; the panel surfaces the real error.
@@ -97,15 +103,20 @@ async function init(): Promise<void> {
   }
   if (isStale()) return;
 
-  setContext({ url, instanceUrl: stateRes.data.instanceUrl, classification, library });
+  setContext({ url, instanceUrl: stateRes.data.instanceUrl, classification, library, alreadyImported });
   const root = mountHost();
   const togglePanel = mountPanel(root, () => void loadPanel());
+  togglePanelRef = togglePanel;
   mountFab(root, {
-    variant: library ? "in-library" : undefined,
-    label: library ? "Add this print profile to Thingport" : "Import to Thingport",
+    variant: library || alreadyImported ? "in-library" : undefined,
+    label: alreadyImported
+      ? "Already in Thingport"
+      : library
+        ? "Add this print profile to Thingport"
+        : "Import to Thingport",
     onClick: togglePanel,
   });
-  reportTabIconState(true);
+  reportTabIconState(!alreadyImported);
 
   // A guided import that stopped early lands back here, so show why.
   if (jobRes?.ok && jobRes.data.error) {
@@ -148,6 +159,11 @@ if (!window.thingportGrabInjected) {
 
   listen<ContentMessages>({
     RESOLVE_MAKERWORLD_DOWNLOAD_URL: () => resolveMakerworldDownloadUrl(location.href).catch(() => null),
+    OPEN_IMPORT_PANEL: () => {
+      if (!togglePanelRef) return false;
+      if (!isPanelOpen()) togglePanelRef();
+      return true;
+    },
   });
 
   installNavigationWatcher();

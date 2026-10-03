@@ -129,3 +129,36 @@ body {
     margin-bottom: t.$space-2;
   }
 }
+
+// "What do I do now?": the action for the page the user is looking at.
+.page {
+  margin-bottom: t.$space-3;
+  padding-bottom: t.$space-3;
+  border-bottom: 1px solid t.c("border");
+
+  &__title {
+    margin: 0;
+    font-size: t.$font-size;
+    font-weight: 700;
+  }
+
+  &__hint {
+    margin: 4px 0 0;
+    font-size: t.$font-size-sm;
+    line-height: 1.4;
+    color: t.c("text-muted");
+  }
+
+  &__links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: t.$space-2;
+    margin-top: t.$space-2;
+
+    .btn {
+      margin-top: 0;
+      text-align: center;
+      text-decoration: none;
+    }
+  }
+}

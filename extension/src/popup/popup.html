@@ -41,6 +41,19 @@
       <section id="configured-view" hidden>
         <p class="note note--first" id="account-text"></p>
         <div class="error" id="rejected-banner" role="alert"></div>
+
+        <section class="page" id="page-section">
+          <h2 class="page__title" id="page-title"></h2>
+          <p class="page__hint" id="page-hint"></p>
+          <button type="button" class="btn" id="page-action" hidden></button>
+          <div class="page__links" id="page-links" hidden>
+            <a class="btn btn--secondary" href="https://makerworld.com/" target="_blank" rel="noopener noreferrer">MakerWorld</a>
+            <a class="btn btn--secondary" href="https://www.printables.com/" target="_blank" rel="noopener noreferrer">Printables</a>
+            <a class="btn btn--secondary" href="https://www.thingiverse.com/" target="_blank" rel="noopener noreferrer">Thingiverse</a>
+          </div>
+          <div class="error" id="page-error" role="alert"></div>
+        </section>
+
         <div class="toggle-row">
           <label for="enabled-switch">Extension enabled</label>
           <input type="checkbox" role="switch" class="switch" id="enabled-switch" />

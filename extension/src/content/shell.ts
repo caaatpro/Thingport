@@ -85,6 +85,10 @@ export function isPanelMounted(): boolean {
   return contentEl !== null;
 }
 
+export function isPanelOpen(): boolean {
+  return panelEl !== null && !panelEl.hidden;
+}
+
 export function renderPanel(html: string): void {
   // The panel may have been torn down mid-flow; the background work continues regardless.
   if (!contentEl) return;

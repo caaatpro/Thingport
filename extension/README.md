@@ -158,6 +158,20 @@ MakerWorld session travel to it.
 Upgrading from a version that signed in with an email and password? The old password is deleted from
 the extension's storage on update, the instance address is kept, and you only need to paste a token.
 
+### After connecting: importing a model
+
+Open a model page on MakerWorld, Printables or Thingiverse. A round Thingport button appears in the
+bottom-right corner of the page; click it, optionally pick a collection, and press **Import**.
+
+You can also do it from the toolbar popup: when the tab you're looking at is a model (or collection)
+page, the popup shows an **Import this model** button that opens the same panel on the page. This
+also works on a tab that was already open when you installed the extension, which browsers don't
+attach content scripts to until the next reload -- the extension attaches itself on demand. On any
+other page the popup shows links to the three sites.
+
+If a model is already in your library, the button stays visible with a check mark and opens a link to
+it, rather than disappearing.
+
 ### MakerWorld: no separate cookie setup needed
 
 Importing from MakerWorld normally requires pasting a session cookie into Thingport's Profile

@@ -79,6 +79,8 @@ export type BackgroundMessages = {
 
 export type ContentMessages = {
   RESOLVE_MAKERWORLD_DOWNLOAD_URL: { payload: void; result: ResolvedDownload | null };
+  /** From the popup's "Import this page" button. False when this page has no import panel to open. */
+  OPEN_IMPORT_PANEL: { payload: void; result: boolean };
 };
 
 type AnyMessages = Record<string, { payload: unknown; result: unknown }>;

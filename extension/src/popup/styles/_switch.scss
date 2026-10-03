@@ -1,5 +1,9 @@
 @use "../../styles/tokens" as t;
 
+.toggle-row + .toggle-row {
+  margin-top: t.$space-2;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;

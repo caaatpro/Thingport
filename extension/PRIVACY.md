@@ -75,6 +75,8 @@ model, and the model links listed on collection pages. It doesn't read any other
 | Storage                                          | Keeps the settings and data listed under "What the extension stores".                          |
 | Cookies                                          | Reads MakerWorld's session cookie, only on makerworld.com, for MakerWorld imports.             |
 | Downloads                                        | Reads the link from the MakerWorld download it starts, then cancels and removes that download. |
+| Active tab                                       | When you open the popup, lets it see the address of the current tab, to offer "Import this model". |
+| Scripting                                        | Attaches the import button to a supported tab that was already open when the extension was installed. |
 | Access to MakerWorld, Printables and Thingiverse | Shows the import button, and MakerWorld's Download normalized button, on their pages.          |
 | Access to your Thingport instance                | Requested for that one address when you set the extension up, so it can talk to your instance. |
 
