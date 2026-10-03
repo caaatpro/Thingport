@@ -3,7 +3,16 @@
 
 import type { Print } from "./api";
 
-export type ExtensionState = { configured: boolean; disabled: boolean; instanceUrl: string; email: string };
+export type ExtensionState = {
+  configured: boolean;
+  disabled: boolean;
+  instanceUrl: string;
+  /** Who the stored token belongs to, for display. */
+  account: string;
+  /** Thingport answered 401: the token was revoked or has expired, so it needs replacing. */
+  tokenRejected: boolean;
+  shareMakerworldSession: boolean;
+};
 
 export type RecentImport = {
   printId: string;
@@ -11,6 +20,7 @@ export type RecentImport = {
   url: string;
   thumbDataUrl: string | null;
   instanceUrl: string;
+  /** The account the import was made with; recent imports are scoped to instance + account. */
   email: string;
 };
 
@@ -47,8 +57,10 @@ export type ApiCallPayload = { method: string; path: string; body?: unknown };
 
 export type BackgroundMessages = {
   GET_STATE: { payload: void; result: ExtensionState };
-  SAVE_CONFIG: { payload: { instanceUrl: string; email: string; password: string }; result: null };
+  SAVE_CONFIG: { payload: { instanceUrl: string; token: string }; result: null };
   SET_DISABLED: { payload: { disabled: boolean }; result: null };
+  SET_SHARE_MAKERWORLD_SESSION: { payload: { share: boolean }; result: null };
+  DISCONNECT: { payload: void; result: null };
   GET_RECENT_IMPORTS: { payload: void; result: RecentImport[] };
   OPEN_SETUP: { payload: void; result: "popup" | "tab" };
   SET_TAB_ICON_STATE: { payload: { active: boolean }; result: null };

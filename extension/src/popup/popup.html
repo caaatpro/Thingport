@@ -39,25 +39,46 @@
 
     <main>
       <section id="configured-view" hidden>
+        <p class="note note--first" id="account-text"></p>
+        <div class="error" id="rejected-banner" role="alert"></div>
         <div class="toggle-row">
           <label for="enabled-switch">Extension enabled</label>
           <input type="checkbox" role="switch" class="switch" id="enabled-switch" />
         </div>
+        <div class="toggle-row">
+          <label for="share-session-switch">Share my MakerWorld session</label>
+          <input type="checkbox" role="switch" class="switch" id="share-session-switch" />
+        </div>
+        <p class="note">
+          Lets your Thingport instance import from MakerWorld as you (needed for some models). Turn it off to keep the
+          cookie in this browser.
+        </p>
         <div class="section" id="recent-section" hidden>
           <h2 class="section__title">Recent imports</h2>
           <div class="recent-grid" id="recent-grid"></div>
         </div>
         <div class="error" id="configured-error" role="alert"></div>
+        <button type="button" class="btn btn--secondary btn--spaced" id="disconnect-btn">Disconnect</button>
       </section>
 
       <form id="setup-form" class="form" hidden>
         <p class="form__intro">Connect to your Thingport instance to import models with one click.</p>
         <label class="form__label" for="instance-url">Thingport instance URL</label>
         <input class="form__input" type="url" id="instance-url" placeholder="https://thingport.example.com" required />
-        <label class="form__label" for="email">Email</label>
-        <input class="form__input" type="email" id="email" autocomplete="username" required />
-        <label class="form__label" for="password">Password</label>
-        <input class="form__input" type="password" id="password" autocomplete="current-password" required />
+        <label class="form__label" for="token">API token</label>
+        <input
+          class="form__input"
+          type="password"
+          id="token"
+          placeholder="tpg_…"
+          autocomplete="off"
+          spellcheck="false"
+          required
+        />
+        <p class="note">
+          In Thingport, open <strong>Profile → API tokens</strong>, create a token and paste it here. Thingport Grab
+          never asks for your password, and you can revoke the token there at any time.
+        </p>
         <p class="note">
           If you're logged into MakerWorld in this browser, Thingport Grab reads your MakerWorld session cookie locally
           to import from it -- it's sent only to the instance URL above, never anywhere else.

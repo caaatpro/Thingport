@@ -237,7 +237,13 @@ async function main(): Promise<void> {
     );
     await worker.evaluate(
       (config) =>
-        chrome.storage.local.set({ ...config, email: "maker@example.com", password: "screenshots", disabled: false }),
+        chrome.storage.local.set({
+          ...config,
+          token: "tpg_screenshotscreenshotscreenshotscreenshot",
+          accountName: "Maker",
+          accountEmail: "maker@example.com",
+          disabled: false,
+        }),
       { instanceUrl, recentImports: recent },
     );
     await screenshotPopup(context, extensionId, "popup-connected.png", "light");

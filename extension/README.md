@@ -135,19 +135,28 @@ Hover the bulb on the button for the same summary.
 
 ## Setup
 
-The popup asks for your instance URL (e.g. `https://thingport.example.com`) and your Thingport
-email/password once. Until that's done, importable pages show a grayed-out Thingport icon; clicking
-it explains what's needed and opens that same setup form (the toolbar popup, or the same form in a
-tab where the browser won't let the extension open its popup itself). Saving requests permission to
-reach that one origin and validates the login before storing anything. After that, the toolbar icon
-turns from the dark/inactive icon to the color/active one, and the floating icon becomes the normal
-import button. Reopen the popup any time to change the instance (the pencil next to its address) or
-flip **Extension enabled** off to pause it without losing the saved setup.
+The popup asks for your instance URL (e.g. `https://thingport.example.com`) and an **API token**.
+Create the token in Thingport under **Profile → API tokens**, then paste it into the popup. The
+extension never sees your account password. Until that's done, importable pages show a grayed-out
+Thingport icon; clicking it explains what's needed and opens that same setup form (the toolbar
+popup, or the same form in a tab where the browser won't let the extension open its popup itself).
+Saving requests permission to reach that one origin and checks the token against your instance
+before storing anything. After that, the toolbar icon turns from the dark/inactive icon to the
+color/active one, and the floating icon becomes the normal import button. Reopen the popup any time
+to change the instance (the pencil next to its address), flip **Extension enabled** off to pause it
+without losing the saved setup, or **Disconnect** to forget the instance and token.
 
-The extension re-authenticates automatically as its session token nears expiry -- there's nothing
-to keep re-entering day to day. If your password changes or a session gets revoked server-side, the
-next import attempt will silently re-login with the stored credentials, or surface a clear error if
-those no longer work.
+A token is **scoped and revocable**. It can only do what the extension needs -- import models, file
+them into collections, and a few reads -- and cannot edit or delete models, change your account or
+manage tokens. Revoke it from the same Profile page at any time; the extension then shows a
+"reconnect" notice and stops working until you paste a new one. Tokens can also be given an expiry.
+
+Plain `http://` is only accepted for `localhost` and private-network addresses (e.g. a home server
+on `192.168.x.x`); anywhere else the instance must use `https://`, because the token and your
+MakerWorld session travel to it.
+
+Upgrading from a version that signed in with an email and password? The old password is deleted from
+the extension's storage on update, the instance address is kept, and you only need to paste a token.
 
 ### MakerWorld: no separate cookie setup needed
 
@@ -157,7 +166,8 @@ reading it -- that's the whole reason for the manual copy/paste). This extension
 cookie directly from your browser instead, using the `cookies` API -- a privileged, extension-only
 capability explicitly allowed to read `HttpOnly` cookies, unlike a regular page's own JavaScript.
 It's sent only to your own Thingport instance, as part of the same import request that needs it,
-exactly like the cookie you'd otherwise paste in by hand -- never anywhere else. If your Thingport
+exactly like the cookie you'd otherwise paste in by hand -- never anywhere else. If you'd rather
+keep it in the browser, turn off **Share my MakerWorld session** in the popup. If your Thingport
 account doesn't already have a MakerWorld cookie saved, the extension also pushes this one to
 Profile > MakerWorld for you, so the plain web app's own imports benefit too, not just ones started
 from the extension.

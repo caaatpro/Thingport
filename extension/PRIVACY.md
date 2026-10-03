@@ -12,11 +12,13 @@ extension's developer never receives any of your data, and nothing is shared wit
 Everything below is kept in your browser's local extension storage, on your device only. It isn't
 synced between browsers or devices.
 
-- **Your Thingport connection:** the address of your Thingport instance, and the email and password
-  you sign in to it with. They're stored as you entered them, so the extension can sign in again
-  when its session expires.
-- **A session token** your Thingport instance issues when the extension signs in.
-- **Your settings:** whether the extension is switched on.
+- **Your Thingport connection:** the address of your Thingport instance and an **API token** you
+  created in Thingport (Profile → API tokens), plus the name and email of the account it belongs
+  to, for display. The token only allows what the extension needs and you can revoke it in
+  Thingport at any time. The extension never asks for or stores your account password; versions
+  before 1.3 did, and delete it when updated.
+- **Your settings:** whether the extension is switched on, and whether it shares your MakerWorld
+  session with your instance.
 - **Recent imports:** the title, a small thumbnail and a link for the last five models you imported
   through the extension, shown in its toolbar popup.
 - **Collection import progress:** while a MakerWorld collection import is running, the list of
@@ -30,7 +32,7 @@ the **provider site you're on**.
 
 **To your Thingport instance:**
 
-- Your email and password, to sign in.
+- Your API token, with every request, to authenticate it.
 - The address of each model page you open on MakerWorld, Printables or Thingiverse, to check
   whether you've already imported that model. This happens when the page opens, so the extension
   knows whether to show its button. On a MakerWorld collection page, the same check runs for each
@@ -78,7 +80,8 @@ model, and the model links listed on collection pages. It doesn't read any other
 
 ## Your control over your data
 
-- Change your Thingport connection, or switch the extension off, from its toolbar popup.
+- Change your Thingport connection, switch the extension off, stop sharing your MakerWorld
+  session, or disconnect entirely, from its toolbar popup. Revoke the token in Thingport.
 - Uninstalling the extension deletes everything it stored.
 - Anything the extension sends to your Thingport instance is stored on your own server, under your
   control, like everything else in your Thingport library.

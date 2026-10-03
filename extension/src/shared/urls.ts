@@ -23,9 +23,26 @@ function isHost(parsed: URL, domain: string): boolean {
   return host === domain || host === `www.${domain}`;
 }
 
+/** The domain itself or one of its subdomains -- never a lookalike such as "evilmakerworld.com", which
+ *  a bare `endsWith("makerworld.com")` would also accept. */
+function isDomainOrSubdomain(hostname: string, domain: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
+const PROVIDER_DOMAINS = ["thingiverse.com", "makerworld.com", "printables.com"];
+
+/** Whether `url` is a page on a site this extension runs on. Used to accept messages only from the
+ *  content scripts it injects there. */
+export function isProviderPageUrl(url: string): boolean {
+  const parsed = parse(url);
+  if (!parsed || (parsed.protocol !== "https:" && parsed.protocol !== "http:")) return false;
+  return PROVIDER_DOMAINS.some((domain) => isDomainOrSubdomain(parsed.hostname, domain));
+}
+
 export function parseMakerworldModelUrl(url: string): { designId: string; requestedInstanceId: string | null } | null {
   const parsed = parse(url);
-  if (!parsed || !parsed.hostname.toLowerCase().endsWith("makerworld.com")) return null;
+  if (!parsed || !isDomainOrSubdomain(parsed.hostname, "makerworld.com")) return null;
   const m = parsed.pathname.match(/\/models?\/(\d+)/i);
   if (!m) return null;
   const hashMatch = parsed.hash.match(/profileid-(\d+)/i);
@@ -40,7 +57,7 @@ export function makerworldModelUrl(designId: string): string {
 export function isMakerworldCollectionUrl(url: string): boolean {
   const parsed = parse(url);
   return Boolean(
-    parsed && parsed.hostname.toLowerCase().endsWith("makerworld.com") && /\/collections\/\d+/i.test(parsed.pathname),
+    parsed && isDomainOrSubdomain(parsed.hostname, "makerworld.com") && /\/collections\/\d+/i.test(parsed.pathname),
   );
 }
 

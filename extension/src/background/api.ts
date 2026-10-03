@@ -1,18 +1,12 @@
-// Every fetch to the Thingport instance goes through here, so auth (including silent re-login) and
-// the instance URL live in one place. The host permission granted at setup bypasses CORS.
+// Every fetch to the Thingport instance goes through here, so auth and the instance URL live in one
+// place. The host permission granted at setup bypasses CORS. Requests carry an API token, never the
+// account password, and are restricted to the endpoints in shared/apiPolicy.ts.
 
-import type { LoginResult } from "../shared/api";
-import { apiUrl } from "../shared/storage";
+import { isApiCallAllowed } from "../shared/apiPolicy";
+import { apiUrl, STORAGE_KEYS } from "../shared/storage";
 import { isMakerworldUrl } from "../shared/urls";
 import { getStoredConfig, isConfigured, type ConfiguredConfig } from "./config";
 import { getLiveMakerworldCookie, maybeSyncMakerworldCookie } from "./makerworldCookie";
-
-const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000;
-
-// The instance never asks the extension for a captcha (see captchaService.ts).
-const CLIENT_HEADERS = { "X-Thingport-Client": "grab" };
-
-type Credentials = Pick<ConfiguredConfig, "instanceUrl" | "email" | "password">;
 
 async function errorDetail(res: Response, fallback: string): Promise<string> {
   try {
@@ -22,32 +16,6 @@ async function errorDetail(res: Response, fallback: string): Promise<string> {
   return fallback;
 }
 
-/** Also called once on a 401, so a password change doesn't require reopening the popup. */
-export async function loginAndStoreToken(credentials: Credentials): Promise<string> {
-  const res = await fetch(apiUrl(credentials.instanceUrl, "/login"), {
-    method: "POST",
-    headers: { ...CLIENT_HEADERS, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: credentials.email, password: credentials.password }),
-  });
-  if (!res.ok) throw new Error(await errorDetail(res, "Could not sign in to this Thingport instance"));
-  const data = (await res.json()) as LoginResult;
-  const tokenExpiresAt = Date.now() + data.expires_in * 1000;
-  await chrome.storage.local.set({ token: data.token, tokenExpiresAt });
-  return data.token;
-}
-
-export async function ensureToken(config: ConfiguredConfig, { forceRefresh = false } = {}): Promise<string> {
-  if (
-    !forceRefresh &&
-    config.token &&
-    config.tokenExpiresAt &&
-    config.tokenExpiresAt - Date.now() > TOKEN_REFRESH_MARGIN_MS
-  ) {
-    return config.token;
-  }
-  return loginAndStoreToken(config);
-}
-
 export async function requireConfig(): Promise<ConfiguredConfig> {
   const config = await getStoredConfig();
   if (!isConfigured(config)) throw new Error("Thingport Grab isn't configured yet -- open the extension popup first.");
@@ -55,13 +23,38 @@ export async function requireConfig(): Promise<ConfiguredConfig> {
   return config;
 }
 
+const TOKEN_REJECTED_MESSAGE =
+  "Thingport rejected this extension's API token -- it was revoked or has expired. Open the extension and connect with a new token.";
+
+async function send(config: ConfiguredConfig, method: string, path: string, body?: unknown): Promise<Response> {
+  if (!isApiCallAllowed(method, path)) {
+    throw new Error(`Thingport Grab doesn't use ${method} ${path.split("?")[0]}, so the request was blocked.`);
+  }
+  const res = await fetch(apiUrl(config.instanceUrl, path), {
+    method,
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    // A redirect would re-send the token to wherever it points.
+    redirect: "error",
+  });
+  if (res.status === 401) {
+    await chrome.storage.local.set({ [STORAGE_KEYS.tokenRejected]: true });
+    throw new Error(TOKEN_REJECTED_MESSAGE);
+  }
+  return res;
+}
+
 /** `path` is after `/api`. MakerWorld `/import*` calls get the live browser cookie attached unless
- *  the caller set one. */
+ *  the caller set one, or the user turned session sharing off. */
 export async function apiCall<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
   const config = await requireConfig();
 
   let finalBody = body as Record<string, unknown> | undefined;
   if (
+    config.shareMakerworldSession !== false &&
     path.startsWith("/import") &&
     finalBody &&
     !finalBody.makerworld_cookie &&
@@ -74,27 +67,13 @@ export async function apiCall<T = unknown>(method: string, path: string, body?: 
     }
   }
 
-  const doFetch = (token: string) =>
-    fetch(apiUrl(config.instanceUrl, path), {
-      method,
-      headers: {
-        ...CLIENT_HEADERS,
-        Authorization: `Bearer ${token}`,
-        ...(finalBody ? { "Content-Type": "application/json" } : {}),
-      },
-      body: finalBody ? JSON.stringify(finalBody) : undefined,
-    });
-
-  let res = await doFetch(await ensureToken(config));
-  if (res.status === 401) res = await doFetch(await ensureToken(config, { forceRefresh: true }));
+  const res = await send(config, method, path, finalBody);
   if (!res.ok) throw new Error(await errorDetail(res, `Request failed (${res.status})`));
   if (res.status === 204) return null as T;
   return (await res.json()) as T;
 }
 
 export async function apiFetchBlob(config: ConfiguredConfig, path: string): Promise<Blob | null> {
-  const res = await fetch(apiUrl(config.instanceUrl, path), {
-    headers: { ...CLIENT_HEADERS, Authorization: `Bearer ${await ensureToken(config)}` },
-  });
+  const res = await send(config, "GET", path);
   return res.ok ? res.blob() : null;
 }

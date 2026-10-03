@@ -28,7 +28,7 @@ export async function recordRecentImport(print: Print, titleHint: string | null)
     url: `${instanceUrl}/models/${print.id}`,
     thumbDataUrl: thumbPath ? await fetchThumbDataUrl(config, thumbPath).catch(() => null) : null,
     instanceUrl,
-    email: config.email,
+    email: config.accountEmail ?? "",
   };
   // Another profile of a listed model moves it to the front instead of adding a slot.
   const rest = (await readStored()).filter(
@@ -68,5 +68,5 @@ export async function getRecentImports(): Promise<RecentImport[]> {
   const config = await getStoredConfig();
   if (!isConfigured(config)) return [];
   const instanceUrl = normalizeInstanceUrl(config.instanceUrl);
-  return (await readStored()).filter((e) => e.instanceUrl === instanceUrl && e.email === config.email);
+  return (await readStored()).filter((e) => e.instanceUrl === instanceUrl && e.email === (config.accountEmail ?? ""));
 }

@@ -21,8 +21,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
     "lint:firefox": "npm run build:firefox && web-ext lint --source-dir dist/firefox",
-    "verify": "npm run typecheck && npm run lint && npm run build",
-    "release:dry-run": "semantic-release --dry-run --no-ci"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
+    "release:dry-run": "semantic-release --dry-run --no-ci",
+    "test": "tsx --test tests/*.test.ts"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^7.0.0",

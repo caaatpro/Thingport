@@ -34,4 +34,9 @@
     @include m.button-secondary;
     margin-top: t.$space-2;
   }
+
+  // Sits apart from the content above it (the destructive action at the bottom of the popup).
+  &--spaced {
+    margin-top: 16px;
+  }
 }

@@ -1,5 +1,5 @@
 // The grayed-out icon's dialog. Setup happens in an extension page: saving needs a host-permission
-// prompt, and the password never enters this page's DOM.
+// prompt, and the token never enters this page's DOM.
 
 import { send } from "../shared/messages";
 import { fillIcons } from "../shared/icon";
@@ -19,16 +19,16 @@ export function openSetupModal(root: ShadowRoot): void {
       </div>
       <div class="tg-hint">
         To import from this page, Thingport Grab needs to know where your Thingport instance is
-        and how to sign in to it:
+        and an API token to use it with:
       </div>
       <ul class="tg-modal__list">
         <li><strong>Instance URL</strong>, e.g. https://thingport.example.com</li>
-        <li><strong>Email</strong> and <strong>password</strong> of your Thingport account</li>
+        <li>An <strong>API token</strong>, created in Thingport under Profile → API tokens (revocable any time)</li>
       </ul>
       <div class="tg-hint">
-        They're stored only in this browser's extension storage and sent only to your own
-        instance. You can also open this any time from the Thingport Grab icon in your browser
-        toolbar.
+        Your account password is never asked for. The token is stored only in this browser's
+        extension storage and sent only to your own instance. You can also open this any time from
+        the Thingport Grab icon in your browser toolbar.
       </div>
       <button class="tg-btn" type="button" data-action="open-setup">Open setup</button>
       <div class="tg-hint tg-modal__status" hidden></div>
