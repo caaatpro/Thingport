@@ -9,21 +9,13 @@ import { inspectPreparedPrint } from "./preparedPrint";
 import {
   availableModelName,
   availablePlateFilename,
-  ensurePlateThumbnail,
-  extractFusionThumbnail,
   managedPlatePath,
   pruneEmptyStorageDirs,
   renderPlateStoragePath,
-  renderPlateThumbnail,
-  saveThumbFromFile,
 } from "./printService";
-import { generateModelPreviewGlb } from "./modelPreviewCache";
 import { deleteNormalized3mf } from "./normalized3mfCache";
-import { getPreviewMode } from "./settingsService";
 import { Prisma } from "@prisma/client";
 import type { Plate, Print } from "@prisma/client";
-
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".bmp"]);
 
 export type NewPlateInput = {
   /** Untrusted; will be sanitized. */
@@ -79,25 +71,6 @@ async function resolveSize(input: NewPlateInput, effectivePath: string | null): 
     return stat.size;
   } catch {
     return 0;
-  }
-}
-
-async function thumbnailAndSniff(plateId: string, filename: string, mime: string, effectivePath: string | null) {
-  if (!effectivePath || !fsSync.existsSync(effectivePath)) return;
-  const ext = path.extname(filename).toLowerCase();
-  if (mime.toLowerCase().startsWith("image/") && IMAGE_EXTS.has(ext)) {
-    await saveThumbFromFile(plateId, effectivePath);
-  } else if (ext === ".3mf") {
-    await ensurePlateThumbnail(plateId, effectivePath);
-    // "on-demand" builds the preview on first view, "disabled" never. Not awaited: it can be slow.
-    if ((await getPreviewMode()) === "automatic") void generateModelPreviewGlb(plateId, effectivePath);
-  } else if (ext === ".f3d" || ext === ".f3z") {
-    // No in-browser 3D for Fusion files; the embedded PNG is the preview.
-    await extractFusionThumbnail(plateId, effectivePath);
-  } else if (ext === ".stl" || ext === ".obj" || ext === ".step" || ext === ".stp") {
-    // No embedded preview; render one server-side. Not awaited — the CPU rasterize shouldn't hold
-    // up the upload response.
-    void renderPlateThumbnail(plateId, effectivePath);
   }
 }
 
@@ -159,7 +132,10 @@ async function createPlateAtPosition(
     throw err;
   }
 
-  await thumbnailAndSniff(record.id, desiredFilename, mime, effectivePath);
+  // Thumbnail / preview / geometry run off-request in the durable processing queue. Dynamic import
+  // avoids a static import cycle (processingQueue imports resolvePlateFilePath from here).
+  const { enqueuePlate } = await import("./processingQueue");
+  await enqueuePlate(record.id);
   return { record, effectivePath };
 }
 

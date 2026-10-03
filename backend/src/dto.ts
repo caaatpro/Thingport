@@ -94,6 +94,8 @@ export type PlateOut = {
   /** Bounding-box size in model units (mm by convention); null for files we haven't measured. */
   dim_mm: { x: number; y: number; z: number } | null;
   triangle_count: number | null;
+  /** Background processing state: "queued" | "processing" | "ready" | "failed". */
+  processing_status: string;
 };
 
 export type PrintFileOut = {
@@ -197,6 +199,7 @@ export function toPlateOut(printId: string, plate: Plate): PlateOut {
         ? { x: plate.dimXmm, y: plate.dimYmm, z: plate.dimZmm }
         : null,
     triangle_count: plate.triangleCount ?? null,
+    processing_status: plate.processingStatus.toLowerCase(),
   };
 }
 
