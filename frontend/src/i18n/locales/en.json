@@ -1227,7 +1227,11 @@
       "addedToFavorites": "Added \"{{name}}\" to Favourites",
       "removedFromFavorites": "Removed \"{{name}}\" from Favourites",
       "importedFrom": "Imported from {{provider}}",
-      "uploadedDirectly": "Uploaded directly to Thingport"
+      "uploadedDirectly": "Uploaded directly to Thingport",
+      "filesCount_one": "{{count}} file",
+      "filesCount_other": "{{count}} files",
+      "processing": "Processing…",
+      "processingFailed": "Preview failed"
     },
     "detail": {
       "subtitle": "Model",
@@ -1495,6 +1499,15 @@
       "mine": "My models",
       "shared": "Shared with me",
       "all": "All"
+    },
+    "files": {
+      "title_one": "File ({{count}})",
+      "title_other": "Files ({{count}})",
+      "downloadAll": "Download all (zip)",
+      "processing": "Processing",
+      "failed": "Processing failed",
+      "prepared": "Prepared print",
+      "supporting": "Supporting file"
     }
   }
 }

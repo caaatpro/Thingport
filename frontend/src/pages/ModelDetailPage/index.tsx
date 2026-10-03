@@ -28,6 +28,7 @@ import Model3DPreviewModal from "./Model3DPreviewModal";
 import ModelActionsMenu from "./ModelActionsMenu";
 import FavoriteButton from "./FavoriteButton";
 import ModelSidePanel from "./ModelSidePanel";
+import ModelFilesPanel from "./ModelFilesPanel";
 
 type Props = {
   theme: ResolvedTheme;
@@ -280,6 +281,8 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
               />
             </Box>
           )}
+
+          <ModelFilesPanel print={print} onUnauthorized={onUnauthorized} onUpdated={setPrint} />
 
           <Paper
             variant="outlined"

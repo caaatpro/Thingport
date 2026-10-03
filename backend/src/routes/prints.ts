@@ -234,6 +234,7 @@ router.get(
         plates: { orderBy: { position: "asc" } },
         previewImages: { orderBy: { position: "asc" } },
         author: true,
+        category: true,
         user: { select: { id: true, displayName: true } },
         shares: { select: { sharedWithUserId: true } },
       },
@@ -281,7 +282,7 @@ router.get(
     const out = paged.map((p) => {
       const printFiles = filesByPrint.get(p.id) ?? [];
       const preparedFile = p.preparedFileId ? (printFiles.find((f) => f.id === p.preparedFileId) ?? null) : null;
-      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, undefined, {
+      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, p.category, {
         viewerId: req.userId,
         shares: p.shares,
         owner: { id: p.user.id, display_name: p.user.displayName },

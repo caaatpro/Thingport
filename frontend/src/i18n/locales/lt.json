@@ -1229,7 +1229,12 @@
       "addedToFavorites": "\"{{name}}\" pridėtas prie Mėgstamiausių",
       "removedFromFavorites": "\"{{name}}\" pašalintas iš Mėgstamiausių",
       "importedFrom": "Importuota iš {{provider}}",
-      "uploadedDirectly": "Įkelta tiesiai į Thingport"
+      "uploadedDirectly": "Įkelta tiesiai į Thingport",
+      "filesCount_one": "{{count}} failas",
+      "filesCount_few": "{{count}} failai",
+      "filesCount_other": "{{count}} failų",
+      "processing": "Apdorojama…",
+      "processingFailed": "Peržiūra nepavyko"
     },
     "detail": {
       "subtitle": "Modelis",
@@ -1503,6 +1508,16 @@
       "mine": "Mano modeliai",
       "shared": "Pasidalinta su manimi",
       "all": "Visi"
+    },
+    "files": {
+      "title_one": "Failas ({{count}})",
+      "title_few": "Failai ({{count}})",
+      "title_other": "Failų ({{count}})",
+      "downloadAll": "Atsisiųsti viską (zip)",
+      "processing": "Apdorojama",
+      "failed": "Apdorojimas nepavyko",
+      "prepared": "Paruoštas spausdinimui",
+      "supporting": "Papildomas failas"
     }
   }
 }

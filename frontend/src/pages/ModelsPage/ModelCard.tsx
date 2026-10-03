@@ -7,7 +7,9 @@ import Stack from "@mui/material/Stack";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
+import Chip from "@mui/material/Chip";
 import { useTheme } from "@mui/material/styles";
+import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
 import { type Print, printsApi } from "../../api/prints";
@@ -207,19 +209,79 @@ export default function ModelCard({
           )}
         </Stack>
         {(() => {
-          const ext = item.plates[0]?.filename.split(".").pop()?.toUpperCase();
+          const exts = [
+            ...new Set(
+              item.plates
+                .map((p) => p.filename.split(".").pop()?.toUpperCase() ?? "")
+                .filter((e) => e && e.length <= 5),
+            ),
+          ];
           const d = item.plates[0]?.dim_mm;
           const dims = d ? `${Math.round(d.x)}×${Math.round(d.y)}×${Math.round(d.z)} mm` : null;
-          const parts = [
-            ext && ext.length <= 5 ? ext : null,
+          const fileCount = item.plates.length + (item.supporting_file_count || 0);
+          const line1 = [
+            exts.length ? exts.join(", ") : null,
             typeof item.total_size === "number" && item.total_size > 0 ? formatFileSize(item.total_size) : null,
             dims,
           ].filter(Boolean);
-          return parts.length ? (
-            <Typography variant="caption" sx={{ color: "#9aa0a6", display: "block", mt: 0.25 }}>
-              {parts.join(" · ")}
-            </Typography>
-          ) : null;
+          const created = item.created_at ? new Date(item.created_at).toLocaleDateString() : null;
+          const shownTags = item.tags.slice(0, 3);
+          const moreTags = item.tags.length - shownTags.length;
+          const processing = item.plates.some((p) => p.processing_status === "queued" || p.processing_status === "processing");
+          const failed = item.plates.some((p) => p.processing_status === "failed");
+          return (
+            <Box sx={{ mt: 0.25 }}>
+              {line1.length > 0 && (
+                <Typography variant="caption" sx={{ color: "#9aa0a6", display: "block" }}>
+                  {line1.join(" · ")}
+                </Typography>
+              )}
+              <Stack direction="row" alignItems="center" spacing={0.75} sx={{ color: "#9aa0a6", mt: 0.25, minWidth: 0 }}>
+                {item.category_name && (
+                  <Stack direction="row" alignItems="center" spacing={0.25} sx={{ minWidth: 0 }}>
+                    <FolderOutlinedIcon sx={{ fontSize: 13 }} />
+                    <Typography variant="caption" noWrap title={item.category_name}>
+                      {item.category_name}
+                    </Typography>
+                  </Stack>
+                )}
+                {fileCount > 1 && (
+                  <Typography variant="caption" sx={{ flexShrink: 0 }}>
+                    {t("models:card.filesCount", { count: fileCount })}
+                  </Typography>
+                )}
+                {created && (
+                  <Typography variant="caption" sx={{ flexShrink: 0, ml: "auto !important" }}>
+                    {created}
+                  </Typography>
+                )}
+              </Stack>
+              {(shownTags.length > 0 || processing || failed) && (
+                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap", rowGap: 0.5 }}>
+                  {processing && <Chip size="small" label={t("models:card.processing")} sx={{ height: 20, fontSize: 11 }} />}
+                  {failed && (
+                    <Chip
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      label={t("models:card.processingFailed")}
+                      sx={{ height: 20, fontSize: 11 }}
+                    />
+                  )}
+                  {shownTags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      size="small"
+                      variant="outlined"
+                      label={tag}
+                      sx={{ height: 20, fontSize: 11, maxWidth: 110, bgcolor: "background.paper" }}
+                    />
+                  ))}
+                  {moreTags > 0 && <Chip size="small" variant="outlined" label={`+${moreTags}`} sx={{ height: 20, fontSize: 11 }} />}
+                </Stack>
+              )}
+            </Box>
+          );
         })()}
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.75 }}>
           <AuthorHoverCard

@@ -298,7 +298,8 @@ export function toPrintOut(
     author: author ? toAuthorOut(author) : null,
     tags: print.tags,
     category_id: print.categoryId,
-    category_name: category?.name ?? null,
+    // A category is the owner's private filing folder, so it isn't shown to someone it's shared with.
+    category_name: access?.viewerId && print.userId !== access.viewerId ? null : (category?.name ?? null),
     created_at: print.createdAt.toISOString(),
     storage_path: storageParentDir(sortedPlates),
     plates: plateOuts,
