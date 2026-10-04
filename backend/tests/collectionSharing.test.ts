@@ -91,7 +91,7 @@ describe("sharing a collection shares the models in it", () => {
       .get("/api/prints")
       .query({ collection_id: collectionId })
       .set(auth(friend.token));
-    expect(inCollection.body.map((p: { id: string }) => p.id).sort()).toEqual([inside, later].sort());
+    expect(inCollection.body.map((p: { id: string }) => p.id).toSorted()).toEqual([inside, later].toSorted());
 
     const sharedTab = await request(app).get("/api/prints").query({ scope: "shared" }).set(auth(friend.token));
     const sharedIds = sharedTab.body.map((p: { id: string }) => p.id);
