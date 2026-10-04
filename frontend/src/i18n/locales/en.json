@@ -1504,7 +1504,8 @@
       "searchPlaceholder": "Search members…",
       "empty": "No other members to share with yet.",
       "loadFailed": "Couldn't load sharing.",
-      "saveFailed": "Couldn't update sharing."
+      "saveFailed": "Couldn't update sharing.",
+      "collectionHint": "Everyone you pick sees every model in this collection, including models you add to it later. They can view and download them, but not change them."
     },
     "upload": {
       "dropHere": "Drop models to upload",

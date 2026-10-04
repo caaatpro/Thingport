@@ -39,7 +39,10 @@ async function searchPrintIds(userId: string, tsQuery: string, limit: number): P
     SELECT "id"
     FROM "Print"
     WHERE ("userId" = ${userId}
-           OR EXISTS (SELECT 1 FROM "PrintShare" ps WHERE ps."printId" = "Print"."id" AND ps."sharedWithUserId" = ${userId}))
+           OR EXISTS (SELECT 1 FROM "PrintShare" ps WHERE ps."printId" = "Print"."id" AND ps."sharedWithUserId" = ${userId})
+           OR EXISTS (SELECT 1 FROM "CollectionItem" ci
+                      JOIN "CollectionShare" cs ON cs."collectionId" = ci."collectionId"
+                      WHERE ci."printId" = "Print"."id" AND cs."sharedWithUserId" = ${userId}))
       AND "searchVector" @@ to_tsquery('simple'::regconfig, ${tsQuery})
     ORDER BY ts_rank("searchVector", to_tsquery('simple'::regconfig, ${tsQuery})) DESC, "name" ASC
     LIMIT ${limit}

@@ -192,6 +192,7 @@ export default function CollectionActionsMenu({
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         name={collection.name}
+        hint={t("models:share.collectionHint")}
         loadShares={() => collectionsApi.listShares(collection.id)}
         saveShares={(ids) => collectionsApi.setShares(collection.id, ids)}
         onSaved={() => {

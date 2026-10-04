@@ -15,7 +15,7 @@ import { previewImagePath, deleteAllPreviewImages } from "../services/previewIma
 import { deleteAuthorIfOrphaned, getLinkedAuthorIds } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
-import { printReadWhere, collectionReadWhere } from "../services/access";
+import { printReadWhere, collectionReadWhere, sharedViaCollectionSelect, sharedWithMeWhere } from "../services/access";
 import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
 import { RENDERABLE_MODEL_EXTS } from "../config";
 import { estimateDownloadSize, resolvePrintsForDownload, sendPrintsZip } from "../services/downloadZip";
@@ -67,9 +67,9 @@ async function buildPrintWhere(req: Request): Promise<Prisma.PrintWhereInput> {
 
   const where: Prisma.PrintWhereInput =
     scope === "shared"
-      ? { userId: { not: me }, shares: { some: { sharedWithUserId: me } } }
+      ? { userId: { not: me }, ...sharedWithMeWhere(me) }
       : scope === "all"
-        ? { OR: [{ userId: me }, { shares: { some: { sharedWithUserId: me } } }] }
+        ? printReadWhere(me)
         : { userId: me };
   // AND clauses so the self-author and search OR groups don't clobber each other.
   const andClauses: Prisma.PrintWhereInput[] = [];
@@ -192,7 +192,11 @@ router.post(
       const collectionId = (body.collection_id || "").trim();
       if (collectionId && !systemCollectionKeyForId(collectionId) && printsOut.length) {
         const owned = await prisma.collection.findFirst({ where: { id: collectionId, userId: req.userId } });
-        if (owned) await addPrintsToCollection(collectionId, printsOut.map((p) => p.id));
+        if (owned)
+          await addPrintsToCollection(
+            collectionId,
+            printsOut.map((p) => p.id),
+          );
       }
       res.json({ prints: printsOut });
     } finally {
@@ -237,6 +241,7 @@ router.get(
         category: true,
         user: { select: { id: true, displayName: true } },
         shares: { select: { sharedWithUserId: true } },
+        collectionItems: sharedViaCollectionSelect,
       },
     });
     const prints = tagList.length ? allMatching.filter((p) => matchesTagList(p.tags, tagList)) : allMatching;
@@ -285,6 +290,7 @@ router.get(
       return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, p.category, {
         viewerId: req.userId,
         shares: p.shares,
+        viaCollection: p.collectionItems.length > 0,
         owner: { id: p.user.id, display_name: p.user.displayName },
       });
     });
@@ -646,7 +652,11 @@ router.get(
       include: { sharedWithUser: { select: { id: true, displayName: true, email: true } } },
     });
     res.json(
-      shares.map((s) => ({ user_id: s.sharedWithUserId, display_name: s.sharedWithUser.displayName, email: s.sharedWithUser.email })),
+      shares.map((s) => ({
+        user_id: s.sharedWithUserId,
+        display_name: s.sharedWithUser.displayName,
+        email: s.sharedWithUser.email,
+      })),
     );
   }),
 );
@@ -674,7 +684,12 @@ router.put(
         }),
       ),
     ]);
-    void createLog({ userId: req.userId!, action: "model_shared", targetId: req.params.id, details: { count: targetIds.length } });
+    void createLog({
+      userId: req.userId!,
+      action: "model_shared",
+      targetId: req.params.id,
+      details: { count: targetIds.length },
+    });
     res.json(await printOutById(req.userId!, req.params.id));
   }),
 );

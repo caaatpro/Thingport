@@ -408,8 +408,8 @@ model PrintShare {
   @@index([sharedWithUserId])
 }
 
-/// Grants one user visibility of another user's Collection listing. Per-model access inside it is
-/// still governed by PrintShare, so a private model in a shared collection stays hidden.
+/// Grants one user visibility of another user's Collection AND every model in it, including models
+/// added later (see services/access.ts). Writes stay owner-only.
 model CollectionShare {
   id               String     @id @default(cuid())
   collectionId     String

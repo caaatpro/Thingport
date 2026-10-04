@@ -1512,7 +1512,8 @@
       "searchPlaceholder": "Ieškoti narių…",
       "empty": "Kol kas nėra kitų narių, su kuriais galėtumėte pasidalinti.",
       "loadFailed": "Nepavyko įkelti bendrinimo.",
-      "saveFailed": "Nepavyko atnaujinti bendrinimo."
+      "saveFailed": "Nepavyko atnaujinti bendrinimo.",
+      "collectionHint": "Kiekvienas pasirinktas narys mato visus šios kolekcijos modelius, įskaitant vėliau pridėtus. Jie gali juos peržiūrėti ir atsisiųsti, bet ne keisti."
     },
     "upload": {
       "dropHere": "Nuvilkite modelius įkėlimui",

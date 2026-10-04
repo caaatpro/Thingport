@@ -140,7 +140,7 @@ export type PrintOut = {
   // source_url is the reconstructed original model page.
   source_provider: string | null;
   source_url: string | null;
-  // Targeted sharing. "shared" iff the model has at least one PrintShare. is_owner is false when the
+  // Targeted sharing. "shared" iff the model has a PrintShare or is in a collection that is shared. is_owner is false when the
   // viewer only has shared access; owner is populated only then (so the UI can show "shared by X").
   visibility: "private" | "shared";
   is_owner: boolean;
@@ -151,6 +151,8 @@ export type PrintOut = {
 export type PrintAccessCtx = {
   viewerId?: string;
   shares?: { sharedWithUserId: string }[];
+  /** The model sits in one of the owner's collections that is shared with someone. */
+  viaCollection?: boolean;
   owner?: { id: string; display_name: string } | null;
 };
 
@@ -315,7 +317,7 @@ export function toPrintOut(
     is_favorite: print.favoritedAt !== null,
     source_provider: print.sourceProvider,
     source_url: buildImportSourceUrl(print.sourceProvider, print.sourceExternalId),
-    visibility: (access?.shares?.length ?? 0) > 0 ? "shared" : "private",
+    visibility: (access?.shares?.length ?? 0) > 0 || access?.viaCollection ? "shared" : "private",
     is_owner: access?.viewerId ? print.userId === access.viewerId : true,
     owner: access?.viewerId && print.userId !== access.viewerId ? (access.owner ?? null) : null,
     shared_with_count: access?.shares?.length ?? 0,

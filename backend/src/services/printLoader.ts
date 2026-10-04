@@ -1,14 +1,20 @@
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { toPrintOut, type PrintOut } from "../dto";
-import { printReadWhere } from "./access";
+import { printReadWhere, sharedViaCollectionSelect } from "./access";
 import type { Author, Category, Plate, PreviewImage, Print, PrintFile } from "@prisma/client";
 
 type OwnerSel = { id: string; displayName: string };
 type ShareSel = { sharedWithUserId: string };
 
 export type FullPrint = {
-  print: Print & { author: Author | null; category: Category | null; user: OwnerSel; shares: ShareSel[] };
+  print: Print & {
+    author: Author | null;
+    category: Category | null;
+    user: OwnerSel;
+    shares: ShareSel[];
+    collectionItems: { id: string }[];
+  };
   plates: Plate[];
   files: PrintFile[];
   preparedFile: PrintFile | null;
@@ -25,6 +31,7 @@ export async function loadFullPrint(userId: string, printId: string): Promise<Fu
       category: true,
       user: { select: { id: true, displayName: true } },
       shares: { select: { sharedWithUserId: true } },
+      collectionItems: sharedViaCollectionSelect,
     },
   });
   if (!print) throw new HttpError(404, "Print not found");
@@ -49,7 +56,12 @@ export async function printOutById(userId: string, printId: string): Promise<Pri
     full.print.author,
     full.previewImages,
     full.print.category,
-    { viewerId: userId, shares: full.print.shares, owner: { id: full.print.user.id, display_name: full.print.user.displayName } },
+    {
+      viewerId: userId,
+      shares: full.print.shares,
+      viaCollection: full.print.collectionItems.length > 0,
+      owner: { id: full.print.user.id, display_name: full.print.user.displayName },
+    },
   );
 }
 
@@ -74,6 +86,7 @@ export async function printOutsByIds(userId: string, printIds: string[]): Promis
         author: true,
         user: { select: { id: true, displayName: true } },
         shares: { select: { sharedWithUserId: true } },
+        collectionItems: sharedViaCollectionSelect,
       },
     }),
     prisma.plate.findMany({ where: { printId: { in: printIds } }, orderBy: { position: "asc" } }),
@@ -96,7 +109,12 @@ export async function printOutsByIds(userId: string, printIds: string[]): Promis
         print.author,
         previewsByPrint.get(print.id) || [],
         undefined,
-        { viewerId: userId, shares: print.shares, owner: { id: print.user.id, display_name: print.user.displayName } },
+        {
+          viewerId: userId,
+          shares: print.shares,
+          viaCollection: print.collectionItems.length > 0,
+          owner: { id: print.user.id, display_name: print.user.displayName },
+        },
       ),
     );
   }

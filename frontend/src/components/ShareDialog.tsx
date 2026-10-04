@@ -24,6 +24,8 @@ type Props = {
   onClose: () => void;
   /** Resource name, shown in the title. */
   name: string;
+  /** Extra explanation under the summary, e.g. what sharing a collection includes. */
+  hint?: string;
   loadShares: () => Promise<ShareUser[]>;
   saveShares: (userIds: string[]) => Promise<void>;
   onSaved?: () => void;
@@ -31,7 +33,16 @@ type Props = {
 };
 
 /** Targeted-sharing picker: toggle which members can see a model or collection. */
-export default function ShareDialog({ open, onClose, name, loadShares, saveShares, onSaved, onUnauthorized }: Props) {
+export default function ShareDialog({
+  open,
+  onClose,
+  name,
+  hint,
+  loadShares,
+  saveShares,
+  onSaved,
+  onUnauthorized,
+}: Props) {
   const { t } = useTranslation(["models", "common"]);
   const [users, setUsers] = useState<DirectoryUser[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -104,6 +115,11 @@ export default function ShareDialog({ open, onClose, name, loadShares, saveShare
               ? t("models:share.summaryShared", { count: selected.size })
               : t("models:share.summaryPrivate")}
           </Typography>
+          {hint && (
+            <Typography variant="caption" color="text.secondary">
+              {hint}
+            </Typography>
+          )}
           {error && <Alert severity="error">{error}</Alert>}
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -122,7 +138,10 @@ export default function ShareDialog({ open, onClose, name, loadShares, saveShare
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
-              <List dense sx={{ maxHeight: 280, overflowY: "auto", border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
+              <List
+                dense
+                sx={{ maxHeight: 280, overflowY: "auto", border: "1px solid", borderColor: "divider", borderRadius: 1 }}
+              >
                 {filtered.map((u) => (
                   <ListItemButton key={u.id} onClick={() => toggle(u.id)} dense>
                     <Checkbox edge="start" size="small" checked={selected.has(u.id)} tabIndex={-1} disableRipple />
