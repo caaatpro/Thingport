@@ -131,7 +131,10 @@ async function fetchOrderPage(): Promise<{ doc: Document; url: string } | null> 
 /** Starts one file's download and returns the link the browser resolved it to (null if none). */
 async function captureFileUrl(fileUrl: string): Promise<string | null> {
   const armed = await send("ARM_DOWNLOAD_CAPTURE");
-  if (!armed || !armed.ok) return null;
+  if (!armed || !armed.ok) {
+    lastCults3dFailure = `The extension could not prepare the download capture (${armed && !armed.ok ? armed.error : "no answer"}).`;
+    return null;
+  }
   const link = document.createElement("a");
   link.href = fileUrl;
   link.setAttribute("download", "");
@@ -146,6 +149,15 @@ async function captureFileUrl(fileUrl: string): Promise<string | null> {
 /** Null when there's no free download here (paid model, signed out) or no file link could be captured. */
 export async function resolveCults3dDownloadUrl(): Promise<ResolvedDownload | null> {
   lastCults3dFailure = "";
+  try {
+    return await resolveOrder();
+  } catch (err) {
+    lastCults3dFailure = `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+    return null;
+  }
+}
+
+async function resolveOrder(): Promise<ResolvedDownload | null> {
   const order = await fetchOrderPage();
   if (!order) return null;
   const listed = parseOrderFiles(order.doc, order.url);

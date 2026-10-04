@@ -207,7 +207,7 @@ async function runDirectImport(opts?: { entries?: string[] }): Promise<void> {
  *  reason an import from it fails. */
 function importErrorHint(): string | undefined {
   if (ctx().classification.provider === "cults3d") {
-    const why = lastCults3dFailure ? ` (${lastCults3dFailure})` : "";
+    const why = ` (${lastCults3dFailure || "no reason recorded -- reload the extension on chrome://extensions and this page, then try again"})`;
     return `Cults3D only gives files to signed-in users, and only free models can be imported. Log in to cults3d.com in this browser, check the page has a free Download button, reload it and try again${why}.`;
   }
   return ctx().classification.provider === "makerworld"
