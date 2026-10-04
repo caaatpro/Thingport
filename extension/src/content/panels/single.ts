@@ -4,7 +4,7 @@
 import type { InspectResult, ZipEntriesResult } from "../../shared/api";
 import { request } from "../../shared/messages";
 import { ctx } from "../context";
-import { resolveCults3dDownloadUrl } from "../cults3d/downloadResolver";
+import { lastCults3dFailure, resolveCults3dDownloadUrl } from "../cults3d/downloadResolver";
 import { resolveMakerworldDownloadUrl, resolveMakerworldProfileDownload } from "../makerworld/downloadResolver";
 import {
   currentMakerworldProfileTitle,
@@ -207,7 +207,8 @@ async function runDirectImport(opts?: { entries?: string[] }): Promise<void> {
  *  reason an import from it fails. */
 function importErrorHint(): string | undefined {
   if (ctx().classification.provider === "cults3d") {
-    return "Cults3D only gives files to signed-in users, and only free models can be imported. Log in to cults3d.com in this browser, check the page has a free Download button, reload it and try again.";
+    const why = lastCults3dFailure ? ` (${lastCults3dFailure})` : "";
+    return `Cults3D only gives files to signed-in users, and only free models can be imported. Log in to cults3d.com in this browser, check the page has a free Download button, reload it and try again${why}.`;
   }
   return ctx().classification.provider === "makerworld"
     ? "MakerWorld only lets signed-in users download files. Log in to makerworld.com in this browser, make sure “Share my MakerWorld session” is on in the Thingport Grab popup, reload the page and try again."

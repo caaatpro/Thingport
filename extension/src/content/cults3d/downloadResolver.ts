@@ -87,31 +87,45 @@ export function parseOrderFiles(doc: Document, base: string): { url: string; fil
   return files;
 }
 
-async function fetchOrderPage(): Promise<{ doc: Document; url: string } | null> {
-  const onOrderPage = /\/orders\/\d+/.test(location.pathname);
-  if (onOrderPage) return { doc: document, url: location.href };
-  const form = document.querySelector<HTMLFormElement>('form[action*="/free_orders"]');
-  if (!form) return null;
+/** Why the last resolution came up empty, for the panel's error text. */
+export let lastCults3dFailure = "";
+
+async function fetchText(url: string, init: RequestInit): Promise<{ doc: Document; url: string } | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const body = new URLSearchParams();
-    for (const [key, value] of new FormData(form)) if (typeof value === "string") body.append(key, value);
-    const res = await fetch(new URL(form.getAttribute("action") || "", location.href).href, {
-      method: "POST",
-      body,
-      credentials: "same-origin",
-      headers: { Accept: "text/html" },
-      signal: controller.signal,
-    });
-    if (!res.ok) return null;
-    const doc = new DOMParser().parseFromString(await res.text(), "text/html");
-    return { doc, url: res.url };
+    const res = await fetch(url, { ...init, credentials: "same-origin", signal: controller.signal });
+    if (!res.ok) {
+      lastCults3dFailure = `Cults3D answered ${res.status} for ${new URL(url).pathname}.`;
+      return null;
+    }
+    return { doc: new DOMParser().parseFromString(await res.text(), "text/html"), url: res.url };
   } catch {
+    lastCults3dFailure = "The request to Cults3D failed or timed out.";
     return null;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** The order page: this page itself, the page the free-download form leads to, or -- when the model was
+ *  already ordered -- the existing order the page links to. */
+async function fetchOrderPage(): Promise<{ doc: Document; url: string } | null> {
+  if (/\/orders\/\d+/.test(location.pathname)) return { doc: document, url: location.href };
+  const form = document.querySelector<HTMLFormElement>('form[action*="/free_orders"]');
+  if (form) {
+    const body = new URLSearchParams();
+    for (const [key, value] of new FormData(form)) if (typeof value === "string") body.append(key, value);
+    const action = new URL(form.getAttribute("action") || "", location.href).href;
+    return fetchText(action, { method: "POST", body, headers: { Accept: "text/html" } });
+  }
+  const existing = [...document.querySelectorAll<HTMLAnchorElement>('a[href*="/orders/"]')].find((a) =>
+    /\/orders\/\d+\/?$/.test(a.pathname),
+  );
+  if (existing) return fetchText(existing.href, { headers: { Accept: "text/html" } });
+  lastCults3dFailure =
+    "There is no free Download button on this page (a paid model, or you are not logged in to Cults3D here).";
+  return null;
 }
 
 /** Starts one file's download and returns the link the browser resolved it to (null if none). */
@@ -131,13 +145,18 @@ async function captureFileUrl(fileUrl: string): Promise<string | null> {
 
 /** Null when there's no free download here (paid model, signed out) or no file link could be captured. */
 export async function resolveCults3dDownloadUrl(): Promise<ResolvedDownload | null> {
+  lastCults3dFailure = "";
   const order = await fetchOrderPage();
   if (!order) return null;
   const listed = parseOrderFiles(order.doc, order.url);
+  if (!listed.length) lastCults3dFailure = "The order page lists no downloadable files.";
   const files: { url: string; filename: string }[] = [];
   for (const file of listed) {
     const captured = await captureFileUrl(file.url);
     if (captured) files.push({ url: captured, filename: file.filename });
+  }
+  if (listed.length && !files.length) {
+    lastCults3dFailure = "Cults3D's file links started no download that the extension could capture.";
   }
   if (!files.length) return null;
   return { downloadUrl: files[0].url, instanceId: null, pageMeta: readCults3dPageMeta(), files };
