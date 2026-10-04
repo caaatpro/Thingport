@@ -1309,6 +1309,7 @@
       "removeFromCollection": "Remove from collection",
       "confirmRemoveFromCollection": "Remove \"{{name}}\" from this collection?",
       "removeFromCollectionFailed": "Failed to remove from collection. Please try again.",
+      "source": "Source",
       "openInProvider": "Open in {{provider}}",
       "openInSlicer": "Open in {{slicer}}",
       "openNormalizedInSlicer": "Open normalized in {{slicer}}",

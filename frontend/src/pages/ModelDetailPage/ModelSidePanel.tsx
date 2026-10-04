@@ -7,6 +7,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
+import Link from "@mui/material/Link";
 import ButtonBase from "@mui/material/ButtonBase";
 import FolderIcon from "@mui/icons-material/Folder";
 import StorageIcon from "@mui/icons-material/Storage";
@@ -17,6 +18,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
 import type { Print } from "../../api/prints";
 import type { AuthUser } from "../../api/auth";
+import { importProviderInfo } from "../../constants/importProviders";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 import { dividerBorderColor } from "../../theme";
 import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
@@ -29,6 +31,11 @@ import RollingNumber from "../../components/RollingNumber";
 import { formatFileSize } from "../../utils/fileSize";
 import AuthorHoverCard from "../../components/AuthorHoverCard";
 import DownloadPickerDialog from "./DownloadPickerDialog";
+
+/** The link as shown: no scheme, no "www.". */
+function shortUrl(url: string): string {
+  return url.replace(/^https?:\/\/(www\.)?/, "");
+}
 
 type Props = {
   print: Print;
@@ -73,6 +80,9 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
 
   const showViewerAsAuthor =
     !print.author?.name && !print.author?.handle && !print.creator && !print.source_provider && Boolean(viewer);
+  const sourceInfo = importProviderInfo(print.source_provider);
+  const sourceLink =
+    sourceInfo && print.source_url ? { href: print.source_url, label: shortUrl(print.source_url) } : null;
   const authorName =
     print.author?.name || print.author?.handle || print.creator || (showViewerAsAuthor ? viewer!.display_name : null);
   const authorAvatarUrl = print.author?.avatar_url || (showViewerAsAuthor ? viewerAvatarUrl : undefined);
@@ -139,6 +149,25 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
             </Stack>
           </AuthorHoverCard>
         </Box>
+
+        {sourceLink && (
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+              {t("models:detail.source")}
+            </Typography>
+            <Link
+              href={sourceLink.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="body2"
+              underline="hover"
+              sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, overflowWrap: "anywhere" }}
+            >
+              {sourceLink.label}
+              <LaunchIcon sx={{ fontSize: 14 }} />
+            </Link>
+          </Box>
+        )}
 
         {print.category_id && print.category_name && (
           <Box>

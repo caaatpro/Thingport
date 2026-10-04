@@ -1313,6 +1313,7 @@
       "removeFromCollection": "Pašalinti iš kolekcijos",
       "confirmRemoveFromCollection": "Pašalinti „{{name}}“ iš šios kolekcijos?",
       "removeFromCollectionFailed": "Nepavyko pašalinti iš kolekcijos. Bandykite dar kartą.",
+      "source": "Šaltinis",
       "openInProvider": "Atverti „{{provider}}“",
       "openInSlicer": "Atverti su {{slicer}}",
       "openNormalizedInSlicer": "Atverti normalizuotą su {{slicer}}",
