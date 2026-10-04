@@ -78,6 +78,7 @@ export type BackgroundMessages = {
   FORCE_ADVANCE_MAKERWORLD_JOB: { payload: void; result: null };
   ARM_DOWNLOAD_CAPTURE: { payload: void; result: null };
   AWAIT_DOWNLOAD_CAPTURE: { payload: void; result: string | null };
+  RESOLVE_CULTS3D_FILE: { payload: { url: string }; result: { url: string; filename: string | null } };
   GET_MAKERWORLD_JOB: { payload: void; result: { job: MakerworldJob | null; error: MakerworldJobError | null } };
 };
 

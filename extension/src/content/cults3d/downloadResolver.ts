@@ -84,6 +84,19 @@ export function parseOrderFiles(doc: Document, base: string): { url: string; fil
     files.push({ url: url.href, filename });
     if (files.length >= MAX_FILES) break;
   }
+  if (!files.length) {
+    // A single "Download all" link serves everything as one zip.
+    for (const a of doc.querySelectorAll<HTMLAnchorElement>('a[href*="/downloads/"]')) {
+      if (!/^\s*download all\s*$/i.test(a.textContent || "")) continue;
+      try {
+        const url = new URL(a.getAttribute("href") || "", base);
+        if (url.protocol === "https:") files.push({ url: url.href, filename: "" });
+      } catch {
+        // skip a malformed link
+      }
+      break;
+    }
+  }
   return files;
 }
 
@@ -128,6 +141,16 @@ async function fetchOrderPage(): Promise<{ doc: Document; url: string } | null> 
   return null;
 }
 
+/** The link a file's /downloads/ URL leads to. The background follows it with the user's cookies; if
+ *  that fails, the page itself starts the download and the browser's download event is captured. */
+async function resolveFileLink(fileUrl: string): Promise<{ url: string; filename: string | null } | null> {
+  const direct = await send("RESOLVE_CULTS3D_FILE", { url: fileUrl }).catch(() => null);
+  if (direct && direct.ok) return direct.data;
+  lastCults3dFailure = direct && !direct.ok ? direct.error : "The extension could not follow Cults3D's file link.";
+  const captured = await captureFileUrl(fileUrl);
+  return captured ? { url: captured, filename: null } : null;
+}
+
 /** Starts one file's download and returns the link the browser resolved it to (null if none). */
 async function captureFileUrl(fileUrl: string): Promise<string | null> {
   const armed = await send("ARM_DOWNLOAD_CAPTURE");
@@ -164,12 +187,11 @@ async function resolveOrder(): Promise<ResolvedDownload | null> {
   if (!listed.length) lastCults3dFailure = "The order page lists no downloadable files.";
   const files: { url: string; filename: string }[] = [];
   for (const file of listed) {
-    const captured = await captureFileUrl(file.url);
-    if (captured) files.push({ url: captured, filename: file.filename });
+    const resolved = await resolveFileLink(file.url);
+    if (resolved) files.push({ url: resolved.url, filename: file.filename || resolved.filename || "" });
   }
-  if (listed.length && !files.length) {
-    lastCults3dFailure = "Cults3D's file links started no download that the extension could capture.";
-  }
+  if (files.length) lastCults3dFailure = "";
+  else if (listed.length && !lastCults3dFailure) lastCults3dFailure = "No file link could be resolved.";
   if (!files.length) return null;
   return { downloadUrl: files[0].url, instanceId: null, pageMeta: readCults3dPageMeta(), files };
 }

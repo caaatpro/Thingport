@@ -41,7 +41,7 @@ export function buildManifest(target: Target, pkg: { version: string; descriptio
     // MakerWorld session was silently never sent to the instance (so MakerWorld imports failed with
     // "No downloadable model file found"). The content script already runs on this site, so this adds
     // no new install warning.
-    host_permissions: ["*://*.makerworld.com/*"],
+    host_permissions: ["*://*.makerworld.com/*", "*://*.cults3d.com/*"],
     // The user's instance origin, requested at setup.
     optional_host_permissions: ["*://*/*"],
     content_scripts: [{ matches: PROVIDER_MATCHES, js: ["content.js"], run_at: "document_idle" }],

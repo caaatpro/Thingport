@@ -14,6 +14,7 @@ import {
 } from "./config";
 import { armDownloadCapture, awaitDownloadCapture } from "./downloadCapture";
 import { importSingle } from "./importJobs";
+import { resolveCults3dFileLink } from "./resolveRedirect";
 import { abortJob, advanceJob, dropJobIfForTab, forceAdvanceJob, getJobForTab, startJob } from "./makerworldJob";
 import { getRecentImports } from "./recentImports";
 import { openSetup } from "./setup";
@@ -86,6 +87,10 @@ listen<BackgroundMessages>({
   AWAIT_DOWNLOAD_CAPTURE: (_payload, sender) => {
     requireProviderPage(sender);
     return awaitDownloadCapture();
+  },
+  RESOLVE_CULTS3D_FILE: ({ url }, sender) => {
+    requireProviderPage(sender);
+    return resolveCults3dFileLink(url);
   },
   GET_MAKERWORLD_JOB: (_payload, sender) => getJobForTab(sender.tab?.id),
 });

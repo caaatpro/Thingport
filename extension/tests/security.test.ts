@@ -3,6 +3,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { filenameFromDisposition } from "../src/background/resolveRedirect";
 import { isApiCallAllowed } from "../src/shared/apiPolicy";
 import { instanceUrlProblem, isApiToken, isPrivateHost } from "../src/shared/storage";
 import {
@@ -180,5 +181,15 @@ describe("Cults3D URLs", () => {
     assert.equal(parseCults3dModelUrl("https://evilcults3d.com/en/3d-model/various/x"), null);
     assert.equal(isProviderPageUrl("https://cults3d.com/en"), true);
     assert.equal(isProviderPageUrl("https://cults3d.com.evil.example/en"), false);
+  });
+});
+
+describe("Content-Disposition file names", () => {
+  it("reads quoted, bare and RFC 5987 forms", () => {
+    assert.equal(filenameFromDisposition('attachment; filename="corner cap.stl"'), "corner cap.stl");
+    assert.equal(filenameFromDisposition("attachment; filename=model.zip"), "model.zip");
+    assert.equal(filenameFromDisposition("attachment; filename*=UTF-8''rear%20handle.stl"), "rear handle.stl");
+    assert.equal(filenameFromDisposition(null), null);
+    assert.equal(filenameFromDisposition("inline"), null);
   });
 });

@@ -1202,7 +1202,7 @@ async function downloadCults3dFiles(
     for (const file of files.slice(0, 50)) {
       const saved = await saveImportResponseToTemp(
         await openImportResponse(file.url, { ...body, resolved_download_url: null }, pageUrl, 1),
-        { ...body, filename: file.filename ?? null },
+        { ...body, filename: file.filename || null },
       );
       temps.push(saved.tempPath);
       if (path.extname(saved.filename).toLowerCase() === ".zip") {
