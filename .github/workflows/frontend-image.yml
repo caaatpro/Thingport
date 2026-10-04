@@ -7,12 +7,14 @@ on:
     tags: ["v*.*.*"]
     paths:
       - "frontend/**"
+      - "extension/**"
       - ".github/workflows/frontend-image.yml"
       - ".github/workflows/build-image.yml"
   pull_request:
     branches: [main]
     paths:
       - "frontend/**"
+      - "extension/**"
       - ".github/workflows/frontend-image.yml"
       - ".github/workflows/build-image.yml"
 
@@ -31,5 +33,6 @@ jobs:
       context: ./frontend
       dockerfile: frontend/Dockerfile
       cache_scope: frontend
+      bundle_extension: true
       push: ${{ github.event_name != 'pull_request' }}
     secrets: inherit

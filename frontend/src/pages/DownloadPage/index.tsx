@@ -11,27 +11,18 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import DownloadIcon from "@mui/icons-material/Download";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import LaptopWindowsIcon from "@mui/icons-material/LaptopWindows";
 import AppleIcon from "@mui/icons-material/Apple";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import CableIcon from "@mui/icons-material/Cable";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { BRIDGE_DOWNLOADS, bridgeDownloadUrl, type BridgeDownload } from "../../constants/bridge";
-import { EXTENSION_DOWNLOADS, type ExtensionDownload } from "../../constants/extension";
+import { EXTENSION_ZIP_URL } from "../../constants/extension";
 import extensionIcon from "../../assets/logos/thingport-icon-color.svg";
-// Official browser logos (github.com/alrra/browser-logos), shown only to mark which browser each
-// extension download is for.
+// Official Chrome logo (github.com/alrra/browser-logos), shown to mark which browser the extension is for.
 import chromeLogo from "../../assets/logos/browsers/chrome.svg";
-import edgeLogo from "../../assets/logos/browsers/edge.svg";
-import firefoxLogo from "../../assets/logos/browsers/firefox.svg";
 
 const OS_ICON = { windows: LaptopWindowsIcon, macos: AppleIcon, linux: TerminalIcon };
-const BROWSER_LOGO: Record<ExtensionDownload["browser"], string> = {
-  chrome: chromeLogo,
-  edge: edgeLogo,
-  firefox: firefoxLogo,
-};
 
 type InstallStep = { text: string; code?: string };
 
@@ -136,37 +127,30 @@ export default function DownloadPage() {
             </Typography>
           </Box>
         </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          {EXTENSION_DOWNLOADS.map((item) => (
-            <Paper key={item.browser} variant="outlined" sx={{ p: 2.5, flex: 1, maxWidth: 340 }}>
-              <Stack spacing={1.5} alignItems="flex-start">
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Box component="img" src={extensionIcon} alt="" sx={{ width: 40, height: 40 }} />
-                  <Box
-                    component="img"
-                    src={BROWSER_LOGO[item.browser]}
-                    alt={item.label}
-                    sx={{ width: 32, height: 32 }}
-                  />
-                </Stack>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  {t("download.extension.name")} ({item.label})
-                </Typography>
-                <Button
-                  component="a"
-                  href={item.storeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="outlined"
-                  size="small"
-                  startIcon={<OpenInNewIcon fontSize="small" />}
-                >
-                  {t(`download.extension.store.${item.browser}`)}
-                </Button>
-              </Stack>
-            </Paper>
-          ))}
-        </Stack>
+        <Paper variant="outlined" sx={{ p: 2.5, maxWidth: 520 }}>
+          <Stack spacing={1.5} alignItems="flex-start">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box component="img" src={extensionIcon} alt="" sx={{ width: 40, height: 40 }} />
+              <Box component="img" src={chromeLogo} alt="Chrome" sx={{ width: 32, height: 32 }} />
+            </Stack>
+            <Typography variant="subtitle2" fontWeight={600}>
+              {t("download.extension.name")} (Chrome)
+            </Typography>
+            <Button
+              component="a"
+              href={EXTENSION_ZIP_URL}
+              download
+              variant="outlined"
+              size="small"
+              startIcon={<DownloadIcon fontSize="small" />}
+            >
+              {t("download.extension.download")}
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              {t("download.extension.install")}
+            </Typography>
+          </Stack>
+        </Paper>
       </Stack>
 
       <Divider />

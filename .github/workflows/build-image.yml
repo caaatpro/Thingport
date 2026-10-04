@@ -26,6 +26,11 @@ on:
         description: "Path to the Dockerfile"
         required: true
         type: string
+      bundle_extension:
+        description: "Build the Thingport Grab zip into <project_dir>/public/downloads so the image serves it"
+        required: false
+        type: boolean
+        default: false
       cache_scope:
         description: "GHA cache scope, so backend/frontend caches don't collide"
         required: true
@@ -70,6 +75,14 @@ jobs:
       - name: Typecheck (quality gate — frontend only, see comment)
         working-directory: ${{ inputs.project_dir }}
         run: npm run --if-present typecheck
+
+      - name: Build the browser extension zip served from the image
+        if: inputs.bundle_extension
+        run: |
+          npm --prefix extension ci --no-audit --no-fund
+          npm --prefix extension run zip:chrome
+          mkdir -p "${{ inputs.project_dir }}/public/downloads"
+          cp extension/dist/zips/thingport-grab-chrome.zip "${{ inputs.project_dir }}/public/downloads/"
 
       - name: Set up QEMU (for the arm64 leg of the multi-arch build below)
         uses: docker/setup-qemu-action@v3

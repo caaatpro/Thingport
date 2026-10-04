@@ -32,3 +32,6 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+
+# Built by CI into the frontend image (see .github/workflows/build-image.yml)
+/frontend/public/downloads/

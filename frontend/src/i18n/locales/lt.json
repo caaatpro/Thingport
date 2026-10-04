@@ -626,13 +626,10 @@
       "intro": "Papildomi įrankiai, veikiantys kartu su jūsų Thingport aplinka.",
       "extension": {
         "heading": "Thingport Grab",
-        "intro": "Naršyklės plėtinys, importuojantis MakerWorld, Thingiverse ir Printables modelius tiesiai iš jų puslapių.",
+        "intro": "Naršyklės plėtinys, importuojantis MakerWorld, Thingiverse, Printables ir Cults3D modelius tiesiai iš jų puslapių.",
         "name": "Thingport Grab",
-        "store": {
-          "chrome": "Gauti iš Chrome Web Store",
-          "edge": "Gauti iš Edge Add-ons",
-          "firefox": "Gauti iš Firefox Add-ons"
-        }
+        "download": "Atsisiųsti (.zip)",
+        "install": "Diegimas: išarchyvuokite, atidarykite chrome://extensions, įjunkite Developer mode, spustelėkite „Load unpacked“ ir pasirinkite išarchyvuotą aplanką. Norėdami atnaujinti, atsisiųskite iš naujo, išarchyvuokite ant senojo aplanko ir spustelėkite „Reload“."
       },
       "bridge": {
         "heading": "Thingport Bridge",
