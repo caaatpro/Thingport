@@ -55,4 +55,3 @@ export function cults3dMetaFromExtension(raw: unknown): ImportedPageMetadata {
   }
   return meta;
 }
-

@@ -32,6 +32,8 @@ export type ResolvedDownload = {
   design?: Record<string, unknown> | null;
   /** Cults3D: title/description/image read off the page. */
   pageMeta?: Record<string, unknown> | null;
+  /** Cults3D: one captured link per file of the order. */
+  files?: { url: string; filename: string }[];
 };
 
 export type ImportSinglePayload = {

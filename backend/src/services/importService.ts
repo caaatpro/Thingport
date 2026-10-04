@@ -74,12 +74,7 @@ import type { Author, Plate, PreviewImage, Print } from "@prisma/client";
 
 import { isMakerworldHost, validateRemoteUrl } from "../utils/urlUtils";
 import { listZipEntries, readZipEntry } from "../utils/zipReader";
-import {
-  CULTS3D_MODEL_URL_PREFIX,
-  cults3dMetaFromExtension,
-  isCults3dHost,
-  parseCults3dModelUrl,
-} from "./cults3dApi";
+import { CULTS3D_MODEL_URL_PREFIX, cults3dMetaFromExtension, isCults3dHost, parseCults3dModelUrl } from "./cults3dApi";
 function isUniqueConstraintError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }
@@ -101,6 +96,8 @@ export type ImportRequestBody = ImportCookies & {
   makerworld_design?: Record<string, unknown> | null;
   /** Cults3D page metadata read by the extension. Client-supplied -- see cults3dMetaFromExtension. */
   page_meta?: Record<string, unknown> | null;
+  /** Cults3D: one resolved link per file of the order. Client-supplied; each is SSRF-checked on fetch. */
+  resolved_files?: { url: string; filename?: string | null }[] | null;
   /** Internal only: per-request delay for MakerWorld collection imports. Never from the body. */
   makerworldPaceMs?: number;
 };
@@ -138,7 +135,11 @@ async function rawFetch(url: string, headers: Record<string, string>): Promise<R
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IMPORT_TIMEOUT_SECONDS * 1000);
   try {
-    return await fetch(url, { headers, redirect: "follow", signal: controller.signal });
+    return await fetch(url, {
+      headers,
+      redirect: "follow",
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timeout);
   }
@@ -182,7 +183,11 @@ async function fetchWithGuard(url: string, headers: Record<string, string>): Pro
   }
 }
 
-export type OpenImportResult = { response: Response; finalUrl: string; meta: ImportedPageMetadata };
+export type OpenImportResult = {
+  response: Response;
+  finalUrl: string;
+  meta: ImportedPageMetadata;
+};
 
 /** Fallback for fetchMakerworldDesign when there's no MakerWorld login. */
 async function fetchMakerworldPageDesign(
@@ -276,7 +281,10 @@ async function makerworldMetaFromExtension(url: string, body: ImportRequestBody)
   };
 }
 
-type MakerworldCloudShortcut = { downloadUrl: string; meta: ImportedPageMetadata };
+type MakerworldCloudShortcut = {
+  downloadUrl: string;
+  meta: ImportedPageMetadata;
+};
 
 /** Null means fall back to page scraping; auth and CAPTCHA failures are rethrown as HttpErrors. */
 async function tryMakerworldCloudApi(url: string, body: ImportRequestBody): Promise<MakerworldCloudShortcut | null> {
@@ -344,10 +352,19 @@ export async function openImportResponse(
         "Cults3D only lets signed-in users download files. Open the model in a browser where you are logged in to Cults3D and import it with the Thingport Grab extension.",
       );
     }
-    return openImportResponse(body.resolved_download_url, body, validatedUrl, depth + 1, cults3dMetaFromExtension(body.page_meta));
+    return openImportResponse(
+      body.resolved_download_url,
+      body,
+      validatedUrl,
+      depth + 1,
+      cults3dMetaFromExtension(body.page_meta),
+    );
   }
 
-  const headers: Record<string, string> = { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" };
+  const headers: Record<string, string> = {
+    "User-Agent": IMPORT_USER_AGENT,
+    Accept: "*/*",
+  };
   let makerworldCookie: string | null = null;
   if (isMakerworldHost(host)) {
     makerworldCookie = resolveMakerworldCookie(body);
@@ -399,7 +416,9 @@ export async function openImportResponse(
       // Skipped for an extension-resolved URL: these calls can trip the CAPTCHA cooloff.
       if (body.resolved_download_url) {
         downloadUrl = body.resolved_download_url;
-        resolvedMeta.makerworldProfile = { instanceId: body.resolved_instance_id ?? null };
+        resolvedMeta.makerworldProfile = {
+          instanceId: body.resolved_instance_id ?? null,
+        };
       } else {
         if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
         const requestedInstanceId = parseMakerworldModelUrl(validatedUrl)?.requestedInstanceId ?? null;
@@ -458,7 +477,12 @@ async function streamToFileCapped(response: Response, destPath: string, maxBytes
 export async function downloadImportToTemp(
   url: string,
   body: ImportRequestBody,
-): Promise<{ tempPath: string; filename: string; mime: string; meta: ImportedPageMetadata }> {
+): Promise<{
+  tempPath: string;
+  filename: string;
+  mime: string;
+  meta: ImportedPageMetadata;
+}> {
   return saveImportResponseToTemp(await openImportResponse(url, body), body);
 }
 
@@ -466,7 +490,12 @@ export async function downloadImportToTemp(
 async function saveImportResponseToTemp(
   { response, finalUrl, meta }: OpenImportResult,
   body: ImportRequestBody,
-): Promise<{ tempPath: string; filename: string; mime: string; meta: ImportedPageMetadata }> {
+): Promise<{
+  tempPath: string;
+  filename: string;
+  mime: string;
+  meta: ImportedPageMetadata;
+}> {
   const contentLength = response.headers.get("content-length");
   if (contentLength && Number(contentLength) > IMPORT_MAX_BYTES) {
     await response.body?.cancel().catch(() => undefined);
@@ -490,7 +519,12 @@ async function saveImportResponseToTemp(
 export async function inspectImportLink(
   url: string,
   body: ImportRequestBody,
-): Promise<{ filename: string; mime: string; is_zip: boolean; title: string | null }> {
+): Promise<{
+  filename: string;
+  mime: string;
+  is_zip: boolean;
+  title: string | null;
+}> {
   const { response, finalUrl, meta } = await openImportResponse(url, body);
   await response.body?.cancel().catch(() => undefined);
   const filename = buildImportFilename(finalUrl, response.headers, body.filename ?? meta.filename);
@@ -504,7 +538,10 @@ const PREVIEW_IMAGE_MAX_COUNT = 20;
 
 async function fetchImageBytes(url: string): Promise<Buffer | null> {
   try {
-    const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
+    const res = await rawFetch(url, {
+      "User-Agent": IMPORT_USER_AGENT,
+      Accept: "image/*",
+    });
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
       return null;
@@ -590,7 +627,11 @@ export function identifySourceModel(url: string): { provider: string; externalId
   const printables = parsePrintablesModelUrl(url);
   if (printables) return { provider: "printables", externalId: printables.modelId };
   const cults = parseCults3dModelUrl(url);
-  if (cults) return { provider: "cults3d", externalId: `${cults.category}/${cults.slug}` };
+  if (cults)
+    return {
+      provider: "cults3d",
+      externalId: `${cults.category}/${cults.slug}`,
+    };
   return null;
 }
 
@@ -608,21 +649,47 @@ export type ImportStatus = {
  * page load. */
 export async function checkImportStatus(userId: string, url: string): Promise<ImportStatus> {
   const source = identifySourceModel(url);
-  if (!source) return { recognized: false, already_imported: false, print_id: null, state: "not_imported" };
+  if (!source)
+    return {
+      recognized: false,
+      already_imported: false,
+      print_id: null,
+      state: "not_imported",
+    };
   const print = await prisma.print.findFirst({
-    where: { userId, sourceProvider: source.provider, sourceExternalId: source.externalId },
+    where: {
+      userId,
+      sourceProvider: source.provider,
+      sourceExternalId: source.externalId,
+    },
     select: { id: true, plates: { select: { sourceInstanceId: true } } },
   });
-  if (!print) return { recognized: true, already_imported: false, print_id: null, state: "not_imported" };
+  if (!print)
+    return {
+      recognized: true,
+      already_imported: false,
+      print_id: null,
+      state: "not_imported",
+    };
   // Without a profile in the URL, any imported profile counts; asking MakerWorld on every page
   // view isn't worth it.
   const requestedInstanceId =
     source.provider === "makerworld" ? parseMakerworldModelUrl(url)?.requestedInstanceId : null;
   if (requestedInstanceId && !print.plates.some((plate) => plate.sourceInstanceId === requestedInstanceId)) {
     const state = print.plates.some((plate) => plate.sourceInstanceId == null) ? "profile_unknown" : "profile_missing";
-    return { recognized: true, already_imported: false, print_id: print.id, state };
+    return {
+      recognized: true,
+      already_imported: false,
+      print_id: print.id,
+      state,
+    };
   }
-  return { recognized: true, already_imported: true, print_id: print.id, state: "imported" };
+  return {
+    recognized: true,
+    already_imported: true,
+    print_id: print.id,
+    state: "imported",
+  };
 }
 
 /** Inverse of identifySourceModel, for the "Open in {Provider}" link. */
@@ -638,15 +705,30 @@ export function buildImportSourceUrl(provider: string | null, externalId: string
 async function findExistingImportedPrint(
   userId: string,
   source: { provider: string; externalId: string },
-): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[] } | null> {
+): Promise<{
+  print: Print;
+  plates: Plate[];
+  author: Author | null;
+  previewImages: PreviewImage[];
+} | null> {
   const print = await prisma.print.findFirst({
-    where: { userId, sourceProvider: source.provider, sourceExternalId: source.externalId },
+    where: {
+      userId,
+      sourceProvider: source.provider,
+      sourceExternalId: source.externalId,
+    },
     include: { author: true },
   });
   if (!print) return null;
   const [plates, previewImages] = await Promise.all([
-    prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } }),
-    prisma.previewImage.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } }),
+    prisma.plate.findMany({
+      where: { printId: print.id },
+      orderBy: { position: "asc" },
+    }),
+    prisma.previewImage.findMany({
+      where: { printId: print.id },
+      orderBy: { position: "asc" },
+    }),
   ]);
   return { print, plates, author: print.author, previewImages };
 }
@@ -664,7 +746,10 @@ async function plateContentSha256(plate: Plate): Promise<string | null> {
   const filePath = resolvePlateFilePath(plate);
   if (!filePath || !fsSync.existsSync(filePath)) return null;
   const sha = await sha256OfFile(filePath);
-  await prisma.plate.update({ where: { id: plate.id }, data: { contentSha256: sha } });
+  await prisma.plate.update({
+    where: { id: plate.id },
+    data: { contentSha256: sha },
+  });
   return sha;
 }
 
@@ -704,32 +789,51 @@ async function addMakerworldProfileToPrint(
       for (const plate of untagged) {
         if ((await plateContentSha256(plate)) !== downloadedSha) continue;
         try {
-          await prisma.plate.update({ where: { id: plate.id }, data: { sourceInstanceId: instanceId } });
+          await prisma.plate.update({
+            where: { id: plate.id },
+            data: { sourceInstanceId: instanceId },
+          });
         } catch (err) {
           // Race guard: a concurrent import of this same profile won.
           if (!isUniqueConstraintError(err)) throw err;
         }
-        return { ...alreadyImported, plates: await platesOf(existing.print.id) };
+        return {
+          ...alreadyImported,
+          plates: await platesOf(existing.print.id),
+        };
       }
     }
 
     try {
       await addPlatesToPrint(existing.print.userId, existing.print.id, [
-        { filename, mime, tempFilePath: tempPath, sourceInstanceId: instanceId },
+        {
+          filename,
+          mime,
+          tempFilePath: tempPath,
+          sourceInstanceId: instanceId,
+        },
       ]);
     } catch (err) {
       // Race guard: a concurrent import of this same profile won.
       if (isUniqueConstraintError(err)) return alreadyImported;
       throw err;
     }
-    return { ...existing, plates: await platesOf(existing.print.id), alreadyImported: false, profileAdded: true };
+    return {
+      ...existing,
+      plates: await platesOf(existing.print.id),
+      alreadyImported: false,
+      profileAdded: true,
+    };
   } finally {
     if (fsSync.existsSync(tempPath)) await fs.rm(tempPath, { force: true }).catch(() => undefined);
   }
 }
 
 function platesOf(printId: string): Promise<Plate[]> {
-  return prisma.plate.findMany({ where: { printId }, orderBy: { position: "asc" } });
+  return prisma.plate.findMany({
+    where: { printId },
+    orderBy: { position: "asc" },
+  });
 }
 
 /** Bulk version of the dedup lookup, for flagging already-imported entries in a listing. */
@@ -740,7 +844,11 @@ export async function findImportedExternalIds(
 ): Promise<Set<string>> {
   if (!externalIds.length) return new Set();
   const prints = await prisma.print.findMany({
-    where: { userId, sourceProvider: provider, sourceExternalId: { in: externalIds } },
+    where: {
+      userId,
+      sourceProvider: provider,
+      sourceExternalId: { in: externalIds },
+    },
     select: { sourceExternalId: true },
   });
   return new Set(prints.map((p) => p.sourceExternalId).filter((id): id is string => id !== null));
@@ -754,7 +862,10 @@ type PlainDownloadResult = { input: NewPlateInput } | { rateLimited: true } | nu
  * which is reported so the caller can say why. */
 async function downloadPlainFileToTemp(url: string, suggestedName: string): Promise<PlainDownloadResult> {
   try {
-    const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" });
+    const res = await rawFetch(url, {
+      "User-Agent": IMPORT_USER_AGENT,
+      Accept: "*/*",
+    });
     if (res.status === 429) {
       await res.body?.cancel().catch(() => undefined);
       return { rateLimited: true };
@@ -769,7 +880,9 @@ async function downloadPlainFileToTemp(url: string, suggestedName: string): Prom
       `thingport-thingiverse-${crypto.randomBytes(8).toString("hex")}${path.extname(filename)}`,
     );
     await streamToFileCapped(res, tempFilePath, IMPORT_MAX_BYTES);
-    return { input: { filename, mime: guessMimeFromPath(filename), tempFilePath } };
+    return {
+      input: { filename, mime: guessMimeFromPath(filename), tempFilePath },
+    };
   } catch {
     return null;
   }
@@ -859,7 +972,10 @@ async function importThingiverseThing(
       }
       throw err;
     }
-    const gallery = galleryImages.map((img) => ({ url: img.url, filename: img.name }));
+    const gallery = galleryImages.map((img) => ({
+      url: img.url,
+      filename: img.name,
+    }));
     await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl ?? null, gallery);
     const previewImages = await prisma.previewImage.findMany({
       where: { printId: result.print.id },
@@ -945,7 +1061,10 @@ async function importPrintablesModel(
       }
       throw err;
     }
-    const gallery = galleryImages.map((img) => ({ url: img.url, filename: img.name }));
+    const gallery = galleryImages.map((img) => ({
+      url: img.url,
+      filename: img.name,
+    }));
     await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl ?? null, gallery);
     const previewImages = await prisma.previewImage.findMany({
       where: { printId: result.print.id },
@@ -990,7 +1109,21 @@ export async function importPrintFromUrl(
     return importPrintablesModel(userId, source, body);
   }
 
-  const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
+  const unpackedTemps: string[] = [];
+  // Cults3D: the extension sends one link per file of the order; each file is a plate of one Print.
+  const cultsFiles = source?.provider === "cults3d" && body.resolved_files?.length ? body.resolved_files : null;
+  let cultsInputs: NewPlateInput[] = [];
+  let tempPath: string, filename: string, mime: string, meta: ImportedPageMetadata;
+  if (cultsFiles) {
+    cultsInputs = await downloadCults3dFiles(url, body, cultsFiles, unpackedTemps);
+    const first = cultsInputs[0];
+    tempPath = first.tempFilePath ?? "";
+    filename = first.filename;
+    mime = first.mime ?? guessMimeFromPath(first.filename);
+    meta = cults3dMetaFromExtension(body.page_meta);
+  } else {
+    ({ tempPath, filename, mime, meta } = await downloadImportToTemp(url, body));
+  }
   const author = await upsertAuthorFromImport(meta.author);
   const categoryId =
     body.category_id ?? (await resolveCategoryIdByCategory(userId, meta.categorySite, meta.siteCategoryIds));
@@ -1005,13 +1138,13 @@ export async function importPrintFromUrl(
     sourceExternalId: source?.externalId ?? null,
   };
 
-  const unpackedTemps: string[] = [];
   try {
     let result: { print: Print; plates: Plate[] };
     try {
       // Cults3D ships most models as a zip of STLs: every model file becomes a plate of one Print.
-      const unpacked =
-        source?.provider === "cults3d" && path.extname(filename).toLowerCase() === ".zip"
+      const unpacked = cultsFiles
+        ? cultsInputs
+        : source?.provider === "cults3d" && path.extname(filename).toLowerCase() === ".zip"
           ? await unpackZipToPlateInputs(tempPath, unpackedTemps)
           : [];
       result = await createPrint(
@@ -1020,7 +1153,14 @@ export async function importPrintFromUrl(
         path.parse(filename).name,
         unpacked.length
           ? unpacked
-          : [{ filename, mime, tempFilePath: tempPath, sourceInstanceId: meta.makerworldProfile?.instanceId ?? null }],
+          : [
+              {
+                filename,
+                mime,
+                tempFilePath: tempPath,
+                sourceInstanceId: meta.makerworldProfile?.instanceId ?? null,
+              },
+            ],
       );
     } catch (err) {
       // Race guard: a concurrent import of the same source model won.
@@ -1046,6 +1186,43 @@ export async function importPrintFromUrl(
     for (const tmp of [tempPath, ...unpackedTemps]) {
       if (fsSync.existsSync(tmp)) await fs.rm(tmp, { force: true }).catch(() => undefined);
     }
+  }
+}
+
+/** Downloads each file of a Cults3D order (links the extension resolved in the signed-in browser). Zips
+ *  are unpacked into plates. Temp files are tracked in `temps` for cleanup. */
+async function downloadCults3dFiles(
+  pageUrl: string,
+  body: ImportRequestBody,
+  files: { url: string; filename?: string | null }[],
+  temps: string[],
+): Promise<NewPlateInput[]> {
+  const inputs: NewPlateInput[] = [];
+  try {
+    for (const file of files.slice(0, 50)) {
+      const saved = await saveImportResponseToTemp(
+        await openImportResponse(file.url, { ...body, resolved_download_url: null }, pageUrl, 1),
+        { ...body, filename: file.filename ?? null },
+      );
+      temps.push(saved.tempPath);
+      if (path.extname(saved.filename).toLowerCase() === ".zip") {
+        const unpacked = await unpackZipToPlateInputs(saved.tempPath, temps);
+        if (unpacked.length) {
+          inputs.push(...unpacked);
+          continue;
+        }
+      }
+      inputs.push({
+        filename: saved.filename,
+        mime: saved.mime,
+        tempFilePath: saved.tempPath,
+      });
+    }
+    if (!inputs.length) throw new HttpError(400, "Cults3D returned no files.");
+    return inputs;
+  } catch (err) {
+    await Promise.all(temps.map((tmp) => fs.rm(tmp, { force: true }).catch(() => undefined)));
+    throw err;
   }
 }
 

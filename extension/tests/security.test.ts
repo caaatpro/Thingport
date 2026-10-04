@@ -5,7 +5,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isApiCallAllowed } from "../src/shared/apiPolicy";
 import { instanceUrlProblem, isApiToken, isPrivateHost } from "../src/shared/storage";
-import { isMakerworldUrl, isProviderPageUrl, parseMakerworldModelUrl, parseCults3dModelUrl, classifyUrl } from "../src/shared/urls";
+import {
+  isMakerworldUrl,
+  isProviderPageUrl,
+  parseMakerworldModelUrl,
+  parseCults3dModelUrl,
+  classifyUrl,
+} from "../src/shared/urls";
 
 describe("isApiCallAllowed (the endpoints the extension may call)", () => {
   it("allows exactly what the extension uses", () => {

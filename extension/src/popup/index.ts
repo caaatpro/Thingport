@@ -97,7 +97,8 @@ async function renderPageSection(state: ExtensionState): Promise<void> {
   }
   const tabId = tab.id;
   const site = SITE_NAMES[classification.provider];
-  els.pageTitle.textContent = classification.kind === "batch" ? `Import this ${site} collection` : `Import this ${site} model`;
+  els.pageTitle.textContent =
+    classification.kind === "batch" ? `Import this ${site} collection` : `Import this ${site} model`;
   els.pageHint.textContent = "Opens the import panel on the page, where you can pick a collection first.";
   els.pageLinks.hidden = true;
   els.pageAction.hidden = false;
@@ -111,10 +112,7 @@ async function renderPageSection(state: ExtensionState): Promise<void> {
         window.close();
         return;
       }
-      showError(
-        "Couldn't open the import panel on this page. Reload the page and try again.",
-        els.pageError,
-      );
+      showError("Couldn't open the import panel on this page. Reload the page and try again.", els.pageError);
     } catch {
       showError("Couldn't reach this page. Reload it and try again.", els.pageError);
     } finally {

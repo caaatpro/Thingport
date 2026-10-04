@@ -30,6 +30,7 @@ export async function importSingle({
         resolved_instance_id: resolved.instanceId || null,
         makerworld_design: resolved.design ?? null,
         page_meta: resolved.pageMeta ?? null,
+        resolved_files: resolved.files ?? null,
       }
     : null;
 

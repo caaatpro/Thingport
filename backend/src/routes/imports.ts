@@ -69,6 +69,16 @@ const importRequestSchema = z.object({
   makerworld_design: z.record(z.unknown()).nullable().optional(),
   // Cults3D: title/description/image the extension read off the page.
   page_meta: z.record(z.unknown()).nullable().optional(),
+  resolved_files: z
+    .array(
+      z.object({
+        url: z.string(),
+        filename: z.string().max(255).nullable().optional(),
+      }),
+    )
+    .max(50)
+    .nullable()
+    .optional(),
 });
 
 // Falls back to the cookie saved in Settings when the request doesn't carry one.
@@ -94,7 +104,10 @@ router.post(
       : result.profileAdded
         ? "profile_added"
         : "created";
-    res.json({ ...toPrintOut(print, plates, [], null, author, previewImages), import_outcome: importOutcome });
+    res.json({
+      ...toPrintOut(print, plates, [], null, author, previewImages),
+      import_outcome: importOutcome,
+    });
     void createLog({
       userId: req.userId!,
       action: "model_imported",
@@ -304,7 +317,9 @@ async function assertNoActiveJob(userId: string): Promise<void> {
   if (active) throw new HttpError(409, "An import is already in progress");
 }
 
-const makerworldProfilesImportRequestSchema = importRequestSchema.extend({ scope: z.enum(["designer", "all"]) });
+const makerworldProfilesImportRequestSchema = importRequestSchema.extend({
+  scope: z.enum(["designer", "all"]),
+});
 
 router.post(
   "/import/makerworld-profiles",
@@ -317,13 +332,18 @@ router.post(
     await assertNoActiveJob(req.userId!);
     const url = await normalizeImportUrl(body.url);
     if (!parseMakerworldModelUrl(url)) throw new HttpError(400, "Not a MakerWorld model link");
-    const job = await createJob(req.userId!, "PROFILES", { sourceUrl: url, provider: "makerworld" });
+    const job = await createJob(req.userId!, "PROFILES", {
+      sourceUrl: url,
+      provider: "makerworld",
+    });
     void runMakerworldProfilesImportJob(job.id, req.userId!, { ...body, url });
     res.status(202).json({ job_id: job.id });
   }),
 );
 
-const collectionImportRequestSchema = importRequestSchema.extend({ design_ids: z.array(z.string()).min(1) });
+const collectionImportRequestSchema = importRequestSchema.extend({
+  design_ids: z.array(z.string()).min(1),
+});
 
 router.post(
   "/import/collection",
@@ -342,7 +362,9 @@ router.post(
   }),
 );
 
-const thingiverseLikesImportRequestSchema = importRequestSchema.extend({ thing_ids: z.array(z.string()).min(1) });
+const thingiverseLikesImportRequestSchema = importRequestSchema.extend({
+  thing_ids: z.array(z.string()).min(1),
+});
 
 router.post(
   "/import/thingiverse-likes",
@@ -358,7 +380,11 @@ router.post(
       provider: "thingiverse",
       total: body.thing_ids.length,
     });
-    void runThingiverseLikesImportJob(job.id, req.userId!, { ...body, url, username: parsed.username });
+    void runThingiverseLikesImportJob(job.id, req.userId!, {
+      ...body,
+      url,
+      username: parsed.username,
+    });
     res.status(202).json({ job_id: job.id });
   }),
 );
@@ -377,12 +403,18 @@ router.post(
       provider: "thingiverse",
       total: body.thing_ids.length,
     });
-    void runThingiverseCollectionImportJob(job.id, req.userId!, { ...body, url, collectionId: parsed.collectionId });
+    void runThingiverseCollectionImportJob(job.id, req.userId!, {
+      ...body,
+      url,
+      collectionId: parsed.collectionId,
+    });
     res.status(202).json({ job_id: job.id });
   }),
 );
 
-const printablesCollectionImportRequestSchema = importRequestSchema.extend({ model_ids: z.array(z.string()).min(1) });
+const printablesCollectionImportRequestSchema = importRequestSchema.extend({
+  model_ids: z.array(z.string()).min(1),
+});
 
 router.post(
   "/import/printables-collection",
@@ -398,12 +430,18 @@ router.post(
       provider: "printables",
       total: body.model_ids.length,
     });
-    void runPrintablesCollectionImportJob(job.id, req.userId!, { ...body, url, collectionId: parsed.collectionId });
+    void runPrintablesCollectionImportJob(job.id, req.userId!, {
+      ...body,
+      url,
+      collectionId: parsed.collectionId,
+    });
     res.status(202).json({ job_id: job.id });
   }),
 );
 
-const zipExtractRequestSchema = importRequestSchema.extend({ entries: z.array(z.string()) });
+const zipExtractRequestSchema = importRequestSchema.extend({
+  entries: z.array(z.string()),
+});
 
 router.post(
   "/import/zip",
