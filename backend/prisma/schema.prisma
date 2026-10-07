@@ -49,6 +49,11 @@ model User {
   printSharesReceived      PrintShare[]      @relation("PrintShareRecipient")
   collectionSharesReceived CollectionShare[] @relation("CollectionShareRecipient")
   apiTokens                ApiToken[]
+  // Set by an admin: the account can't sign in and its sessions and API tokens stop working.
+  disabledAt               DateTime?
+  lastLoginAt              DateTime?
+  // Embedded in session tokens; bumping it signs the user out everywhere.
+  sessionVersion           Int            @default(0)
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 }

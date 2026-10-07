@@ -479,38 +479,6 @@
       "connections": {
         "heading": "Connections"
       },
-      "captcha": {
-        "heading": "Captcha",
-        "placesHeading": "Ask for a captcha on",
-        "subtitle": "An image with a few characters to type in, to slow down automated sign-in attempts, sign-ups and imports. Off everywhere by default.",
-        "places": {
-          "login": {
-            "label": "Sign in",
-            "help": "Asked on every sign-in attempt, before the password is checked."
-          },
-          "register": {
-            "label": "Registration",
-            "help": "Asked when creating an account, including from an invitation link."
-          },
-          "import": {
-            "label": "Import",
-            "help": "Asked in the Import dialog before an import starts. Uploading your own files isn't affected."
-          },
-          "change_password": {
-            "label": "Change password",
-            "help": "Asked when changing your password on the profile page, before the current password is checked."
-          },
-          "change_email": {
-            "label": "Change email",
-            "help": "Asked when changing your email on the profile page, before the current password is checked."
-          }
-        },
-        "loadFailed": "Unable to load the captcha settings.",
-        "saveFailed": "Failed to save the captcha settings",
-        "previewHeading": "What people will see",
-        "previewHelp": "Letters and numbers, with easily confused ones like 0/O and 1/I left out. Not case-sensitive. Each image works once and expires after 10 minutes.",
-        "extensionNote": "Thingport Grab, the browser extension, is never asked for a captcha: it signs in and imports in the background, with nowhere to show one."
-      },
       "smtp": {
         "tabLabel": "SMTP",
         "helpText": "Used to send the account-verification email on registration. Leave Host blank to turn email verification off entirely — new accounts are then verified and signed in immediately.",
@@ -564,7 +532,97 @@
         "roleMember": "Member",
         "makerworldConnected": "Connected",
         "makerworldNotConnected": "Not connected",
-        "loadFailed": "Unable to load users."
+        "loadFailed": "Unable to load users.",
+        "subtitle": "Accounts, roles and access to this instance.",
+        "searchPlaceholder": "Search by name or email…",
+        "filterAll": "All",
+        "filterAdmins": "Admins",
+        "filterMembers": "Members",
+        "filterDisabled": "Disabled",
+        "summary": "{{total}} users · {{admins}} admins · {{disabled}} disabled",
+        "columnUser": "User",
+        "columnStatus": "Status",
+        "columnStorage": "Storage",
+        "columnLastActive": "Last active",
+        "statusActive": "Active",
+        "statusDisabled": "Disabled",
+        "statusUnverified": "Email not verified",
+        "you": "You",
+        "never": "Never",
+        "addUser": "Add user",
+        "noMatches": "No users match.",
+        "saved": "Saved.",
+        "actions": {
+          "open": "User actions",
+          "edit": "Edit name…",
+          "makeAdmin": "Make administrator",
+          "makeMember": "Make regular member",
+          "resetPassword": "Password reset link…",
+          "signOut": "Sign out everywhere…",
+          "disable": "Disable account",
+          "enable": "Enable account",
+          "viewActivity": "View activity",
+          "deleteModels": "Delete all models…",
+          "deleteUser": "Delete user…"
+        },
+        "create": {
+          "title": "Add a user",
+          "description": "The account is created right away and no email is sent. Leave the password empty to generate one.",
+          "emailLabel": "Email",
+          "nameLabel": "Name",
+          "roleLabel": "Role",
+          "passwordLabel": "Password (optional, at least 8 characters)",
+          "submit": "Create user",
+          "creating": "Creating…",
+          "doneTitle": "User created",
+          "generatedHint": "Give this password to {{email}}. It is shown only once; they can change it in their profile.",
+          "noPasswordHint": "The account is ready. {{email}} can sign in with the password you set.",
+          "copy": "Copy",
+          "copied": "Copied",
+          "close": "Close",
+          "failed": "Failed to create the user"
+        },
+        "edit": {
+          "title": "Edit user",
+          "nameLabel": "Name",
+          "save": "Save"
+        },
+        "reset": {
+          "title": "Password reset link",
+          "description": "Send this link to {{name}}. It can be used once and works for one hour.",
+          "expires": "Expires {{time}}",
+          "creating": "Creating the link…",
+          "copy": "Copy link",
+          "copied": "Copied"
+        },
+        "signOut": {
+          "title": "Sign {{name}} out everywhere?",
+          "message": "Every browser session of this user ends immediately. They can sign in again.",
+          "revokeTokens": "Also revoke their API tokens ({{count}})",
+          "confirm": "Sign out",
+          "done": "{{name}} was signed out.",
+          "doneTokens": "{{name}} was signed out and {{count}} API tokens were revoked."
+        },
+        "disableConfirm": {
+          "title": "Disable {{name}}?",
+          "message": "They are signed out at once and can't sign in or use API tokens until you enable the account again. Their models stay as they are.",
+          "confirm": "Disable"
+        },
+        "deleteModels": {
+          "title": "Delete all models of {{name}}?",
+          "message": "{{count}} models and their files are permanently deleted. The account itself stays.",
+          "done": "Deleted {{count}} models."
+        },
+        "deleteUser": {
+          "title": "Delete {{name}}?",
+          "message": "This permanently deletes the account together with {{models}} models ({{size}}), collections and API tokens. It can't be undone.",
+          "typeToConfirm": "Type {{email}} to confirm",
+          "confirm": "Delete user",
+          "done": "{{name}} was deleted."
+        },
+        "roleChanged": "{{name}} is now {{role}}.",
+        "enabledDone": "{{name}} can sign in again.",
+        "disabledDone": "{{name}} was disabled."
       },
       "logs": {
         "heading": "Logs",
@@ -596,7 +654,16 @@
           "collection_deleted": "Collection deleted",
           "collection_item_added": "Added to collection",
           "collection_item_removed": "Removed from collection",
-          "authors_linked": "Linked missing authors"
+          "authors_linked": "Linked missing authors",
+          "user_created": "User created",
+          "user_updated": "User edited",
+          "user_role_changed": "Role changed",
+          "user_disabled": "User disabled",
+          "user_enabled": "User enabled",
+          "user_deleted": "User deleted",
+          "user_signed_out": "User signed out by an admin",
+          "password_reset_link_created": "Password reset link created",
+          "processing_retried": "Processing retried"
         },
         "authorsLinked": "{{count}} model(s) linked"
       },
@@ -616,6 +683,32 @@
           "helpOff": "Off: previews always show a model's full detail.",
           "loadFailed": "Failed to load rendering settings.",
           "saveFailed": "Failed to save rendering settings."
+        }
+      },
+      "overview": {
+        "users": "Users",
+        "usersDetail": "{{active}} active this week",
+        "disabledCount": "{{count}} disabled",
+        "invitations": "{{count}} pending invitations",
+        "library": "Library",
+        "models": "{{count}} models",
+        "collections": "{{count}} collections",
+        "background": "Background work",
+        "allClear": "Nothing running",
+        "queued": "{{count}} processing",
+        "failed": "{{count}} failed",
+        "retry": "Retry failed",
+        "retried": "Retrying {{count}} failed items.",
+        "importsRunning": "{{count}} imports running",
+        "importsFailed": "{{count}} imports failed in 24 h",
+        "loadFailed": "Couldn't load the overview.",
+        "descriptions": {
+          "settings": "Storage, email, Thingiverse access and session length",
+          "rendering": "How 3D previews are generated",
+          "users": "Accounts, roles, access and invitations",
+          "logs": "Who did what, and when",
+          "triggers": "One-off maintenance jobs",
+          "connections": "Accounts of other sites used for imports"
         }
       }
     },
@@ -652,12 +745,6 @@
           "note": "If macOS still refuses to run it, open System Settings -> Privacy & Security and allow it there instead."
         }
       }
-    },
-    "captcha": {
-      "imageAlt": "Captcha: the characters to type",
-      "newImage": "New image",
-      "label": "Characters in the image",
-      "loadFailed": "Couldn't load the image. Try a new one."
     }
   },
   "common": {

@@ -5,7 +5,6 @@ import { resolveCorsOrigins } from "./cors";
 import { HttpError } from "./utils/fileUtils";
 
 import healthRoutes from "./routes/health";
-import captchaRoutes from "./routes/captcha";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
 import tokensRoutes from "./routes/tokens";
@@ -41,7 +40,6 @@ export function createApp(): Express {
 
   // The frontend's nginx proxies /api/* here unmodified.
   app.use("/api", healthRoutes);
-  app.use("/api", captchaRoutes);
   app.use("/api", authRoutes);
   app.use("/api", usersRoutes);
   app.use("/api", tokensRoutes);

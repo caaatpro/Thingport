@@ -1,4 +1,3 @@
-import type { CaptchaAnswer } from "../../api/captcha";
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -189,11 +188,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
   };
 
   /** `profileScope`: which MakerWorld print profiles to import; more than the link's runs as a job. */
-  const submitImport = async (
-    rawUrl: string,
-    captcha?: CaptchaAnswer | null,
-    profileScope: MakerworldProfileScope = "url",
-  ) => {
+  const submitImport = async (rawUrl: string, profileScope: MakerworldProfileScope = "url") => {
     const url = rawUrl.trim();
     if (!url) return;
     setImporting(true);
@@ -203,7 +198,6 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
         url,
         category_id: categoryId || undefined,
         makerworld_cookie: cookie || undefined,
-        ...captcha,
       };
 
       if (isMakerworldCollectionUrl(url)) {

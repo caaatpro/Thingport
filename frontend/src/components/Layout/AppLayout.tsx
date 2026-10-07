@@ -113,9 +113,6 @@ function useRouteChrome() {
   } else if (path.startsWith("/admin-connections")) {
     title = t("adminSettings.connections.heading");
     onBack = () => navigate("/admin");
-  } else if (path.startsWith("/admin-captcha")) {
-    title = t("adminSettings.captcha.heading");
-    onBack = () => navigate("/admin");
   }
 
   return { title, subtitle, onBack };

@@ -59,9 +59,6 @@ type ImportLinkPayload = {
   category_id?: string;
   filename?: string;
   makerworld_cookie?: string;
-  // Solved captcha, checked and consumed by whichever request starts the import.
-  captcha_id?: string;
-  captcha_answer?: string;
 };
 
 /** "profile_added": an existing MakerWorld model gained another profile's file. */

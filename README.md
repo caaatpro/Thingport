@@ -51,7 +51,7 @@ Instead of having your collection scattered across different websites and your f
 - 📎 **Everything to print it** — keep instructions, notes and a sliced, ready-to-print file next to the model.
 - 📦 **Download as ZIP** — a model's files, or a whole category, tag or collection in one archive.
 - 💾 **Plain files on your disk** — choose the folder layout (existing files are reorganized when you change it) and back up with any tool.
-- 👥 **Multi-user** — a separate library per person, open or invite-only registration, optional email verification and captcha, admin logs, and an update check that tells you when new Thingport images are out.
+- 👥 **Multi-user** — a separate library per person, open or invite-only registration, optional email verification, admin logs, and an update check that tells you when new Thingport images are out.
 - 🌍 **Light and dark themes**, in English and Lithuanian.
 - 🐳 **Self-hosted** — runs anywhere Docker does, from a NAS to a spare PC.
 

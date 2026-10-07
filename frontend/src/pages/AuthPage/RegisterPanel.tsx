@@ -8,9 +8,6 @@ import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
 import { authApi, type AuthUser } from "../../api/auth";
-import type { CaptchaAnswer } from "../../api/captcha";
-import CaptchaField from "../../components/CaptchaField";
-import { useCaptchaSettings } from "../../hooks/useCaptchaSettings";
 import CheckEmailPanel from "./CheckEmailPanel";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -29,9 +26,6 @@ export default function RegisterPanel({ onSuccess, invite = null }: Props) {
   // "valid" locks the email to the invited address; "invalid" keeps the form closed.
   const [inviteState, setInviteState] = React.useState<"checking" | "valid" | "invalid">(invite ? "checking" : "valid");
   const [inviteError, setInviteError] = React.useState<string | null>(null);
-  const captchaSettings = useCaptchaSettings();
-  const [captcha, setCaptcha] = React.useState<CaptchaAnswer | null>(null);
-  const [captchaKey, setCaptchaKey] = React.useState(0);
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -79,7 +73,6 @@ export default function RegisterPanel({ onSuccess, invite = null }: Props) {
         email,
         password,
         inviteToken: invite?.token,
-        captcha: captchaSettings?.register ? captcha : null,
       });
       if ("email_verification_required" in res) {
         setPendingEmail(res.email);
@@ -90,7 +83,6 @@ export default function RegisterPanel({ onSuccess, invite = null }: Props) {
       }
     } catch (err) {
       console.error(err);
-      if (captchaSettings?.register) setCaptchaKey((k) => k + 1);
       setError(err instanceof Error ? err.message : t("auth.register.failed"));
     } finally {
       setLoading(false);
@@ -164,7 +156,6 @@ export default function RegisterPanel({ onSuccess, invite = null }: Props) {
           fullWidth
           size="small"
         />
-        {captchaSettings?.register && <CaptchaField key={captchaKey} onChange={setCaptcha} disabled={loading} />}
         <Button type="submit" variant="contained" disabled={loading} fullWidth size="large">
           {loading ? t("auth.register.submitting") : t("auth.register.submit")}
         </Button>

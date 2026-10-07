@@ -2,13 +2,14 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { AUTH_ALGO, AUTH_SECRET } from "./config";
+import { prisma } from "./db";
 import { getAuthTokenTtl } from "./services/settingsService";
 import { authenticateApiToken, isRequestAllowedForScope, looksLikeApiToken } from "./services/apiTokenService";
 
-export type TokenPayload = { sub: string; role: Role };
+export type TokenPayload = { sub: string; role: Role; sv?: number };
 
-function createToken(userId: string, role: Role, ttlSeconds: number): string {
-  return jwt.sign({ sub: userId, role }, AUTH_SECRET, {
+function createToken(userId: string, role: Role, sessionVersion: number, ttlSeconds: number): string {
+  return jwt.sign({ sub: userId, role, sv: sessionVersion }, AUTH_SECRET, {
     algorithm: AUTH_ALGO,
     expiresIn: ttlSeconds,
   });
@@ -17,7 +18,42 @@ function createToken(userId: string, role: Role, ttlSeconds: number): string {
 /** Uses the admin-configured session length and returns it for `expires_in`. */
 export async function issueToken(userId: string, role: Role): Promise<{ token: string; expiresIn: number }> {
   const expiresIn = await getAuthTokenTtl();
-  return { token: createToken(userId, role, expiresIn), expiresIn };
+  const state = await loadSession(userId, true);
+  return { token: createToken(userId, role, state?.sessionVersion ?? 0, expiresIn), expiresIn };
+}
+
+// --- Live session state -----------------------------------------------------------------------------
+// A session token is a signed JWT, so on its own it would keep working after an admin disabled the
+// account, changed its role or signed it out. Every request therefore also checks the user's current
+// state, cached briefly (and dropped immediately when an admin changes it).
+
+type SessionState = { role: Role; disabled: boolean; sessionVersion: number; loadedAt: number };
+const SESSION_CACHE_MS = 10_000;
+const sessionCache = new Map<string, SessionState>();
+
+export function invalidateSession(userId: string): void {
+  sessionCache.delete(userId);
+}
+
+async function loadSession(userId: string, fresh = false): Promise<SessionState | null> {
+  const cached = sessionCache.get(userId);
+  if (!fresh && cached && Date.now() - cached.loadedAt < SESSION_CACHE_MS) return cached;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, disabledAt: true, sessionVersion: true },
+  });
+  if (!user) {
+    sessionCache.delete(userId);
+    return null;
+  }
+  const state = {
+    role: user.role,
+    disabled: user.disabledAt !== null,
+    sessionVersion: user.sessionVersion,
+    loadedAt: Date.now(),
+  };
+  sessionCache.set(userId, state);
+  return state;
 }
 
 export function verifyToken(token: string): TokenPayload | null {
@@ -83,9 +119,18 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ detail: "Unauthorized" });
     return;
   }
-  req.userId = payload.sub;
-  req.userRole = payload.role;
-  next();
+  loadSession(payload.sub)
+    .then((state) => {
+      // Tokens issued before sessionVersion existed carry none, which counts as version 0.
+      if (!state || state.disabled || (payload.sv ?? 0) !== state.sessionVersion) {
+        res.status(401).json({ detail: "Unauthorized" });
+        return;
+      }
+      req.userId = payload.sub;
+      req.userRole = state.role;
+      next();
+    })
+    .catch(next);
 }
 
 /** Must run after requireAuth. Refuses API tokens: sensitive account actions (managing tokens, ...)

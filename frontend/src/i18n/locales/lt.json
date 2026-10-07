@@ -481,38 +481,6 @@
       "connections": {
         "heading": "Ryšiai"
       },
-      "captcha": {
-        "heading": "Captcha",
-        "placesHeading": "Prašyti captcha",
-        "subtitle": "Paveikslėlis su keliais simboliais, kuriuos reikia įvesti, kad būtų sunkiau automatiškai jungtis, registruotis ir importuoti. Pagal nutylėjimą visur išjungta.",
-        "places": {
-          "login": {
-            "label": "Prisijungiant",
-            "help": "Prašoma kiekvieną kartą jungiantis, prieš tikrinant slaptažodį."
-          },
-          "register": {
-            "label": "Registruojantis",
-            "help": "Prašoma kuriant paskyrą, taip pat ir per kvietimo nuorodą."
-          },
-          "import": {
-            "label": "Importuojant",
-            "help": "Prašoma importavimo lange prieš pradedant importą. Savų failų įkėlimui netaikoma."
-          },
-          "change_password": {
-            "label": "Keičiant slaptažodį",
-            "help": "Prašoma keičiant slaptažodį profilio puslapyje, prieš tikrinant dabartinį slaptažodį."
-          },
-          "change_email": {
-            "label": "Keičiant el. paštą",
-            "help": "Prašoma keičiant el. pašto adresą profilio puslapyje, prieš tikrinant dabartinį slaptažodį."
-          }
-        },
-        "loadFailed": "Nepavyko įkelti captcha nustatymų.",
-        "saveFailed": "Nepavyko išsaugoti captcha nustatymų",
-        "previewHeading": "Ką matys naudotojai",
-        "previewHelp": "Raidės ir skaičiai, be lengvai supainiojamų, pvz., 0/O ir 1/I. Didžiosios ir mažosios raidės nesvarbu. Kiekvienas paveikslėlis galioja vieną kartą ir 10 minučių.",
-        "extensionNote": "Thingport Grab naršyklės plėtinio captcha niekada neprašoma: jis jungiasi ir importuoja fone, kur jos parodyti neįmanoma."
-      },
       "smtp": {
         "tabLabel": "SMTP",
         "helpText": "Naudojama siunčiant el. pašto patvirtinimo laišką registruojantis. Palikite Serverį (Host) tuščią, kad visiškai išjungtumėte el. pašto patvirtinimą — tuomet naujos paskyros iš karto patvirtinamos ir prijungiamos.",
@@ -654,12 +622,6 @@
           "note": "Jei „macOS“ vis tiek atsisako jį paleisti, atidarykite System Settings -> Privacy & Security ir leiskite jį ten."
         }
       }
-    },
-    "captcha": {
-      "imageAlt": "Captcha: simboliai, kuriuos reikia įvesti",
-      "newImage": "Naujas paveikslėlis",
-      "label": "Paveikslėlio simboliai",
-      "loadFailed": "Nepavyko įkelti paveikslėlio. Bandykite naują."
     }
   },
   "common": {

@@ -80,12 +80,14 @@ export async function authenticateApiToken(token: string): Promise<ApiTokenAuth 
   if (!looksLikeApiToken(token) || token.length > 200) return null;
   const row = await prisma.apiToken.findUnique({
     where: { tokenHash: hashApiToken(token) },
-    include: { user: { select: { id: true, role: true, emailVerified: true } } },
+    include: { user: { select: { id: true, role: true, emailVerified: true, disabledAt: true } } },
   });
   if (!row) return null;
   if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return null;
   // Same rule as signing in: an account that must verify its email can't act yet.
   if (!row.user.emailVerified) return null;
+  // A disabled account's tokens stop working too.
+  if (row.user.disabledAt) return null;
 
   if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > LAST_USED_REFRESH_MS) {
     void prisma.apiToken.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);

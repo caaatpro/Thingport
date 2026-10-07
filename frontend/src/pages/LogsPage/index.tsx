@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
@@ -33,6 +34,15 @@ const ACTION_COLORS: Record<LogAction, ActionColor> = {
   password_reset_requested: "default",
   password_reset: "warning",
   user_invited: "info",
+  user_created: "success",
+  user_updated: "warning",
+  user_role_changed: "warning",
+  user_disabled: "error",
+  user_enabled: "success",
+  user_deleted: "error",
+  user_signed_out: "warning",
+  password_reset_link_created: "warning",
+  processing_retried: "info",
   authors_linked: "success",
   model_uploaded: "info",
   model_imported: "info",
@@ -63,7 +73,9 @@ export default function LogsPage({ onUnauthorized }: Props) {
   const [logs, setLogs] = React.useState<LogEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [userId, setUserId] = React.useState("");
+  // ?user=<id> lets the users table jump straight to one person's activity.
+  const [searchParams] = useSearchParams();
+  const [userId, setUserId] = React.useState(searchParams.get("user") ?? "");
   const [from, setFrom] = React.useState(defaultFromDate());
   const [to, setTo] = React.useState("");
 

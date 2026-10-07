@@ -1,6 +1,5 @@
 import { authHeaders } from "../utils/auth";
 import { apiBase, assertOk, readErrorMessage, EmailNotVerifiedError, UnauthorizedError } from "./client";
-import type { CaptchaAnswer } from "./captcha";
 
 export type AuthUser = {
   id: string;
@@ -19,7 +18,7 @@ export type UpdateProfileInput = {
   current_password: string;
   email?: string;
   new_password?: string;
-} & Partial<CaptchaAnswer>;
+};
 
 async function readAuthError(res: Response): Promise<never> {
   let message = "Request failed";
@@ -44,22 +43,19 @@ async function postAuth<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const authApi = {
-  login: (email: string, password: string, captcha?: CaptchaAnswer | null): Promise<AuthResult> =>
-    postAuth("/login", { email, password, ...captcha }),
+  login: (email: string, password: string): Promise<AuthResult> => postAuth("/login", { email, password }),
 
   register: (payload: {
     displayName: string;
     email: string;
     password: string;
     inviteToken?: string;
-    captcha?: CaptchaAnswer | null;
   }): Promise<RegisterResult> =>
     postAuth("/register", {
       displayName: payload.displayName,
       email: payload.email,
       password: payload.password,
       ...(payload.inviteToken ? { invite_token: payload.inviteToken } : {}),
-      ...payload.captcha,
     }),
 
   getInvitation: async (token: string): Promise<{ email: string; expires_at: string }> => {

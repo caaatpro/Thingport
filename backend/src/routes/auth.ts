@@ -7,10 +7,9 @@ import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { getAllowRegistrations, isSmtpConfigured, type CaptchaPlace } from "../services/settingsService";
+import { getAllowRegistrations, isSmtpConfigured } from "../services/settingsService";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../services/mailer";
 import { findValidInvitation } from "../services/invitationService";
-import { checkCaptcha } from "../services/captchaService";
 import { createLog } from "../services/auditLog";
 import { seedDefaultCategories } from "../services/categoryService";
 import { toUserOut } from "../dto";
@@ -43,7 +42,6 @@ const loginSchema = z.object({
 router.post(
   "/register",
   asyncHandler(async (req, res) => {
-    await checkCaptcha(req, "register");
     const body = parseBody(registerSchema, req.body);
     const email = body.email.toLowerCase();
 
@@ -113,8 +111,6 @@ router.post(
 router.post(
   "/login",
   asyncHandler(async (req, res) => {
-    // Before the password check, so each guess costs a solved captcha.
-    await checkCaptcha(req, "login");
     const body = parseBody(loginSchema, req.body);
     const email = body.email.toLowerCase();
     const user = await prisma.user.findUnique({ where: { email } });
@@ -123,12 +119,17 @@ router.post(
       throw new HttpError(401, "Invalid email or password");
     }
 
+    if (user.disabledAt) {
+      throw new HttpError(403, "This account has been disabled. Ask an administrator.", "ACCOUNT_DISABLED");
+    }
+
     if (!user.emailVerified) {
       throw new HttpError(403, "Please verify your email before signing in.", "EMAIL_NOT_VERIFIED");
     }
 
     const { token, expiresIn } = await issueToken(user.id, user.role);
     res.json({ token, expires_in: expiresIn, user: toUserOut(user) });
+    void prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }).catch(() => undefined);
     void createLog({ userId: user.id, action: "user_logged_in", details: { email: user.email } });
   }),
 );
@@ -301,11 +302,6 @@ router.patch(
   requireAuth,
   asyncHandler(async (req, res) => {
     const body = parseBody(updateProfileSchema, req.body);
-    // Before the password check, so each guess at the current password costs a solved captcha.
-    const captchaPlaces: CaptchaPlace[] = [];
-    if (body.email !== undefined) captchaPlaces.push("change_email");
-    if (body.new_password !== undefined) captchaPlaces.push("change_password");
-    await checkCaptcha(req, captchaPlaces);
     const user = await prisma.user.findUnique({ where: { id: req.userId! } });
     if (!user) throw new HttpError(401, "Invalid or expired token");
     if (!(await bcrypt.compare(body.current_password, user.passwordHash))) {

@@ -6,7 +6,6 @@ import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import {
   getAllowRegistrations,
-  setCaptchaSettings,
   getAuthTokenTtl,
   getPreviewMode,
   getSimplifyPreviews,
@@ -90,24 +89,6 @@ router.get(
   "/settings/registrations",
   asyncHandler(async (_req, res) => {
     res.json({ allow_registrations: await getAllowRegistrations(true) });
-  }),
-);
-
-// Reading these is public (routes/captcha.ts): sign-in and register forms need them.
-const captchaSettingsSchema = z
-  .object({
-    login: z.boolean(),
-    register: z.boolean(),
-    import: z.boolean(),
-    change_password: z.boolean(),
-    change_email: z.boolean(),
-  })
-  .partial();
-router.patch(
-  "/settings/captcha",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    res.json(await setCaptchaSettings(parseBody(captchaSettingsSchema, req.body)));
   }),
 );
 

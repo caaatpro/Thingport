@@ -7,7 +7,6 @@ import { HttpError } from "../utils/fileUtils";
 import { normalizeImportUrl } from "../utils/urlUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { requireCaptcha } from "../services/captchaService";
 import {
   checkImportStatus,
   downloadImportToTemp,
@@ -93,7 +92,6 @@ async function withStoredMakerworldCookie<T extends { makerworld_cookie?: string
 
 router.post(
   "/import",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = await withStoredMakerworldCookie(req.userId!, parseBody(importRequestSchema, req.body));
     const url = await normalizeImportUrl(body.url);
@@ -323,7 +321,6 @@ const makerworldProfilesImportRequestSchema = importRequestSchema.extend({
 
 router.post(
   "/import/makerworld-profiles",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = await withStoredMakerworldCookie(
       req.userId!,
@@ -347,7 +344,6 @@ const collectionImportRequestSchema = importRequestSchema.extend({
 
 router.post(
   "/import/collection",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = await withStoredMakerworldCookie(req.userId!, parseBody(collectionImportRequestSchema, req.body));
     await assertNoActiveJob(req.userId!);
@@ -368,7 +364,6 @@ const thingiverseLikesImportRequestSchema = importRequestSchema.extend({
 
 router.post(
   "/import/thingiverse-likes",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = parseBody(thingiverseLikesImportRequestSchema, req.body);
     await assertNoActiveJob(req.userId!);
@@ -391,7 +386,6 @@ router.post(
 
 router.post(
   "/import/thingiverse-collection",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = parseBody(thingiverseLikesImportRequestSchema, req.body);
     await assertNoActiveJob(req.userId!);
@@ -418,7 +412,6 @@ const printablesCollectionImportRequestSchema = importRequestSchema.extend({
 
 router.post(
   "/import/printables-collection",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = parseBody(printablesCollectionImportRequestSchema, req.body);
     await assertNoActiveJob(req.userId!);
@@ -445,7 +438,6 @@ const zipExtractRequestSchema = importRequestSchema.extend({
 
 router.post(
   "/import/zip",
-  requireCaptcha("import"),
   asyncHandler(async (req, res) => {
     const body = parseBody(zipExtractRequestSchema, req.body);
     await assertNoActiveJob(req.userId!);

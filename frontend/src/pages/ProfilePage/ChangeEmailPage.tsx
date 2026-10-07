@@ -9,9 +9,6 @@ import Alert from "@mui/material/Alert";
 import SectionHeader from "../../components/SectionHeader";
 import { authApi, type AuthUser } from "../../api/auth";
 import { UnauthorizedError } from "../../api/client";
-import type { CaptchaAnswer } from "../../api/captcha";
-import CaptchaField from "../../components/CaptchaField";
-import { useCaptchaSettings } from "../../hooks/useCaptchaSettings";
 
 type Props = {
   user: AuthUser | null;
@@ -27,9 +24,6 @@ export default function ChangeEmailPage({ user, onUserUpdated, onUnauthorized }:
   const [loading, setLoading] = React.useState(false);
   const [status, setStatus] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const captchaEnabled = useCaptchaSettings()?.change_email ?? false;
-  const [captcha, setCaptcha] = React.useState<CaptchaAnswer | null>(null);
-  const [captchaKey, setCaptchaKey] = React.useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +34,6 @@ export default function ChangeEmailPage({ user, onUserUpdated, onUnauthorized }:
       const result = await authApi.updateProfile({
         current_password: password,
         email: email.trim(),
-        ...(captchaEnabled && captcha),
       });
       onUserUpdated(result.user);
       setPassword("");
@@ -56,8 +49,6 @@ export default function ChangeEmailPage({ user, onUserUpdated, onUnauthorized }:
       }
       setError(err instanceof Error ? err.message : t("profile.genericError"));
     } finally {
-      // Every attempt, successful or not, uses the captcha up.
-      if (captchaEnabled) setCaptchaKey((k) => k + 1);
       setLoading(false);
     }
   };
@@ -107,7 +98,6 @@ export default function ChangeEmailPage({ user, onUserUpdated, onUnauthorized }:
             fullWidth
             size="small"
           />
-          {captchaEnabled && <CaptchaField key={captchaKey} onChange={setCaptcha} disabled={loading} />}
           <Button type="submit" variant="contained" disabled={loading}>
             {loading ? t("profile.saving") : t("profile.saveEmail")}
           </Button>

@@ -15,33 +15,6 @@ async function setBoolSetting(key: string, value: boolean): Promise<void> {
   });
 }
 
-export type CaptchaPlace = "login" | "register" | "import" | "change_password" | "change_email";
-export type CaptchaSettings = Record<CaptchaPlace, boolean>;
-export const CAPTCHA_PLACES: readonly CaptchaPlace[] = [
-  "login",
-  "register",
-  "import",
-  "change_password",
-  "change_email",
-];
-const captchaKey = (place: CaptchaPlace) => `captcha_${place}`;
-
-export async function getCaptchaSettings(): Promise<CaptchaSettings> {
-  const values = await Promise.all(CAPTCHA_PLACES.map((place) => getBoolSetting(captchaKey(place), false)));
-  return Object.fromEntries(CAPTCHA_PLACES.map((place, i) => [place, values[i]])) as CaptchaSettings;
-}
-
-export async function isCaptchaEnabled(place: CaptchaPlace): Promise<boolean> {
-  return getBoolSetting(captchaKey(place), false);
-}
-
-export async function setCaptchaSettings(patch: Partial<CaptchaSettings>): Promise<CaptchaSettings> {
-  for (const place of CAPTCHA_PLACES) {
-    if (patch[place] !== undefined) await setBoolSetting(captchaKey(place), patch[place]);
-  }
-  return getCaptchaSettings();
-}
-
 const ALLOW_REGISTRATIONS_KEY = "allow_registrations";
 
 export async function getAllowRegistrations(fallback: boolean): Promise<boolean> {
