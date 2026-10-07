@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Skeleton from "@mui/material/Skeleton";
+import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type Category, type CategoryMetaInput, categoriesApi } from "../../api/categories";
@@ -59,8 +60,7 @@ export default function ModelsPage({
   const sortMode: PrintSortMode =
     sortModeParam === "popular" || sortModeParam === "downloads" ? sortModeParam : "newest";
   const scopeParam = searchParams.get("scope");
-  const scope: "mine" | "shared" | "all" =
-    scopeParam === "shared" || scopeParam === "all" ? scopeParam : "mine";
+  const scope: "mine" | "shared" | "all" = scopeParam === "shared" || scopeParam === "all" ? scopeParam : "mine";
   const setScope = (next: "mine" | "shared" | "all") => {
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
@@ -121,6 +121,10 @@ export default function ModelsPage({
     subtitle: selectedCategory ? t("models:categories.subtitle") : undefined,
     onBack: categoryId ? () => onSelectCategory(null) : undefined,
   });
+
+  // Which empty state fits: a brand-new library, nothing shared yet, or a filter with no hits.
+  const emptyKey = (part: "Title" | "Hint") =>
+    `models:grid.${categoryId ? "emptyFiltered" : scope === "mine" ? "empty" : "emptyShared"}${part}` as const;
 
   const handleError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
@@ -326,7 +330,9 @@ export default function ModelsPage({
             >
               {Array.from({ length: 10 }).map((_, i) => (
                 <Box key={i}>
-                  <Skeleton variant="rounded" sx={{ width: "100%", aspectRatio: "4 / 3", borderRadius: "12px" }} />
+                  <Box sx={{ width: "100%", aspectRatio: "4 / 3" }}>
+                    <Skeleton variant="rounded" width="100%" height="100%" sx={{ borderRadius: "12px" }} />
+                  </Box>
                   <Skeleton variant="text" sx={{ mt: 1, width: "70%" }} />
                   <Skeleton variant="text" sx={{ width: "40%" }} />
                 </Box>
@@ -375,8 +381,14 @@ export default function ModelsPage({
               )}
             </Stack>
           ) : (
-            <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
-              <Typography variant="body2">{t("models:grid.empty")}</Typography>
+            <Stack alignItems="center" spacing={1} sx={{ py: 10, px: 2, color: "text.secondary", textAlign: "center" }}>
+              <ViewInArIcon sx={{ fontSize: 56, opacity: 0.35, mb: 1 }} />
+              <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+                {t(emptyKey("Title"))}
+              </Typography>
+              <Typography variant="body2" sx={{ maxWidth: 420 }}>
+                {t(emptyKey("Hint"))}
+              </Typography>
             </Stack>
           )}
         </Box>

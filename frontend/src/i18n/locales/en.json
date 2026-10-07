@@ -1328,7 +1328,13 @@
     },
     "grid": {
       "empty": "No models yet.",
-      "loadingMore": "Loading…"
+      "loadingMore": "Loading…",
+      "emptyTitle": "Your library is empty",
+      "emptyHint": "Drop model files anywhere on this page, or use Add to upload files or import a link.",
+      "emptySharedTitle": "Nothing shared with you yet",
+      "emptySharedHint": "Models and collections other people share with you will show up here.",
+      "emptyFilteredTitle": "No models here",
+      "emptyFilteredHint": "Nothing matches this category or filter."
     },
     "sort": {
       "newest": "Newest",
