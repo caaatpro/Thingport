@@ -5,30 +5,11 @@ import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
+import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import AppLayout from "./components/Layout/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
-import ModelsPage from "./pages/ModelsPage";
-import ModelDetailPage from "./pages/ModelDetailPage";
-import CollectionsPage from "./pages/CollectionsPage";
-import CollectionDetailPage from "./pages/CollectionDetailPage";
-import TagsPage from "./pages/TagsPage";
-import TagDetailPage from "./pages/TagDetailPage";
-import AuthorPage from "./pages/AuthorPage";
 import AuthPage from "./pages/AuthPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import ProfilePage from "./pages/ProfilePage";
-import ChangeEmailPage from "./pages/ProfilePage/ChangeEmailPage";
-import ChangePasswordPage from "./pages/ProfilePage/ChangePasswordPage";
-import DownloadPage from "./pages/DownloadPage";
-import AdminPage from "./pages/AdminPage";
-import AdminSettingsPage from "./pages/AdminSettingsPage";
-import UsersPage from "./pages/UsersPage";
-import LogsPage from "./pages/LogsPage";
-import TriggersPage from "./pages/TriggersPage";
-import ConnectionsPage from "./pages/ConnectionsPage";
-import RenderingPage from "./pages/RenderingPage";
 import { healthApi, type HealthInfo } from "./api/health";
 import { authApi, type AuthUser } from "./api/auth";
 import { settingsApi, type PreviewMode } from "./api/settings";
@@ -37,6 +18,27 @@ import { type AppSettings, loadSettings, saveSettings } from "./utils/settings";
 import { useResolvedTheme } from "./hooks/useResolvedTheme";
 import type { ResolvedTheme, ThemeSelection } from "./constants/settingsOptions";
 import { buildTheme } from "./theme";
+
+const ModelsPage = React.lazy(() => import("./pages/ModelsPage"));
+const ModelDetailPage = React.lazy(() => import("./pages/ModelDetailPage"));
+const CollectionsPage = React.lazy(() => import("./pages/CollectionsPage"));
+const CollectionDetailPage = React.lazy(() => import("./pages/CollectionDetailPage"));
+const TagsPage = React.lazy(() => import("./pages/TagsPage"));
+const TagDetailPage = React.lazy(() => import("./pages/TagDetailPage"));
+const AuthorPage = React.lazy(() => import("./pages/AuthorPage"));
+const VerifyEmailPage = React.lazy(() => import("./pages/VerifyEmailPage"));
+const ResetPasswordPage = React.lazy(() => import("./pages/ResetPasswordPage"));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
+const ChangeEmailPage = React.lazy(() => import("./pages/ProfilePage/ChangeEmailPage"));
+const ChangePasswordPage = React.lazy(() => import("./pages/ProfilePage/ChangePasswordPage"));
+const DownloadPage = React.lazy(() => import("./pages/DownloadPage"));
+const AdminPage = React.lazy(() => import("./pages/AdminPage"));
+const AdminSettingsPage = React.lazy(() => import("./pages/AdminSettingsPage"));
+const UsersPage = React.lazy(() => import("./pages/UsersPage"));
+const LogsPage = React.lazy(() => import("./pages/LogsPage"));
+const TriggersPage = React.lazy(() => import("./pages/TriggersPage"));
+const ConnectionsPage = React.lazy(() => import("./pages/ConnectionsPage"));
+const RenderingPage = React.lazy(() => import("./pages/RenderingPage"));
 
 const DEFAULT_REFRESH_SECONDS = 6 * 60 * 60; // 6 hours
 
@@ -56,6 +58,14 @@ type AppShellProps = {
   onLogout: () => void;
   onUserUpdated: (user: AuthUser) => void;
 };
+
+function PageLoading() {
+  return (
+    <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}>
+      <CircularProgress size={24} />
+    </Box>
+  );
+}
 
 /** Split out so App can stay outside <BrowserRouter>. */
 function AppShell({
@@ -113,147 +123,149 @@ function AppShell({
       user={user}
       onThemeChange={onThemeChange}
     >
-      <Routes>
-        <Route path="/" element={<DashboardPage onUnauthorized={onUnauthorized} />} />
-        <Route
-          path="/models"
-          element={
-            <ModelsPage
-              categoryId={categoryId}
-              onSelectCategory={setCategoryId}
-              categoriesVersion={categoryVersion}
-              onCategoriesChanged={handleCategoriesChanged}
-              printsVersion={nonce}
-              onUnauthorized={onUnauthorized}
-              theme={resolvedTheme}
-              previewMode={previewMode}
-              viewer={user}
-            />
-          }
-        />
-        <Route
-          path="/models/collections"
-          element={
-            <CollectionsPage
-              theme={resolvedTheme}
-              previewMode={previewMode}
-              onUnauthorized={onUnauthorized}
-              onBookmarksChanged={handleBookmarksChanged}
-            />
-          }
-        />
-        <Route
-          path="/models/collections/:collectionId"
-          element={
-            <CollectionDetailPage
-              theme={resolvedTheme}
-              previewMode={previewMode}
-              onUnauthorized={onUnauthorized}
-              onBookmarksChanged={handleBookmarksChanged}
-              viewer={user}
-            />
-          }
-        />
-        <Route
-          path="/models/tags"
-          element={<TagsPage onUnauthorized={onUnauthorized} onBookmarksChanged={handleBookmarksChanged} />}
-        />
-        <Route
-          path="/models/tags/:tagName"
-          element={
-            <TagDetailPage
-              theme={resolvedTheme}
-              previewMode={previewMode}
-              onUnauthorized={onUnauthorized}
-              onBookmarksChanged={handleBookmarksChanged}
-              viewer={user}
-            />
-          }
-        />
-        <Route
-          path="/models/:printId"
-          element={
-            <ModelDetailPage
-              theme={resolvedTheme}
-              onSelectCategory={setCategoryId}
-              onUnauthorized={onUnauthorized}
-              viewer={user}
-            />
-          }
-        />
-        <Route
-          path="/authors/:authorId"
-          element={
-            <AuthorPage
-              theme={resolvedTheme}
-              previewMode={previewMode}
-              onUnauthorized={onUnauthorized}
-              viewer={user}
-              onUserUpdated={onUserUpdated}
-            />
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProfilePage
-              user={user}
-              makerworldCookie={settings.makerworld.cookie}
-              onUpdateMakerWorld={(patch) =>
-                setSettings((prev) => ({ ...prev, makerworld: { ...prev.makerworld, ...patch } }))
-              }
-              onUnauthorized={onUnauthorized}
-            />
-          }
-        />
-        <Route
-          path="/profile/email"
-          element={<ChangeEmailPage user={user} onUserUpdated={onUserUpdated} onUnauthorized={onUnauthorized} />}
-        />
-        <Route path="/profile/password" element={<ChangePasswordPage onUnauthorized={onUnauthorized} />} />
-        <Route path="/downloads" element={<DownloadPage />} />
-        <Route
-          path="/admin"
-          element={isAdmin ? <AdminPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/admin-settings"
-          element={isAdmin ? <AdminSettingsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/admin-rendering"
-          element={
-            isAdmin ? (
-              <RenderingPage onUnauthorized={onUnauthorized} onPreviewModeChanged={setPreviewMode} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/admin-users"
-          element={
-            isAdmin ? (
-              <UsersPage onUnauthorized={onUnauthorized} currentUserId={user?.id} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/admin-logs"
-          element={isAdmin ? <LogsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/admin-triggers"
-          element={isAdmin ? <TriggersPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
-        />
-        <Route
-          path="/admin-connections"
-          element={isAdmin ? <ConnectionsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <React.Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route path="/" element={<DashboardPage onUnauthorized={onUnauthorized} />} />
+          <Route
+            path="/models"
+            element={
+              <ModelsPage
+                categoryId={categoryId}
+                onSelectCategory={setCategoryId}
+                categoriesVersion={categoryVersion}
+                onCategoriesChanged={handleCategoriesChanged}
+                printsVersion={nonce}
+                onUnauthorized={onUnauthorized}
+                theme={resolvedTheme}
+                previewMode={previewMode}
+                viewer={user}
+              />
+            }
+          />
+          <Route
+            path="/models/collections"
+            element={
+              <CollectionsPage
+                theme={resolvedTheme}
+                previewMode={previewMode}
+                onUnauthorized={onUnauthorized}
+                onBookmarksChanged={handleBookmarksChanged}
+              />
+            }
+          />
+          <Route
+            path="/models/collections/:collectionId"
+            element={
+              <CollectionDetailPage
+                theme={resolvedTheme}
+                previewMode={previewMode}
+                onUnauthorized={onUnauthorized}
+                onBookmarksChanged={handleBookmarksChanged}
+                viewer={user}
+              />
+            }
+          />
+          <Route
+            path="/models/tags"
+            element={<TagsPage onUnauthorized={onUnauthorized} onBookmarksChanged={handleBookmarksChanged} />}
+          />
+          <Route
+            path="/models/tags/:tagName"
+            element={
+              <TagDetailPage
+                theme={resolvedTheme}
+                previewMode={previewMode}
+                onUnauthorized={onUnauthorized}
+                onBookmarksChanged={handleBookmarksChanged}
+                viewer={user}
+              />
+            }
+          />
+          <Route
+            path="/models/:printId"
+            element={
+              <ModelDetailPage
+                theme={resolvedTheme}
+                onSelectCategory={setCategoryId}
+                onUnauthorized={onUnauthorized}
+                viewer={user}
+              />
+            }
+          />
+          <Route
+            path="/authors/:authorId"
+            element={
+              <AuthorPage
+                theme={resolvedTheme}
+                previewMode={previewMode}
+                onUnauthorized={onUnauthorized}
+                viewer={user}
+                onUserUpdated={onUserUpdated}
+              />
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProfilePage
+                user={user}
+                makerworldCookie={settings.makerworld.cookie}
+                onUpdateMakerWorld={(patch) =>
+                  setSettings((prev) => ({ ...prev, makerworld: { ...prev.makerworld, ...patch } }))
+                }
+                onUnauthorized={onUnauthorized}
+              />
+            }
+          />
+          <Route
+            path="/profile/email"
+            element={<ChangeEmailPage user={user} onUserUpdated={onUserUpdated} onUnauthorized={onUnauthorized} />}
+          />
+          <Route path="/profile/password" element={<ChangePasswordPage onUnauthorized={onUnauthorized} />} />
+          <Route path="/downloads" element={<DownloadPage />} />
+          <Route
+            path="/admin"
+            element={isAdmin ? <AdminPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/admin-settings"
+            element={isAdmin ? <AdminSettingsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/admin-rendering"
+            element={
+              isAdmin ? (
+                <RenderingPage onUnauthorized={onUnauthorized} onPreviewModeChanged={setPreviewMode} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/admin-users"
+            element={
+              isAdmin ? (
+                <UsersPage onUnauthorized={onUnauthorized} currentUserId={user?.id} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/admin-logs"
+            element={isAdmin ? <LogsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/admin-triggers"
+            element={isAdmin ? <TriggersPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/admin-connections"
+            element={isAdmin ? <ConnectionsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </React.Suspense>
     </AppLayout>
   );
 }
@@ -395,9 +407,13 @@ export default function App() {
           }}
         >
           {isVerifyEmailPath ? (
-            <VerifyEmailPage onSuccess={handleLogin} />
+            <React.Suspense fallback={null}>
+              <VerifyEmailPage onSuccess={handleLogin} />
+            </React.Suspense>
           ) : isResetPasswordPath ? (
-            <ResetPasswordPage onSuccess={handleLogin} />
+            <React.Suspense fallback={null}>
+              <ResetPasswordPage onSuccess={handleLogin} />
+            </React.Suspense>
           ) : (
             <AuthPage
               onSuccess={handleLogin}

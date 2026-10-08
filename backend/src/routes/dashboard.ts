@@ -54,6 +54,8 @@ router.get(
       top_authors: summary.topAuthors.map(authorOut),
       top_providers: summary.topProviders.map(providerOut),
       recently_added: summary.recentlyAdded.map(modelOut),
+      recently_viewed: summary.recentlyViewed.map(modelOut),
+      favorites: summary.favorites.map(modelOut),
     });
   }),
 );

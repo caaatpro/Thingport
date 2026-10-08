@@ -1,3 +1,5 @@
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -46,6 +48,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
   const [notFound, setNotFound] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Returns wherever the user came from; useSmartBack skips same-route history entries.
   const goBack = useSmartBack();
@@ -53,24 +56,6 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
   usePageHeader({
     title: print ? print.title || print.name : undefined,
     subtitle: print ? t("models:detail.subtitle") : undefined,
-    actions: print ? (
-      <Stack
-        direction="row"
-        spacing={0.5}
-        sx={{
-          alignItems: "center",
-        }}
-      >
-        <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
-        <ModelActionsMenu
-          print={print}
-          onUnauthorized={onUnauthorized}
-          onDeleted={goBack}
-          onUpdated={setPrint}
-          viewer={viewer}
-        />
-      </Stack>
-    ) : undefined,
   });
 
   useEffect(() => {
@@ -140,8 +125,42 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
   const goPrevImage = () => setActiveImageIndex((i) => (i - 1 + images.length) % images.length);
   const goNextImage = () => setActiveImageIndex((i) => (i + 1) % images.length);
 
+  const isOwner = print.is_owner !== false;
+
   return (
     <Box sx={{ maxWidth: "1390px", mx: "auto" }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "flex-end", mb: 2 }}>
+        <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
+        <Button
+          variant="outlined"
+          color="inherit"
+          size="small"
+          startIcon={<EditOutlinedIcon />}
+          onClick={() => navigate(`/models/${print.id}?edit=${print.id}`)}
+        >
+          {t("common:edit")}
+        </Button>
+        {isOwner && (
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            startIcon={<ShareOutlinedIcon />}
+            onClick={() => setShareOpen(true)}
+          >
+            {t("models:share.menu")}
+          </Button>
+        )}
+        <ModelActionsMenu
+          print={print}
+          onUnauthorized={onUnauthorized}
+          onDeleted={goBack}
+          onUpdated={setPrint}
+          viewer={viewer}
+          shareOpen={shareOpen}
+          onShareOpenChange={setShareOpen}
+        />
+      </Stack>
       <Box
         sx={{
           display: "grid",
@@ -160,9 +179,11 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
               position: "relative",
               width: "100%",
               aspectRatio: "16 / 10",
-              borderRadius: "12px",
+              borderRadius: "14px",
               overflow: "hidden",
               bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
             }}
           >
             {hasImages ? (
@@ -307,7 +328,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
             sx={{
               mt: 3,
               p: 2,
-              borderRadius: "12px",
+              borderRadius: "14px",
               borderColor: dividerBorderColor,
             }}
           >

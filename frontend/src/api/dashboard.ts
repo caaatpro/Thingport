@@ -33,6 +33,8 @@ export type DashboardSummary = {
   top_authors: DashboardAuthor[];
   top_providers: DashboardProvider[];
   recently_added: DashboardModel[];
+  recently_viewed: DashboardModel[];
+  favorites: DashboardModel[];
 };
 
 export const dashboardApi = {

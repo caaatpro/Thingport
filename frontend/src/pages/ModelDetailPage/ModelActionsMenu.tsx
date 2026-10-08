@@ -47,6 +47,9 @@ type Props = {
   /** Glyph size in px; defaults to fontSize="small". */
   iconFontSize?: number;
   viewer?: AuthUser | null;
+  /** Lets a page open the share dialog from its own button. */
+  shareOpen?: boolean;
+  onShareOpenChange?: (open: boolean) => void;
 };
 
 /** The "..." menu for a model, shared by the detail header and grid cards. */
@@ -60,6 +63,8 @@ export default function ModelActionsMenu({
   triggerSx,
   iconFontSize,
   viewer,
+  shareOpen: shareOpenProp,
+  onShareOpenChange,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
@@ -71,7 +76,9 @@ export default function ModelActionsMenu({
   const [deleting, setDeleting] = useState(false);
   const [removingFromCollection, setRemovingFromCollection] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
+  const [shareOpenState, setShareOpenState] = useState(false);
+  const shareOpen = shareOpenProp ?? shareOpenState;
+  const setShareOpen = onShareOpenChange ?? setShareOpenState;
   // Driven by ?edit=<id> so links and the back button open/close it.
   const editOpen = searchParams.get("edit") === print.id;
   const {

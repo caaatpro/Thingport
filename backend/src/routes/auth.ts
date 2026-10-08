@@ -14,6 +14,10 @@ import { createLog } from "../services/auditLog";
 import { seedDefaultCategories } from "../services/categoryService";
 import { toUserOut } from "../dto";
 import type { Prisma, Role } from "../generated/prisma/client";
+import { rateLimit } from "../utils/rateLimit";
+
+/** Brute-force guard for sign-in, sign-up and the e-mail/password flows. */
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30 });
 
 const router = Router();
 
@@ -41,6 +45,7 @@ const loginSchema = z.object({
 
 router.post(
   "/register",
+  authLimiter,
   asyncHandler(async (req, res) => {
     const body = parseBody(registerSchema, req.body);
     const email = body.email.toLowerCase();
@@ -110,6 +115,7 @@ router.post(
 
 router.post(
   "/login",
+  authLimiter,
   asyncHandler(async (req, res) => {
     const body = parseBody(loginSchema, req.body);
     const email = body.email.toLowerCase();
@@ -147,6 +153,7 @@ const verifyEmailSchema = z.object({ token: z.string().min(1) });
 
 router.post(
   "/verify-email",
+  authLimiter,
   asyncHandler(async (req, res) => {
     const body = parseBody(verifyEmailSchema, req.body);
     const user = await prisma.user.findUnique({ where: { emailVerificationToken: body.token } });
@@ -188,6 +195,7 @@ const resendVerificationSchema = z.object({ email: z.string().trim().email() });
 
 router.post(
   "/resend-verification",
+  authLimiter,
   asyncHandler(async (req, res) => {
     const body = parseBody(resendVerificationSchema, req.body);
     const email = body.email.toLowerCase();
@@ -223,6 +231,7 @@ const forgotPasswordSchema = z.object({ email: z.string().trim().email("Enter a 
 
 router.post(
   "/forgot-password",
+  authLimiter,
   asyncHandler(async (req, res) => {
     const body = parseBody(forgotPasswordSchema, req.body);
     const email = body.email.toLowerCase();
@@ -267,6 +276,7 @@ const resetPasswordSchema = z.object({
 
 router.post(
   "/reset-password",
+  authLimiter,
   asyncHandler(async (req, res) => {
     const body = parseBody(resetPasswordSchema, req.body);
     const user = await findUserByResetToken(body.token);

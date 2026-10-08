@@ -94,7 +94,10 @@ describe("authenticating with a token", () => {
     expect(self.body.user.email).toBe(email("token-owner"));
 
     // Creates a collection as the token's owner.
-    const made = await request(app).post("/api/collections").set(bearer).send({ name: `From grab ${stamp}` });
+    const made = await request(app)
+      .post("/api/collections")
+      .set(bearer)
+      .send({ name: `From grab ${stamp}` });
     expect(made.status).toBe(200);
     const mine = await request(app).get("/api/collections").set(session(ownerSession));
     expect(mine.body.map((c: { id: string }) => c.id)).toContain(made.body.id);
@@ -135,7 +138,9 @@ describe("authenticating with a token", () => {
   it("rejects unknown, malformed and truncated tokens", async () => {
     const created = await createToken(ownerSession, { name: "real" });
     for (const bad of ["tpg_notarealtoken", "tpg_", created.body.token.slice(0, -1), `tpg_${"a".repeat(500)}`]) {
-      const res = await request(app).get("/api/collections").set({ Authorization: `Bearer ${bad}` });
+      const res = await request(app)
+        .get("/api/collections")
+        .set({ Authorization: `Bearer ${bad}` });
       expect({ token: bad.slice(0, 20), status: res.status }).toEqual({ token: bad.slice(0, 20), status: 401 });
     }
   });
@@ -151,7 +156,9 @@ describe("authenticating with a token", () => {
   it("records when it was last used", async () => {
     const created = await createToken(ownerSession, { name: "tracked" });
     expect((await prisma.apiToken.findUniqueOrThrow({ where: { id: created.body.id } })).lastUsedAt).toBeNull();
-    await request(app).get("/api/collections").set({ Authorization: `Bearer ${created.body.token}` });
+    await request(app)
+      .get("/api/collections")
+      .set({ Authorization: `Bearer ${created.body.token}` });
     await new Promise((resolve) => setTimeout(resolve, 100)); // the stamp is written in the background
     expect((await prisma.apiToken.findUniqueOrThrow({ where: { id: created.body.id } })).lastUsedAt).not.toBeNull();
   });
@@ -179,7 +186,9 @@ describe("revoking tokens", () => {
     const created = await createToken(token, { name: "orphan" });
     await prisma.user.delete({ where: { id } });
     createdUserIds.splice(createdUserIds.indexOf(id), 1);
-    const res = await request(app).get("/api/collections").set({ Authorization: `Bearer ${created.body.token}` });
+    const res = await request(app)
+      .get("/api/collections")
+      .set({ Authorization: `Bearer ${created.body.token}` });
     expect(res.status).toBe(401);
   });
 });

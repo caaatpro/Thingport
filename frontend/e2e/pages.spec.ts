@@ -38,7 +38,9 @@ test("the downloads page offers the extension and no browser-store links", async
     "href",
     "/downloads/thingport-grab-chrome.zip",
   );
-  await expect(page.locator('a[href*="chromewebstore"], a[href*="addons.mozilla"], a[href*="microsoftedge"]')).toHaveCount(0);
+  await expect(
+    page.locator('a[href*="chromewebstore"], a[href*="addons.mozilla"], a[href*="microsoftedge"]'),
+  ).toHaveCount(0);
 });
 
 test("English is the only language: no language picker on the profile page", async ({ page }) => {

@@ -232,27 +232,20 @@ router.get(
 
     const where = await buildPrintWhere(req);
     const tagList = parseTagList(req);
+    // Two steps: sort and page over slim rows, then load the heavy relations for one page only.
     const allMatching = await prisma.print.findMany({
       where,
-      include: {
-        plates: { orderBy: { position: "asc" } },
-        previewImages: { orderBy: { position: "asc" } },
-        author: true,
-        category: true,
-        user: { select: { id: true, displayName: true } },
-        shares: { select: { sharedWithUserId: true } },
-        collectionItems: sharedViaCollectionSelect,
+      select: {
+        id: true,
+        tags: true,
+        viewCount: true,
+        printCount: true,
+        createdAt: true,
+        favoritedAt: true,
+        lastViewedAt: true,
       },
     });
     const prints = tagList.length ? allMatching.filter((p) => matchesTagList(p.tags, tagList)) : allMatching;
-    const printIds = prints.map((p) => p.id);
-    const files = printIds.length ? await prisma.printFile.findMany({ where: { printId: { in: printIds } } }) : [];
-    const filesByPrint = new Map<string, typeof files>();
-    for (const f of files) {
-      const list = filesByPrint.get(f.printId) ?? [];
-      list.push(f);
-      filesByPrint.set(f.printId, list);
-    }
 
     // Under "newest", Favourites and Browsing History sort by when they were favorited/viewed.
     const collectionIdParam = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
@@ -284,15 +277,43 @@ router.get(
       res.setHeader("X-Total-Count", String(sorted.length));
     }
 
-    const out = paged.map((p) => {
+    const pageIds = paged.map((p) => p.id);
+    const full = pageIds.length
+      ? await prisma.print.findMany({
+          where: { id: { in: pageIds } },
+          include: {
+            plates: { orderBy: { position: "asc" } },
+            previewImages: { orderBy: { position: "asc" } },
+            author: true,
+            category: true,
+            user: { select: { id: true, displayName: true } },
+            shares: { select: { sharedWithUserId: true } },
+            collectionItems: sharedViaCollectionSelect,
+          },
+        })
+      : [];
+    const fullById = new Map(full.map((p) => [p.id, p]));
+    const files = pageIds.length ? await prisma.printFile.findMany({ where: { printId: { in: pageIds } } }) : [];
+    const filesByPrint = new Map<string, typeof files>();
+    for (const f of files) {
+      const list = filesByPrint.get(f.printId) ?? [];
+      list.push(f);
+      filesByPrint.set(f.printId, list);
+    }
+
+    const out = pageIds.flatMap((id) => {
+      const p = fullById.get(id);
+      if (!p) return [];
       const printFiles = filesByPrint.get(p.id) ?? [];
       const preparedFile = p.preparedFileId ? (printFiles.find((f) => f.id === p.preparedFileId) ?? null) : null;
-      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, p.category, {
-        viewerId: req.userId,
-        shares: p.shares,
-        viaCollection: p.collectionItems.length > 0,
-        owner: { id: p.user.id, display_name: p.user.displayName },
-      });
+      return [
+        toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, p.category, {
+          viewerId: req.userId,
+          shares: p.shares,
+          viaCollection: p.collectionItems.length > 0,
+          owner: { id: p.user.id, display_name: p.user.displayName },
+        }),
+      ];
     });
     res.json(out);
   }),

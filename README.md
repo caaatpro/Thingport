@@ -17,7 +17,6 @@ from the places where you discover them.
 </p>
 
 <p>
-  <a href="https://thingport.net/"><img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/web-pages.yml/badge.svg" alt="Website build"></a>
   <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/frontend-image.yml/badge.svg" alt="Frontend">
   <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/backend-image.yml/badge.svg" alt="Backend">
   <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/bridge-release.yml/badge.svg" alt="Slicer Bridge">

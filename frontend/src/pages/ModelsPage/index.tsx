@@ -8,6 +8,8 @@ import CircularProgress from "@mui/material/CircularProgress";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Skeleton from "@mui/material/Skeleton";
+import GridViewIcon from "@mui/icons-material/GridView";
+import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
@@ -21,6 +23,8 @@ import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
 import CategoriesPanel from "./CategoriesPanel";
 import CategoryBanner from "./CategoryBanner";
 import ModelCard from "./ModelCard";
+import ModelRow from "./ModelRow";
+import BulkBar from "./BulkBar";
 import SortTabs from "./SortTabs";
 
 const PAGE_SIZE = 24;
@@ -37,6 +41,17 @@ type Props = {
   previewMode: PreviewMode;
   viewer?: AuthUser | null;
 };
+
+const VIEW_KEY = "thingport.library.view";
+type ViewMode = "grid" | "list";
+
+function readView(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid";
+  } catch {
+    return "grid";
+  }
+}
 
 const CARD_GRID_COLUMNS = "repeat(auto-fill, minmax(236px, 1fr))";
 
@@ -55,6 +70,9 @@ export default function ModelsPage({
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [items, setItems] = useState<Print[]>([]);
+  const [view, setView] = useState<ViewMode>(readView);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -155,6 +173,10 @@ export default function ModelsPage({
   }, [categoriesVersion]);
 
   useEffect(() => {
+    setSelectedIds(new Set());
+  }, [categoryIdFilter, sortMode, scope]);
+
+  useEffect(() => {
     setLoading(true);
     (async () => {
       try {
@@ -175,7 +197,7 @@ export default function ModelsPage({
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryIdFilter, printsVersion, sortMode, scope]);
+  }, [categoryIdFilter, printsVersion, sortMode, scope, reloadKey]);
 
   // Live-refresh cards whose files are still being processed (thumbnail/preview/geometry), so a
   // freshly dropped model flips from a placeholder to its preview without a manual reload.
@@ -213,6 +235,15 @@ export default function ModelsPage({
       setLoadingMore(false);
     }
   };
+
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const selectedItems = items.filter((item) => selectedIds.has(item.id));
 
   const loadMoreSentinelRef = useInfiniteScroll(loadMore, hasMore, loading || loadingMore);
 
@@ -293,7 +324,31 @@ export default function ModelsPage({
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        <SortTabs value={sortMode} onChange={setSortMode} />
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+          <SortTabs value={sortMode} onChange={setSortMode} />
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={view}
+            aria-label={t("models:view.label")}
+            onChange={(_, next: ViewMode | null) => {
+              if (!next) return;
+              setView(next);
+              try {
+                localStorage.setItem(VIEW_KEY, next);
+              } catch {
+                // The choice just won't persist.
+              }
+            }}
+          >
+            <ToggleButton value="grid" aria-label={t("models:view.grid")}>
+              <GridViewIcon fontSize="small" />
+            </ToggleButton>
+            <ToggleButton value="list" aria-label={t("models:view.list")}>
+              <ViewListIcon fontSize="small" />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
       </Box>
       <Stack
         direction="row"
@@ -343,25 +398,32 @@ export default function ModelsPage({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: CARD_GRID_COLUMNS,
-                  gap: "20px",
+                  gridTemplateColumns: view === "list" ? "1fr" : CARD_GRID_COLUMNS,
+                  gap: view === "list" ? "8px" : "20px",
                 }}
               >
-                {items.map((item) => (
-                  <ModelCard
-                    key={item.id}
-                    item={item}
-                    theme={theme}
-                    previewMode={previewMode}
-                    onDeleted={(deletedId) => setItems((prev) => prev.filter((i) => i.id !== deletedId))}
-                    onFavoriteChange={(updated) =>
-                      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
-                    }
-                    onUpdated={(updated) => setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
-                    onUnauthorized={onUnauthorized}
-                    viewer={viewer}
-                  />
-                ))}
+                {items.map((item) => {
+                  const common = {
+                    item,
+                    theme,
+                    previewMode,
+                    onDeleted: (deletedId: string) => setItems((prev) => prev.filter((i) => i.id !== deletedId)),
+                    onFavoriteChange: (updated: Print) =>
+                      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i))),
+                    onUpdated: (updated: Print) =>
+                      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i))),
+                    onUnauthorized,
+                    viewer,
+                    selected: selectedIds.has(item.id),
+                    selectionActive: selectedIds.size > 0,
+                    onToggleSelect: item.is_owner === false ? undefined : () => toggleSelected(item.id),
+                  };
+                  return view === "list" ? (
+                    <ModelRow key={item.id} {...common} />
+                  ) : (
+                    <ModelCard key={item.id} {...common} />
+                  );
+                })}
               </Box>
               {hasMore && (
                 <Stack
@@ -416,6 +478,15 @@ export default function ModelsPage({
           )}
         </Box>
       </Stack>
+      {selectedItems.length > 0 && (
+        <BulkBar
+          selected={selectedItems}
+          categories={categories}
+          onClear={() => setSelectedIds(new Set())}
+          onChanged={() => setReloadKey((k) => k + 1)}
+          onUnauthorized={onUnauthorized}
+        />
+      )}
     </Stack>
   );
 }

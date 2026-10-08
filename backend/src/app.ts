@@ -27,6 +27,9 @@ import dashboardRoutes from "./routes/dashboard";
 export function createApp(): Express {
   const app = express();
 
+  // Behind the frontend nginx (and usually another proxy): trust its forwarded client address.
+  app.set("trust proxy", process.env.TRUST_PROXY_HOPS ? Number(process.env.TRUST_PROXY_HOPS) : 1);
+
   const origins = resolveCorsOrigins();
   app.use(
     cors({
@@ -62,8 +65,9 @@ export function createApp(): Express {
   app.use("/api", bookmarksRoutes);
   app.use("/api", searchRoutes);
   app.use("/api", notificationsRoutes);
-  app.use("/api", adminRoutes);
   app.use("/api", dashboardRoutes);
+  // Last on purpose: its router-wide requireAdmin would otherwise answer 403 for any route mounted after it.
+  app.use("/api", adminRoutes);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ detail: "Not found" });

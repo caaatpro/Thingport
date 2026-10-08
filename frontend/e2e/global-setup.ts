@@ -38,7 +38,9 @@ export default async function globalSetup(config: FullConfig) {
 
   const admin = await ensureUser(api, ADMIN);
   if (admin.user.role !== "ADMIN") {
-    throw new Error("The first account on the stack isn't an admin: start from a fresh database (scripts/e2e.sh does).");
+    throw new Error(
+      "The first account on the stack isn't an admin: start from a fresh database (scripts/e2e.sh does).",
+    );
   }
   const member = await ensureUser(api, MEMBER);
 
@@ -56,7 +58,9 @@ export default async function globalSetup(config: FullConfig) {
     }
     const upload = await api.post("/api/upload", {
       headers: authHeader(admin.token),
-      multipart: { files: { name: `${title}.stl`, mimeType: "model/stl", buffer: Buffer.from(stlBox(title, 20 + i * 5)) } },
+      multipart: {
+        files: { name: `${title}.stl`, mimeType: "model/stl", buffer: Buffer.from(stlBox(title, 20 + i * 5)) },
+      },
     });
     if (!upload.ok()) throw new Error(`Seeding "${title}" failed: ${await upload.text()}`);
     const id = ((await upload.json()) as { prints: { id: string }[] }).prints[0].id;

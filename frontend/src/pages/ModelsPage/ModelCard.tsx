@@ -7,6 +7,7 @@ import Stack from "@mui/material/Stack";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
+import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import { useTheme } from "@mui/material/styles";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
@@ -42,6 +43,10 @@ type Props = {
   onRemovedFromCollection?: (id: string) => void;
   /** Shown as the author of a direct upload, which has none. */
   viewer?: AuthUser | null;
+  /** Selection mode: set by the page when bulk actions apply to this card. */
+  selected?: boolean;
+  selectionActive?: boolean;
+  onToggleSelect?: () => void;
 };
 
 const OVERLAY_BUTTON_SIZE = 30;
@@ -67,6 +72,9 @@ export default function ModelCard({
   collectionId,
   onRemovedFromCollection,
   viewer,
+  selected = false,
+  selectionActive = false,
+  onToggleSelect,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
@@ -97,7 +105,7 @@ export default function ModelCard({
   return (
     <Paper
       variant="outlined"
-      onClick={() => navigate(`/models/${item.id}`)}
+      onClick={() => (selectionActive && onToggleSelect ? onToggleSelect() : navigate(`/models/${item.id}`))}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       sx={{
@@ -113,7 +121,11 @@ export default function ModelCard({
           borderColor: muiTheme.thingport.borderStrong,
           transform: "translateY(-2px)",
         },
-        "&:hover .model-card-actions": { opacity: 1 },
+        "&:hover .model-card-actions, &:hover .model-card-select, &:focus-within .model-card-select": { opacity: 1 },
+        ...(selected && {
+          borderColor: "primary.main",
+          boxShadow: (th) => `0 0 0 2px ${th.palette.primary.main}`,
+        }),
       }}
     >
       {/* zIndex 0 makes this its own stacking context, so the slideshow's layered slides stay
@@ -145,7 +157,7 @@ export default function ModelCard({
             sx={{
               position: "absolute",
               top: 8,
-              left: 8,
+              left: onToggleSelect ? 44 : 8,
               px: 1,
               py: 0.375,
               borderRadius: 1,
@@ -161,6 +173,31 @@ export default function ModelCard({
         </Tooltip>
       )}
 
+      {onToggleSelect && (
+        <Box
+          className="model-card-select"
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            position: "absolute",
+            top: 6,
+            left: 6,
+            zIndex: 1,
+            opacity: selectionActive || selected ? 1 : 0,
+            transition: "opacity .15s ease",
+            bgcolor: "background.paper",
+            borderRadius: "8px",
+            lineHeight: 0,
+          }}
+        >
+          <Checkbox
+            size="small"
+            checked={selected}
+            onChange={onToggleSelect}
+            slotProps={{ input: { "aria-label": t("models:bulk.selectModel", { name: item.title || item.name }) } }}
+            sx={{ p: 0.5 }}
+          />
+        </Box>
+      )}
       <Stack
         className="model-card-actions"
         direction="row"

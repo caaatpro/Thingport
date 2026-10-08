@@ -6,7 +6,8 @@ const TOP_MODELS_PREVIEW = 3;
 const TOP_MODELS_LIST_MAX = 50;
 const TOP_AUTHORS_PREVIEW = 5;
 const TOP_AUTHORS_LIST_MAX = 50;
-const RECENTLY_ADDED_LIMIT = 3;
+const RECENTLY_ADDED_LIMIT = 8;
+const SHELF_LIMIT = 8;
 
 export type DashboardModel = {
   id: string;
@@ -40,6 +41,8 @@ export type DashboardSummary = {
   topAuthors: DashboardAuthor[];
   topProviders: DashboardProvider[];
   recentlyAdded: DashboardModel[];
+  recentlyViewed: DashboardModel[];
+  favorites: DashboardModel[];
 };
 
 type PrintForModelSummary = {
@@ -107,6 +110,26 @@ async function fetchRecentlyAdded(userId: string, limit: number): Promise<Dashbo
   return prints.map(toModelSummary);
 }
 
+async function fetchRecentlyViewed(userId: string, limit: number): Promise<DashboardModel[]> {
+  const prints = await prisma.print.findMany({
+    where: { userId, lastViewedAt: { not: null } },
+    orderBy: { lastViewedAt: "desc" },
+    take: limit,
+    select: MODEL_SUMMARY_SELECT,
+  });
+  return prints.map(toModelSummary);
+}
+
+async function fetchFavorites(userId: string, limit: number): Promise<DashboardModel[]> {
+  const prints = await prisma.print.findMany({
+    where: { userId, favoritedAt: { not: null } },
+    orderBy: { favoritedAt: "desc" },
+    take: limit,
+    select: MODEL_SUMMARY_SELECT,
+  });
+  return prints.map(toModelSummary);
+}
+
 // Sorted in JS: groupBy can't reliably order by an aggregate here.
 async function fetchTopAuthors(userId: string, limit: number): Promise<DashboardAuthor[]> {
   const grouped = await prisma.print.groupBy({
@@ -161,6 +184,8 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
     topAuthors,
     topProviders,
     recentlyAdded,
+    recentlyViewed,
+    favorites,
   ] = await Promise.all([
     prisma.collection.count({ where: { userId } }),
     prisma.print.count({ where: { userId } }),
@@ -171,6 +196,8 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
     fetchTopAuthors(userId, TOP_AUTHORS_PREVIEW),
     fetchTopProviders(userId),
     fetchRecentlyAdded(userId, RECENTLY_ADDED_LIMIT),
+    fetchRecentlyViewed(userId, SHELF_LIMIT),
+    fetchFavorites(userId, SHELF_LIMIT),
   ]);
 
   return {
@@ -183,6 +210,8 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
     topAuthors,
     topProviders,
     recentlyAdded,
+    recentlyViewed,
+    favorites,
   };
 }
 

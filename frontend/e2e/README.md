@@ -4,9 +4,9 @@ Playwright drives a real Chromium against a throwaway Thingport stack: fresh dat
 in memory, its own port (18090). Nothing here touches your real instance.
 
 ```sh
-scripts/e2e.sh                   # build and start the stack, run everything, tear it down
-scripts/e2e.sh -g "sign in"      # extra arguments go to `playwright test`
-E2E_KEEP=1 scripts/e2e.sh        # leave the stack up afterwards (http://localhost:18090)
+scripts/e2e.sh              # build and start the stack, run everything, tear it down
+scripts/e2e.sh -g "sign in" # extra arguments go to `playwright test`
+E2E_KEEP=1 scripts/e2e.sh   # leave the stack up afterwards (http://localhost:18090)
 
 # against a stack that is already running (specs can be repeated; they use unique names)
 cd frontend && E2E_BASE_URL=http://localhost:18090 npx playwright test

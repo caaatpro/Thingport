@@ -312,7 +312,14 @@
       "recentlyAdded": {
         "title": "Recently Added",
         "empty": "Nothing added yet — uploaded and imported models will show up here."
-      }
+      },
+      "recentlyViewed": {
+        "title": "Pick up where you left off"
+      },
+      "favorites": {
+        "title": "Favorites"
+      },
+      "statsLabel": "Library at a glance"
     },
     "adminSettings": {
       "storageUsage": {
@@ -1219,6 +1226,35 @@
       "supporting": "Supporting file",
       "triangles_one": "{{formatted}} triangle",
       "triangles_other": "{{formatted}} triangles"
+    },
+    "bulk": {
+      "selected_one": "{{count}} selected",
+      "selected_other": "{{count}} selected",
+      "selectModel": "Select {{name}}",
+      "clear": "Clear",
+      "addToCollection": "Add to collection",
+      "noCollections": "No collections yet",
+      "addTags": "Add tags",
+      "addTagsTitle": "Add tags to {{count}} models",
+      "addTagsApply": "Add tags",
+      "tagsPlaceholder": "Type a tag and press Enter",
+      "moveToCategory": "Move to category",
+      "noCategory": "No category",
+      "delete": "Delete",
+      "confirmDelete_one": "Delete {{count}} model? This cannot be undone.",
+      "confirmDelete_other": "Delete {{count}} models? This cannot be undone.",
+      "doneCollection": "Added to “{{name}}”",
+      "doneTags": "Tags added",
+      "doneMove": "Moved",
+      "doneDelete_one": "Deleted {{count}} model",
+      "doneDelete_other": "Deleted {{count}} models",
+      "partial": "{{failed}} of {{total}} failed",
+      "notYours": "Only your own models can be changed"
+    },
+    "view": {
+      "label": "View",
+      "grid": "Grid",
+      "list": "List"
     }
   }
 }

@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { MEMBER, apiJson, readSeed, stlBox, unique } from "./helpers";
 
-test("sharing a model with a member makes it appear under 'Shared with me' for them", async ({ page, browser, request }) => {
+test("sharing a model with a member makes it appear under 'Shared with me' for them", async ({
+  page,
+  browser,
+  request,
+}) => {
   const { adminToken, memberId } = readSeed();
   const upload = await request.post("/api/upload", {
     headers: { Authorization: `Bearer ${adminToken}` },
@@ -29,7 +33,9 @@ test("sharing a model with a member makes it appear under 'Shared with me' for t
   await member.goto(`/models/${id}`);
   await expect(member.getByText(title).first()).toBeVisible();
   const res = await member.request.delete(`/api/print/${id}`, {
-    headers: { Authorization: `Bearer ${(await member.evaluate(() => localStorage.getItem("thingport_auth_token")))!}` },
+    headers: {
+      Authorization: `Bearer ${(await member.evaluate(() => localStorage.getItem("thingport_auth_token")))!}`,
+    },
   });
   expect(res.status()).toBe(404);
   await memberCtx.close();

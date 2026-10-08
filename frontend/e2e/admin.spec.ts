@@ -102,6 +102,12 @@ test.describe("as a member", () => {
     await expect(page.getByText("Administration")).toHaveCount(0);
   });
 
+  test("the dashboard works for a member too", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Recently Added" })).toBeVisible();
+    await expect(page.getByText("Failed to load your dashboard.")).toHaveCount(0);
+  });
+
   test("the admin API refuses a member's token", async ({ request }) => {
     const { memberToken } = readSeed();
     const res = await request.get("/api/admin/users", { headers: { Authorization: `Bearer ${memberToken}` } });
