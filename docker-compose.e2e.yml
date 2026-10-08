@@ -1,0 +1,17 @@
+# Throwaway stack for the browser tests (frontend/e2e): a fresh database and storage kept in memory,
+# on its own port. Use it through scripts/e2e.sh:
+#   docker compose -p thingport-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d --build --no-deps db backend frontend
+services:
+  db:
+    volumes: !override []
+    tmpfs:
+      - /var/lib/postgresql/data
+  backend:
+    volumes: !override []
+    tmpfs:
+      - /app/storage
+    environment:
+      - AUTH_SECRET=e2e-only-secret-not-for-real-use
+  frontend:
+    ports: !override
+      - "${E2E_PORT:-18090}:80"

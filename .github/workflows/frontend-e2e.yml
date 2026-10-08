@@ -1,0 +1,61 @@
+name: Frontend end-to-end
+
+# Starts a throwaway stack (fresh database, storage in memory) with docker compose and drives it with
+# Playwright in a real Chromium: sign-in, the library, sharing between two accounts, administration.
+# The same script runs locally: scripts/e2e.sh
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "docker-compose.yml"
+      - "docker-compose.e2e.yml"
+      - "scripts/e2e.sh"
+      - ".github/workflows/frontend-e2e.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "docker-compose.yml"
+      - "docker-compose.e2e.yml"
+      - "scripts/e2e.sh"
+      - ".github/workflows/frontend-e2e.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: frontend-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install the frontend's dependencies and Chromium
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run the browser tests against a throwaway stack
+        run: sh scripts/e2e.sh
+      - name: Keep the report when something failed
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 7
