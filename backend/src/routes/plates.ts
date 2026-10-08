@@ -16,7 +16,13 @@ import {
   resolvePlateFilePath,
   type NewPlateInput,
 } from "../services/printCreation";
-import { availablePlateFilename, plateThumbPath, relocatePrint, saveThumbFromBytes } from "../services/printService";
+import {
+  availablePlateFilename,
+  plateThumbExists,
+  plateThumbPath,
+  relocatePrint,
+  saveThumbFromBytes,
+} from "../services/printService";
 import { addGeneratedPreviewImageIfNone } from "../services/previewImageService";
 import { printOutById } from "../services/printLoader";
 import { generateModelPreviewGlb, modelPreviewGlbPath, modelPreviewState } from "../services/modelPreviewCache";
@@ -194,6 +200,13 @@ router.post(
       where: { id: req.params.plateId, print: { userId: req.userId } },
     });
     if (!plate) throw new HttpError(404, "Not found");
+    // A thumbnail the server (or an earlier upload) already made is kept: this is only the fallback for
+    // formats the server can't render, and a browser without proper WebGL draws a black silhouette
+    // that would otherwise replace a good image every time the plate is opened.
+    if (plateThumbExists(plate.id)) {
+      res.json({ print: await printOutById(req.userId!, plate.printId) });
+      return;
+    }
     const ok = await saveThumbFromBytes(plate.id, file.buffer);
     if (!ok) throw new HttpError(400, "Invalid thumbnail image");
     // Only when no better preview (e.g. an imported cover) exists.
