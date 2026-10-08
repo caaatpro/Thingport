@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -23,7 +23,6 @@ type Props = {
  *  (under 2 models) are hidden by default. */
 export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const navigate = useNavigate();
   const [tags, setTags] = useState<TagSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<TagSortMode>("popular");
@@ -136,7 +135,8 @@ export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) 
               size="small"
               clickable
               variant="outlined"
-              onClick={() => navigate(`/models/tags/${encodeURIComponent(tag.name)}`)}
+              component={Link}
+              to={`/models/tags/${encodeURIComponent(tag.name)}`}
               label={`${tag.name} (${tag.count})`}
               deleteIcon={
                 tag.bookmarked ? <BookmarkIcon fontSize="inherit" /> : <BookmarkBorderIcon fontSize="inherit" />

@@ -13,7 +13,7 @@ test("a model's page shows its title and files", async ({ page }) => {
   const errors = collectPageErrors(page);
   const { models } = readSeed();
   await page.goto("/models");
-  await card(page, models[1].title).click();
+  await page.getByRole("link", { name: models[1].title, exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`/models/${models[1].id}`));
   await expect(page.getByText(`${models[1].title}.stl`).first()).toBeVisible();
   expect(errors).toEqual([]);
@@ -22,7 +22,7 @@ test("a model's page shows its title and files", async ({ page }) => {
 test("global search finds a model by name", async ({ page }) => {
   await page.goto("/models");
   await page.getByPlaceholder(/Search models/).fill("Phone");
-  await expect(page.getByRole("button", { name: "Phone stand" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Phone stand" }).first()).toBeVisible();
   await page.getByPlaceholder(/Search models/).fill("zzz-no-such-thing");
   await expect(page.getByText(/No results for/)).toBeVisible();
 });

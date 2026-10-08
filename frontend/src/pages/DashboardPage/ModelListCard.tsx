@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -30,16 +30,18 @@ function ModelRow({
   rank,
   valueOf,
   valueLabel,
-  onClick,
+  to,
+  onNavigate,
 }: {
   model: DashboardModel;
   rank: number;
   valueOf: (model: DashboardModel) => number;
   valueLabel: (count: number) => string;
-  onClick: () => void;
+  to: string;
+  onNavigate?: () => void;
 }) {
   return (
-    <ListItemButton onClick={onClick} sx={{ borderRadius: 1, px: 1 }}>
+    <ListItemButton component={Link} to={to} onClick={onNavigate} sx={{ borderRadius: 1, px: 1 }}>
       <Typography sx={{ width: 24, flexShrink: 0, color: "text.secondary", fontWeight: 600 }}>{rank}</Typography>
       <ListItemAvatar sx={{ minWidth: 48 }}>
         <Avatar
@@ -80,7 +82,6 @@ export default function ModelListCard({
   seeMoreLabel,
   fetchMore,
 }: Props) {
-  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   return (
@@ -124,7 +125,7 @@ export default function ModelListCard({
               rank={idx + 1}
               valueOf={valueOf}
               valueLabel={valueLabel}
-              onClick={() => navigate(`/models/${model.id}`)}
+              to={`/models/${model.id}`}
             />
           ))}
         </List>
@@ -147,10 +148,8 @@ export default function ModelListCard({
             rank={idx + 1}
             valueOf={valueOf}
             valueLabel={valueLabel}
-            onClick={() => {
-              setDialogOpen(false);
-              navigate(`/models/${model.id}`);
-            }}
+            to={`/models/${model.id}`}
+            onNavigate={() => setDialogOpen(false)}
           />
         )}
       />

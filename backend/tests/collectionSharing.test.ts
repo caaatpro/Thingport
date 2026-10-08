@@ -121,7 +121,7 @@ describe("sharing a collection shares the models in it", () => {
   });
 
   it("stays read-only for the recipient", async () => {
-    expect((await request(app).delete(`/api/print/${inside}`).set(auth(friend.token))).status).toBe(404);
+    expect((await request(app).delete(`/api/print/${inside}`).set(auth(friend.token))).status).toBe(403);
     const tag = await request(app)
       .post(`/api/print/${inside}/tags`)
       .set(auth(friend.token))

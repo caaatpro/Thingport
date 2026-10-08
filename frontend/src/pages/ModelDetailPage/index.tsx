@@ -1,8 +1,9 @@
+import { hasRole } from "../../utils/access";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
@@ -41,7 +42,6 @@ type Props = {
 
 export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorized, viewer }: Props) {
   const { printId } = useParams<{ printId: string }>();
-  const navigate = useNavigate();
   const { t } = useTranslation(["models", "common", "library"]);
   const [print, setPrint] = useState<Print | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,15 +131,18 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
     <Box sx={{ maxWidth: "1390px", mx: "auto" }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "flex-end", mb: 2 }}>
         <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
-        <Button
-          variant="outlined"
-          color="inherit"
-          size="small"
-          startIcon={<EditOutlinedIcon />}
-          onClick={() => navigate(`/models/${print.id}?edit=${print.id}`)}
-        >
-          {t("common:edit")}
-        </Button>
+        {hasRole(print.access_role, "edit") && (
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            startIcon={<EditOutlinedIcon />}
+            component={Link}
+            to={`/models/${print.id}?edit=${print.id}`}
+          >
+            {t("common:edit")}
+          </Button>
+        )}
         {isOwner && (
           <Button
             variant="outlined"
@@ -309,8 +312,23 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
             </Stack>
           )}
 
+          {/* Off-screen but laid out at a real size (the snapshot renderer measures it). Fixed, so it can never
+              widen the page: `width: 1` means 100% in MUI, and an absolute 100%-wide box pushed past the edge. */}
           {needsGeneratedPreview && firstPlate && (
-            <Box sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 }} aria-hidden="true">
+            <Box
+              sx={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: 640,
+                height: 480,
+                overflow: "hidden",
+                opacity: 0,
+                pointerEvents: "none",
+                zIndex: -1,
+              }}
+              aria-hidden="true"
+            >
               <ModelSnapshot
                 url={printsApi.fileUrl(firstPlate.url)}
                 ext={extOf(firstPlate.filename)}
@@ -375,7 +393,9 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
                     label={tag}
                     size="small"
                     variant="outlined"
-                    onClick={() => navigate(`/models/tags/${encodeURIComponent(tag)}`)}
+                    component={Link}
+                    to={`/models/tags/${encodeURIComponent(tag)}`}
+                    clickable
                     sx={{
                       bgcolor: "background.paper",
                       borderColor: "divider",

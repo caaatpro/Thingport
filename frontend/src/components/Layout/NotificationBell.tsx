@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
 import Tooltip from "@mui/material/Tooltip";
@@ -13,7 +13,6 @@ import Link from "@mui/material/Link";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { useNotifications } from "./NotificationsContext";
-import type { Notification } from "../../api/notifications";
 
 function relativeTime(iso: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -28,7 +27,6 @@ function relativeTime(iso: string, t: (key: string, opts?: Record<string, unknow
 
 export default function NotificationBell() {
   const { t } = useTranslation("app");
-  const navigate = useNavigate();
   const { items, unreadCount, markAllRead } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -38,11 +36,6 @@ export default function NotificationBell() {
   };
 
   const handleClose = () => setAnchorEl(null);
-
-  const handleItemClick = (notification: Notification) => {
-    handleClose();
-    if (notification.internal_path) navigate(notification.internal_path);
-  };
 
   return (
     <>
@@ -77,7 +70,8 @@ export default function NotificationBell() {
           <div key={notification.id}>
             {idx > 0 && <Divider />}
             <MenuItem
-              onClick={() => handleItemClick(notification)}
+              {...(notification.internal_path ? { component: RouterLink, to: notification.internal_path } : {})}
+              onClick={handleClose}
               sx={{ whiteSpace: "normal", alignItems: "flex-start", py: 1 }}
             >
               <Stack spacing={0.25} sx={{ minWidth: 0, width: "100%" }}>

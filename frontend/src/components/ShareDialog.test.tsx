@@ -49,7 +49,7 @@ describe("ShareDialog", () => {
     await userEvent.click(await screen.findByText("Anna Ivanova"));
     expect(screen.getByText("Shared with 1 person.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(props.saveShares).toHaveBeenCalledWith(["u1"]));
+    await waitFor(() => expect(props.saveShares).toHaveBeenCalledWith(["u1"], expect.anything()));
     expect(props.onClose).toHaveBeenCalled();
   });
 
@@ -58,7 +58,7 @@ describe("ShareDialog", () => {
     await userEvent.click(await screen.findByText("Anna Ivanova"));
     await userEvent.click(screen.getByText("Anna Ivanova"));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(props.saveShares).toHaveBeenCalledWith([]));
+    await waitFor(() => expect(props.saveShares).toHaveBeenCalledWith([], expect.anything()));
   });
 
   it("filters the member list by name or email", async () => {
@@ -90,5 +90,28 @@ describe("ShareDialog", () => {
     await screen.findByText("Anna Ivanova");
     expect(screen.getByText("Everyone you pick sees every model.")).toBeInTheDocument();
     expect(within(screen.getByRole("dialog")).getByText('Share "Benchy"')).toBeInTheDocument();
+  });
+
+  it("with roles: new people start as viewers and the picked permission is saved", async () => {
+    const props = open({
+      withRoles: true,
+      loadShares: vi
+        .fn<AnyFn>()
+        .mockResolvedValue([{ user_id: "u2", display_name: "Boris", email: "b", role: "edit" }]),
+    });
+    await userEvent.click(await screen.findByText("Anna Ivanova"));
+    const select = screen.getByRole("combobox", { name: "Permission for Anna Ivanova" });
+    expect(select).toHaveTextContent("Can view");
+    await userEvent.click(select);
+    await userEvent.click(await screen.findByRole("option", { name: "Can upload" }));
+    expect(screen.getByRole("combobox", { name: "Permission for Boris Petrov" })).toHaveTextContent("Can edit");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(props.saveShares).toHaveBeenCalledWith(["u2", "u1"], { u2: "edit", u1: "upload" }));
+  });
+
+  it("without roles: no permission pickers are shown", async () => {
+    open();
+    await userEvent.click(await screen.findByText("Anna Ivanova"));
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });

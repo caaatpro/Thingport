@@ -34,6 +34,7 @@ import DownloadPickerDialog from "./DownloadPickerDialog";
 import AddToCollectionModal from "./AddToCollectionModal";
 import EditModelModal from "./EditModelModal";
 import ShareDialog from "../../components/ShareDialog";
+import { hasRole } from "../../utils/access";
 
 type Props = {
   print: Print;
@@ -190,18 +191,20 @@ export default function ModelActionsMenu({
         </span>
       </Tooltip>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem
-          onClick={() => {
-            closeMenu();
-            setAddToCollectionOpen(true);
-          }}
-        >
-          <ListItemIcon>
-            <PlaylistAddIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{t("models:detail.addToCollection")}</ListItemText>
-        </MenuItem>
-        {collectionId && (
+        {print.is_owner !== false && (
+          <MenuItem
+            onClick={() => {
+              closeMenu();
+              setAddToCollectionOpen(true);
+            }}
+          >
+            <ListItemIcon>
+              <PlaylistAddIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("models:detail.addToCollection")}</ListItemText>
+          </MenuItem>
+        )}
+        {collectionId && hasRole(print.access_role, "edit") && (
           <MenuItem onClick={handleRemoveFromCollection}>
             <ListItemIcon>
               <PlaylistRemoveIcon fontSize="small" />
@@ -215,12 +218,14 @@ export default function ModelActionsMenu({
           </ListItemIcon>
           <ListItemText>{t("common:download")}</ListItemText>
         </MenuItem>
-        <MenuItem onClick={openEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{t("common:edit")}</ListItemText>
-        </MenuItem>
+        {hasRole(print.access_role, "edit") && (
+          <MenuItem onClick={openEdit}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("common:edit")}</ListItemText>
+          </MenuItem>
+        )}
         {print.is_owner !== false && (
           <MenuItem
             onClick={() => {
@@ -234,12 +239,14 @@ export default function ModelActionsMenu({
             <ListItemText>{t("models:share.menu")}</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
-        </MenuItem>
+        {hasRole(print.access_role, "delete") && (
+          <MenuItem onClick={handleDelete}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
+          </MenuItem>
+        )}
         <Divider />
         {/* One target: a plain link to it. Several: this menu hands over to SlicerFileMenu,
             anchored on the same trigger, to pick which. */}

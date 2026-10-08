@@ -10,7 +10,7 @@ KEEP_DAYS="${KEEP_DAYS:-14}"
 mkdir -p "$DIR"
 OUT="$DIR/thingport-$(date +%Y%m%d-%H%M%S).sql.gz"
 TMP="$OUT.partial"
-if docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip -9 >"$TMP" \
+if docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip -9 > "$TMP" \
   && gzip -dc "$TMP" | grep -q "PostgreSQL database dump complete"; then
   mv "$TMP" "$OUT"
   echo "backup ok: $OUT ($(du -h "$OUT" | cut -f1))"

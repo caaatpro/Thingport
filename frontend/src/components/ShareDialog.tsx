@@ -14,10 +14,14 @@ import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Checkbox from "@mui/material/Checkbox";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import CircularProgress from "@mui/material/CircularProgress";
 import { usersApi } from "../api/users";
-import type { DirectoryUser, ShareUser } from "../api/prints";
+import type { CollectionRole, DirectoryUser, ShareUser } from "../api/prints";
 import { UnauthorizedError } from "../api/client";
+
+const ROLE_OPTIONS: CollectionRole[] = ["view", "upload", "edit", "delete"];
 
 type Props = {
   open: boolean;
@@ -27,7 +31,10 @@ type Props = {
   /** Extra explanation under the summary, e.g. what sharing a collection includes. */
   hint?: string;
   loadShares: () => Promise<ShareUser[]>;
-  saveShares: (userIds: string[]) => Promise<void>;
+  /** `roles` is only meaningful with `withRoles`. */
+  saveShares: (userIds: string[], roles: Record<string, CollectionRole>) => Promise<void>;
+  /** Collections: each person gets a role (view, upload, edit, delete). */
+  withRoles?: boolean;
   onSaved?: () => void;
   onUnauthorized?: () => void;
 };
@@ -40,12 +47,14 @@ export default function ShareDialog({
   hint,
   loadShares,
   saveShares,
+  withRoles = false,
   onSaved,
   onUnauthorized,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const [users, setUsers] = useState<DirectoryUser[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [roles, setRoles] = useState<Record<string, CollectionRole>>({});
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,6 +71,7 @@ export default function ShareDialog({
         if (cancelled) return;
         setUsers(all);
         setSelected(new Set(shares.map((s) => s.user_id)));
+        setRoles(Object.fromEntries(shares.map((s) => [s.user_id, s.role ?? "view"])));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -94,7 +104,7 @@ export default function ShareDialog({
     setSaving(true);
     setError(null);
     try {
-      await saveShares([...selected]);
+      await saveShares([...selected], roles);
       onSaved?.();
       onClose();
     } catch (err) {
@@ -120,6 +130,11 @@ export default function ShareDialog({
               ? t("models:share.summaryShared", { count: selected.size })
               : t("models:share.summaryPrivate")}
           </Typography>
+          {withRoles && selected.size > 0 && (
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {t("models:share.rolesHint")}
+            </Typography>
+          )}
           {hint && (
             <Typography
               variant="caption"
@@ -163,6 +178,22 @@ export default function ShareDialog({
                   <ListItemButton key={u.id} onClick={() => toggle(u.id)} dense>
                     <Checkbox edge="start" size="small" checked={selected.has(u.id)} tabIndex={-1} disableRipple />
                     <ListItemText primary={u.display_name} secondary={u.email} />
+                    {withRoles && selected.has(u.id) && (
+                      <Select
+                        size="small"
+                        value={roles[u.id] ?? "view"}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setRoles((prev) => ({ ...prev, [u.id]: e.target.value as CollectionRole }))}
+                        inputProps={{ "aria-label": t("models:share.roleFor", { name: u.display_name }) }}
+                        sx={{ minWidth: 132, ml: 1 }}
+                      >
+                        {ROLE_OPTIONS.map((role) => (
+                          <MenuItem key={role} value={role}>
+                            {t(`models:share.roles.${role}`)}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
                   </ListItemButton>
                 ))}
               </List>

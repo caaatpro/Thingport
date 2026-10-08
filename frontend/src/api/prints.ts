@@ -84,11 +84,16 @@ export type Print = {
   // Targeted sharing (optional: an older backend doesn't send these).
   visibility?: "private" | "shared";
   is_owner?: boolean;
+  /** "owner", or the role a collection share gives you on this model. */
+  access_role?: AccessRole;
   owner?: { id: string; display_name: string } | null;
   shared_with_count?: number;
 };
 
-export type ShareUser = { user_id: string; display_name: string; email: string };
+/** What a person sharing a collection with you lets you do; a ladder where each level includes the ones before. */
+export type CollectionRole = "view" | "upload" | "edit" | "delete";
+export type AccessRole = "owner" | CollectionRole;
+export type ShareUser = { user_id: string; display_name: string; email: string; role?: CollectionRole };
 export type DirectoryUser = { id: string; display_name: string; email: string };
 
 export type ListPrintsResult = {

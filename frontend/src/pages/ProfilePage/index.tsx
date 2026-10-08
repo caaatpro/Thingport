@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
@@ -23,7 +23,6 @@ type Props = {
 
 export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld, onUnauthorized }: Props) {
   const { t } = useTranslation("app");
-  const navigate = useNavigate();
   const avatarUrl = useGravatarUrl(user?.email, 128);
 
   return (
@@ -85,7 +84,7 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
               </Typography>
             )}
           </Box>
-          <Button variant="text" onClick={() => navigate("/profile/email")}>
+          <Button variant="text" component={Link} to="/profile/email">
             {t("profile.changeEmailLink")}
           </Button>
         </Stack>
@@ -99,7 +98,7 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
           }}
         >
           <Typography variant="body1">••••••••</Typography>
-          <Button variant="text" onClick={() => navigate("/profile/password")}>
+          <Button variant="text" component={Link} to="/profile/password">
             {t("profile.changePasswordLink")}
           </Button>
         </Stack>

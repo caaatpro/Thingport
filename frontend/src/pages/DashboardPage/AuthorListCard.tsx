@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -24,16 +24,18 @@ function AuthorRow({
   author,
   rank,
   modelCountLabel,
-  onClick,
+  to,
+  onNavigate,
 }: {
   author: DashboardAuthor;
   rank: number;
   modelCountLabel: (count: number) => string;
-  onClick: () => void;
+  to: string;
+  onNavigate?: () => void;
 }) {
   return (
     <AuthorHoverCard authorId={author.id}>
-      <ListItemButton onClick={onClick} sx={{ borderRadius: 1, px: 1 }}>
+      <ListItemButton component={Link} to={to} onClick={onNavigate} sx={{ borderRadius: 1, px: 1 }}>
         <Typography sx={{ width: 24, flexShrink: 0, color: "text.secondary", fontWeight: 600 }}>{rank}</Typography>
         <ListItemAvatar sx={{ minWidth: 48 }}>
           <Avatar src={author.avatar_url ?? undefined} sx={{ width: 40, height: 40 }}>
@@ -63,7 +65,6 @@ function AuthorRow({
 
 export default function AuthorListCard({ authors }: Props) {
   const { t } = useTranslation("app");
-  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   const modelCountLabel = (count: number) => t("dashboard.topAuthors.modelCount", { count });
@@ -108,7 +109,7 @@ export default function AuthorListCard({ authors }: Props) {
               author={author}
               rank={idx + 1}
               modelCountLabel={modelCountLabel}
-              onClick={() => navigate(`/authors/${author.id}`)}
+              to={`/authors/${author.id}`}
             />
           ))}
         </List>
@@ -130,10 +131,8 @@ export default function AuthorListCard({ authors }: Props) {
             author={author}
             rank={idx + 1}
             modelCountLabel={modelCountLabel}
-            onClick={() => {
-              setDialogOpen(false);
-              navigate(`/authors/${author.id}`);
-            }}
+            to={`/authors/${author.id}`}
+            onNavigate={() => setDialogOpen(false)}
           />
         )}
       />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Link from "@mui/material/Link";
@@ -78,20 +78,10 @@ function StatCard({
   href?: string;
   tone?: "warning";
 }) {
-  const navigate = useNavigate();
   return (
     <Paper
       variant="outlined"
-      {...(href
-        ? {
-            component: "a",
-            href,
-            onClick: (event: React.MouseEvent) => {
-              event.preventDefault();
-              navigate(href);
-            },
-          }
-        : {})}
+      {...(href ? { component: RouterLink, to: href } : {})}
       sx={{
         p: 2.5,
         flex: 1,
@@ -148,7 +138,6 @@ function StatCard({
 
 export default function AdminPage({ onUnauthorized }: Props) {
   const { t } = useTranslation(["app", "common"]);
-  const navigate = useNavigate();
   const showToast = useToast();
   // undefined = loading, null = failed (the cards hide).
   const [overview, setOverview] = useState<AdminOverview | null | undefined>(undefined);
@@ -258,12 +247,8 @@ export default function AdminPage({ onUnauthorized }: Props) {
           <Paper
             key={section.path}
             variant="outlined"
-            component="a"
-            href={section.path}
-            onClick={(event: React.MouseEvent) => {
-              event.preventDefault();
-              navigate(section.path);
-            }}
+            component={RouterLink}
+            to={section.path}
             sx={{
               p: 2,
               display: "flex",

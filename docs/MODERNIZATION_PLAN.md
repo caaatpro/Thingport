@@ -42,6 +42,7 @@ There **is** a DB-persisted job system — but it is **import-specific**: Prisma
 **There is no sharing / visibility / public concept anywhere today.** Every content row (`Print`, `Collection`, `Category`, `Plate`, `PrintFile`, `PreviewImage`, `Bookmark`, `ImportJob`, `Notification`) is single-owner (`userId`) and **every read query is hard-scoped to the requesting user**. Admins **cannot** see other users' content (only aggregate counts). So Thingport today is effectively N isolated single-user libraries sharing one instance.
 
 Key models:
+
 - **`Print`** = "a model": `userId` (owner), `name`/`title`/`notes`/`creator`, `tags[]`, `categoryId?`, `authorId?`, `preparedMetadata` (Json), `searchVector`. Relations: `plates[]`, `previewImages[]`, `files[]` (PrintFile), `collectionItems[]`.
 - **`Plate`** = a model file: `filename`, `mime`, `size`, `storagePath`, `contentSha256?`, `position`. **No geometry metadata.**
 - **`Category`** — hierarchical (parent/child tree), per-user, **one per print**, drives the storage path.
@@ -53,6 +54,7 @@ Key models:
 ### 1.4 Search
 
 Two surfaces:
+
 - **Global `/search`** — Postgres `tsvector`, **prefix** (type-ahead) query, ranked by `ts_rank`. Weighted: name+title (A), tags (B), notes (C), creator (D). Config `simple` (no stemming). Caps 6 models / 4 collections / 5 tags.
 - **Library list `/prints`** — plain **ILIKE** `contains` on name/title/notes/creator (does **not** use tsvector, does **not** search tags). Filters: `category_id`, `author_id`, `collection_id`, `tags`. Sort: newest / popular / downloads. Offset pagination via `X-Has-More` / `X-Next-Offset` headers.
 
@@ -62,15 +64,15 @@ Per plate: `filename`, `mime`, `size`, `contentSha256`. **No geometry** (no boun
 
 ### 1.6 Formats (from real code)
 
-| Format | Upload | Storage | Preview | Metadata | Thumbnail | Search |
-|---|---|---|---|---|---|---|
-| **STL** | ✅ allowed+renderable | ✅ Plate | ✅ client three.js `STLLoader` | size/mime/filename only | ⚠️ client snapshot only (none until opened) | text fields + tags |
-| **3MF** | ✅ (top import priority) | ✅ Plate | ✅ **server GLB** (worker) + client | ✅ slicer meta if sliced; geometry computed but not stored | ✅ **server** embedded PNG | text + tags |
-| **OBJ** | ✅ (absent from import priority) | ✅ Plate | ✅ client `OBJLoader` | size/mime/filename | ⚠️ client snapshot only | text + tags |
-| **STEP/STP** | ✅ | ✅ Plate | ✅ client **occt-import-js** (wasm) | size/mime/filename | ⚠️ client snapshot only | text + tags |
-| **IGES/.igs** | ❌ not allowed | ⚠️ only as non-renderable SUPPORTING file (manual upload) | ❌ | size/mime/filename | ❌ placeholder | text only |
-| **F3D** | ⚠️ in UI `accept` only, otherwise unhandled | ⚠️ non-renderable file | ❌ | size/mime/filename | ❌ placeholder | text only |
-| **F3Z** | ❌ not referenced anywhere | ⚠️ raw manual upload only | ❌ | size/mime/filename | ❌ placeholder | text only |
+| Format        | Upload                                      | Storage                                                   | Preview                             | Metadata                                                   | Thumbnail                                   | Search             |
+| ------------- | ------------------------------------------- | --------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------- | ------------------------------------------- | ------------------ |
+| **STL**       | ✅ allowed+renderable                       | ✅ Plate                                                  | ✅ client three.js `STLLoader`      | size/mime/filename only                                    | ⚠️ client snapshot only (none until opened) | text fields + tags |
+| **3MF**       | ✅ (top import priority)                    | ✅ Plate                                                  | ✅ **server GLB** (worker) + client | ✅ slicer meta if sliced; geometry computed but not stored | ✅ **server** embedded PNG                  | text + tags        |
+| **OBJ**       | ✅ (absent from import priority)            | ✅ Plate                                                  | ✅ client `OBJLoader`               | size/mime/filename                                         | ⚠️ client snapshot only                     | text + tags        |
+| **STEP/STP**  | ✅                                          | ✅ Plate                                                  | ✅ client **occt-import-js** (wasm) | size/mime/filename                                         | ⚠️ client snapshot only                     | text + tags        |
+| **IGES/.igs** | ❌ not allowed                              | ⚠️ only as non-renderable SUPPORTING file (manual upload) | ❌                                  | size/mime/filename                                         | ❌ placeholder                              | text only          |
+| **F3D**       | ⚠️ in UI `accept` only, otherwise unhandled | ⚠️ non-renderable file                                    | ❌                                  | size/mime/filename                                         | ❌ placeholder                              | text only          |
+| **F3Z**       | ❌ not referenced anywhere                  | ⚠️ raw manual upload only                                 | ❌                                  | size/mime/filename                                         | ❌ placeholder                              | text only          |
 
 Gate note: the **manual `/upload` route has no extension filter** (multer, no `fileFilter`) — it stores anything and decides renderability by `RENDERABLE_MODEL_EXTS`. URL/collection imports **do** validate against `IMPORT_ALLOWED_EXTS` (415 on reject).
 
@@ -145,6 +147,7 @@ Introduce **TanStack Query (react-query)** for list/detail fetching and cache in
 ### 3.4 Global drag & drop
 
 App-shell-level drop handling in `AppLayout`, reviving the existing (dead) `entriesFromDataTransfer` / `isFileDrag` utilities:
+
 - Whole window is a drop zone; on drag-over show a **soft full-page overlay** ("Drop models here" / "Add to <Collection>") that does not fully obscure content.
 - On drop: overlay disappears, files go into a compact **upload queue** (bottom-corner), the user keeps working.
 - **Context-aware destination** from the route: on `/models/collections/:id` → add to that collection; on a category view → that category; else the general library. No "select collection/file" dialogs.
@@ -182,15 +185,15 @@ DTO additions (`backend/src/dto.ts`): `visibility` (+ `is_owner`, `shared_by` wh
 
 ## 6. File-format support (current → proposed)
 
-| Format | Now | Proposed |
-|---|---|---|
-| STL | client preview, client-only thumb | **+ server-side thumbnail** (queue), geometry metadata (P2) |
-| 3MF | server GLB + embedded thumb | keep; persist computed geometry to DB (P2) |
-| OBJ | client preview, client-only thumb | **+ server-side thumbnail**; add to import priority list |
-| STEP/STP | client occt preview, client-only thumb | **+ server-side thumbnail/GLB via occt (Node)**; geometry metadata (P2) |
-| IGES/.igs | unsupported | **add** (occt reads IGES): allow + renderable + server preview (P2) |
-| F3D | accept-only, unhandled | **store + download + embedded-thumbnail extraction**; prompt STEP export for live 3D (P2) — see §7 |
-| F3Z | absent | same as F3D (zip archive) (P2) |
+| Format    | Now                                    | Proposed                                                                                           |
+| --------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| STL       | client preview, client-only thumb      | **+ server-side thumbnail** (queue), geometry metadata (P2)                                        |
+| 3MF       | server GLB + embedded thumb            | keep; persist computed geometry to DB (P2)                                                         |
+| OBJ       | client preview, client-only thumb      | **+ server-side thumbnail**; add to import priority list                                           |
+| STEP/STP  | client occt preview, client-only thumb | **+ server-side thumbnail/GLB via occt (Node)**; geometry metadata (P2)                            |
+| IGES/.igs | unsupported                            | **add** (occt reads IGES): allow + renderable + server preview (P2)                                |
+| F3D       | accept-only, unhandled                 | **store + download + embedded-thumbnail extraction**; prompt STEP export for live 3D (P2) — see §7 |
+| F3Z       | absent                                 | same as F3D (zip archive) (P2)                                                                     |
 
 Also: add a real extension allow-list to the manual `/upload` route (currently none) so junk isn't silently stored, while keeping non-renderable-but-valid files as SUPPORTING.
 
@@ -218,12 +221,14 @@ Support tiers: **Native storage ✅ · Download ✅ · Thumbnail ✅ (when embed
 Each phase is independently shippable and reversible. Order respects the P0/P1/P2 priorities.
 
 ### Phase 0 — Foundations (no user-visible change)
+
 - **Data model:** add `Visibility` + `ProcessingStatus` enums; `Print.visibility`, `Collection.visibility`, `Plate.processingStatus` (+ error); optional `ProcessingJob` table. Reversible migration; backfill existing → `PRIVATE` / `READY`. **DB backup first.**
 - **DTOs:** add fields (additive).
 - **Tests:** migration up/down; backfill correctness; existing API responses still validate against frontend/extension types.
 - **Risks:** low (additive). Verify `prisma migrate` on a copy of prod data.
 
 ### Phase 1 — P0 features
+
 1. **Generic processing queue** (`services/processingQueue.ts`): drains `ProcessingJob`/`PROCESSING` plates; runs validate → metadata → **server-side thumbnail** (extend headless render to STL/OBJ; occt for STEP) → GLB (existing worker) → status. Boot re-enqueue of interrupted jobs.
    - Files: `services/processingQueue.ts` (new), `services/printCreation.ts` (return fast, enqueue), `services/modelPreviewCache.ts` (reuse worker), `server.ts` (boot re-scan).
    - API: `/upload` returns immediately with `processing_status`; add `GET /print/:id` (already) reflecting status; optional `GET /processing/active`.
@@ -240,6 +245,7 @@ Each phase is independently shippable and reversible. Order respects the P0/P1/P
    - Risks: the storage-segment resolution for shared files is the trickiest bit — add focused tests. Everything backfilled to PRIVATE means **zero behavior change on day one** until a user shares something.
 
 ### Phase 2 — P1 features
+
 - **Live lists via react-query** (models grid, collection detail, upload mutations): optimistic insert so dropped files appear immediately; remove the nonce.
 - **Modern model card**: format chip, size, visibility badge, processing status, tags on hover; semantic links; fluid grid.
 - **In-grid search + facet filters** (format, tag, visibility, author, collection, favorite, date); reuse tsvector; unify the `/prints` list search with the tsvector surface.
@@ -248,6 +254,7 @@ Each phase is independently shippable and reversible. Order respects the P0/P1/P
 - Tests: filter/search correctness incl. visibility; responsive snapshots; a11y basics.
 
 ### Phase 3 — P2 features
+
 - **Geometry metadata** persisted during server render (bbox/dimensions/tri count/units) → show on card/detail, enable size/dimension sort+filter.
 - **Fusion 360**: store `.f3d`/`.f3z`, extract embedded thumbnail, "export STEP for live 3D" prompt, optional manifest metadata (§7).
 - **IGES** support via occt; extend the format allow-list and server preview.
@@ -285,4 +292,4 @@ Each phase is independently shippable and reversible. Order respects the P0/P1/P
 
 ---
 
-*Prepared from a full read of the backend (`routes/`, `services/`, `prisma/schema.prisma`, `config.ts`), the frontend (`App.tsx`, `components/Layout/*`, `pages/*`, `api/*`, `utils/upload*`), and open-source research on Fusion 360 formats. Nothing in the running instance was modified to produce this document.*
+_Prepared from a full read of the backend (`routes/`, `services/`, `prisma/schema.prisma`, `config.ts`), the frontend (`App.tsx`, `components/Layout/*`, `pages/*`, `api/*`, `utils/upload*`), and open-source research on Fusion 360 formats. Nothing in the running instance was modified to produce this document._

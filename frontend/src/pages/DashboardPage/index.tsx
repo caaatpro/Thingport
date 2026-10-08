@@ -1,6 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -29,7 +28,6 @@ type Props = {
 
 export default function DashboardPage({ onUnauthorized }: Props) {
   const { t } = useTranslation("app");
-  const navigate = useNavigate();
   const [summary, setSummary] = React.useState<DashboardSummary | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -82,20 +80,20 @@ export default function DashboardPage({ onUnauthorized }: Props) {
           icon={<ViewInArIcon />}
           count={summary.model_count}
           label={t("dashboard.modelCount.label")}
-          onClick={() => navigate("/models")}
+          to="/models"
         />
         <CountCard
           icon={<CollectionsIcon />}
           count={summary.collection_count}
           label={t("dashboard.collectionCount.label")}
-          onClick={() => navigate("/models/collections")}
+          to="/models/collections"
         />
         <CountCard icon={<PersonIcon />} count={summary.author_count} label={t("dashboard.authorCount.label")} />
         <CountCard
           icon={<FolderIcon />}
           count={summary.category_count}
           label={t("dashboard.categoryCount.label")}
-          onClick={() => navigate("/models")}
+          to="/models"
         />
       </Box>
 

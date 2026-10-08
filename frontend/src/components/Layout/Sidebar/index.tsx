@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { alpha, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
@@ -92,16 +92,21 @@ function NavItem({
   label,
   selected,
   collapsed,
+  to,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   selected: boolean;
   collapsed: boolean;
-  onClick: () => void;
+  to: string;
+  /** Runs on top of the navigation, e.g. to reset a filter. */
+  onClick?: () => void;
 }) {
   const row = (
     <ListItemButton
+      component={RouterLink}
+      to={to}
       selected={selected}
       onClick={onClick}
       aria-current={selected ? "page" : undefined}
@@ -162,22 +167,27 @@ const POST_DRAG_CLICK_GUARD_MS = 250;
 function SortableBookmarkRow({
   id,
   label,
+  href,
   selected,
-  onNavigate,
+  onClick,
 }: {
   id: string;
   label: string;
+  href: string;
   selected: boolean;
-  onNavigate: () => void;
+  onClick: (event: React.MouseEvent) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <ListItemButton
+      component={RouterLink}
+      to={href}
+      draggable={false}
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       selected={selected}
-      onClick={onNavigate}
+      onClick={onClick}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       sx={{
         ...navRowSx(selected),
@@ -193,7 +203,11 @@ function SortableBookmarkRow({
         <BookmarkBorderIcon fontSize="small" />
       </ListItemIcon>
       <ListItemText primary={label} slotProps={{ primary: { noWrap: true } }} />
-      <DragIndicatorIcon className="drag-handle" fontSize="small" sx={{ ml: "auto", flexShrink: 0, color: "text.disabled" }} />
+      <DragIndicatorIcon
+        className="drag-handle"
+        fontSize="small"
+        sx={{ ml: "auto", flexShrink: 0, color: "text.disabled" }}
+      />
     </ListItemButton>
   );
 }
@@ -202,7 +216,6 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
   const { t } = useTranslation(["app", "common"]);
   const muiTheme = useTheme();
   const location = useLocation();
-  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
@@ -261,9 +274,9 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
     });
   };
 
-  const navigateUnlessDragged = (href: string) => {
-    if (draggingId || suppressClickRef.current) return;
-    navigate(href);
+  // A click that ends a drag must not also follow the link.
+  const swallowClickAfterDrag = (event: React.MouseEvent) => {
+    if (draggingId || suppressClickRef.current) event.preventDefault();
   };
 
   const draggingBookmark = draggingId ? bookmarks.find((b) => b.id === draggingId) : undefined;
@@ -289,10 +302,7 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
   const currentWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   // Always lands on the unfiltered grid, unlike the in-page back button.
-  const goToModelsRoot = () => {
-    onSelectCategory(null);
-    navigate("/models");
-  };
+  const goToModelsRoot = () => onSelectCategory(null);
 
   return (
     <Box
@@ -359,13 +369,14 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
             label={t("sidebar.dashboard")}
             selected={onDashboard}
             collapsed={collapsed}
-            onClick={() => navigate("/")}
+            to="/"
           />
           <NavItem
             icon={<ViewInArOutlinedIcon fontSize="small" />}
             label={t("sidebar.models")}
             selected={onModels}
             collapsed={collapsed}
+            to="/models"
             onClick={goToModelsRoot}
           />
           <NavItem
@@ -373,14 +384,14 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
             label={t("sidebar.collections")}
             selected={onCollections}
             collapsed={collapsed}
-            onClick={() => navigate("/models/collections")}
+            to="/models/collections"
           />
           <NavItem
             icon={<LocalOfferOutlinedIcon fontSize="small" />}
             label={t("sidebar.tags")}
             selected={onTags && location.pathname === "/models/tags"}
             collapsed={collapsed}
-            onClick={() => navigate("/models/tags")}
+            to="/models/tags"
           />
 
           {/* Bookmarked tags and collections in the user's own order. Dragging only works while the
@@ -402,7 +413,7 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
                       label={label}
                       selected={location.pathname === href}
                       collapsed
-                      onClick={() => navigate(href)}
+                      to={href}
                     />
                   );
                 })
@@ -423,7 +434,8 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
                           id={entry.id}
                           label={label}
                           selected={location.pathname === href}
-                          onNavigate={() => navigateUnlessDragged(href)}
+                          href={href}
+                          onClick={swallowClickAfterDrag}
                         />
                       );
                     })}
@@ -463,7 +475,7 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
           label={t("sidebar.downloads")}
           selected={onDownload}
           collapsed={collapsed}
-          onClick={() => navigate("/downloads")}
+          to="/downloads"
         />
         {isAdmin && (
           <NavItem
@@ -471,7 +483,7 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
             label={t("sidebar.administration")}
             selected={onAdmin}
             collapsed={collapsed}
-            onClick={() => navigate("/admin")}
+            to="/admin"
           />
         )}
         {collapsed && (

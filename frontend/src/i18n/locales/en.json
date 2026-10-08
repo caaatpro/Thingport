@@ -1104,7 +1104,11 @@
         "subtitle": "Collection",
         "empty": "No models in this collection yet.",
         "confirmDelete": "Delete \"{{name}}\"? Models in it are not deleted.",
-        "deleteFailed": "Failed to delete the collection."
+        "deleteFailed": "Failed to delete the collection.",
+        "upload": "Upload models",
+        "uploading": "Uploading…",
+        "uploadFailed": "Some files could not be uploaded: {{names}}",
+        "sharedBy": "Shared by {{name}}"
       },
       "errors": {
         "loadFailed": "Unable to load collections.",
@@ -1194,7 +1198,15 @@
       "empty": "No other members to share with yet.",
       "loadFailed": "Couldn't load sharing.",
       "saveFailed": "Couldn't update sharing.",
-      "collectionHint": "Everyone you pick sees every model in this collection, including models you add to it later. They can view and download them, but not change them."
+      "collectionHint": "Everyone you pick sees every model in this collection, including models you add to it later. They can view and download them, but not change them.",
+      "roleFor": "Permission for {{name}}",
+      "rolesHint": "View: see and download. Upload: also add models. Edit: also change details and files, and take models out. Delete: also delete models. Only you can share or delete the collection.",
+      "roles": {
+        "view": "Can view",
+        "upload": "Can upload",
+        "edit": "Can edit",
+        "delete": "Can delete"
+      }
     },
     "upload": {
       "dropHere": "Drop models to upload",

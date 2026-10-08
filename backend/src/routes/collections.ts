@@ -23,7 +23,7 @@ import {
 import { printOutsByIds } from "../services/printLoader";
 import { relocatePrintsForToken } from "../services/printService";
 import { createLog } from "../services/auditLog";
-import { collectionReadWhere } from "../services/access";
+import { collectionReadWhere, requireCollectionRole } from "../services/access";
 import { toCollectionOut, type PrintOut, type CollectionAccessCtx } from "../dto";
 
 const router = Router();
@@ -54,7 +54,7 @@ router.get(
           _count: { select: { items: true } },
           items: { orderBy: { position: "asc" }, take: COVER_ITEM_LIMIT },
           user: { select: { id: true, displayName: true } },
-          shares: { select: { sharedWithUserId: true } },
+          shares: { select: { sharedWithUserId: true, role: true } },
         },
       }),
       listBookmarkedCollectionIdSet(req.userId!),
@@ -113,7 +113,7 @@ router.get(
       include: {
         _count: { select: { items: true } },
         user: { select: { id: true, displayName: true } },
-        shares: { select: { sharedWithUserId: true } },
+        shares: { select: { sharedWithUserId: true, role: true } },
       },
     });
     if (!collection) throw new HttpError(404, "Collection not found");
@@ -138,9 +138,10 @@ router.patch(
       throw new HttpError(400, "This collection can't be edited");
     }
     const body = parseBody(collectionSchema, req.body);
-    const collection = await prisma.collection.findFirst({ where: { id: req.params.id, userId: req.userId } });
-    if (!collection) throw new HttpError(404, "Collection not found");
-    await assertCollectionNameAvailable(req.userId!, body.name, collection.id);
+    // Owner, or a share with at least the EDIT role.
+    const access = await requireCollectionRole(req.userId!, req.params.id, "EDIT");
+    const collection = await prisma.collection.findUniqueOrThrow({ where: { id: access.collection.id } });
+    await assertCollectionNameAvailable(collection.userId, body.name, collection.id);
     const renamed = body.name !== collection.name;
     const updated = await prisma.collection.update({
       where: { id: collection.id },
@@ -156,7 +157,12 @@ router.patch(
       prisma.collectionItem.count({ where: { collectionId: updated.id } }),
       prisma.bookmark.findFirst({ where: { userId: req.userId, type: "COLLECTION", collectionId: updated.id } }),
     ]);
-    res.json(toCollectionOut(updated, itemCount, [], Boolean(bookmarked)));
+    res.json(
+      toCollectionOut(updated, itemCount, [], Boolean(bookmarked), {
+        viewerId: req.userId,
+        shares: access.isOwner ? [] : [{ sharedWithUserId: req.userId!, role: access.role ?? "VIEW" }],
+      }),
+    );
     void createLog({
       userId: req.userId!,
       action: "collection_edited",
@@ -194,9 +200,10 @@ router.delete(
     if (isSystemCollectionId(req.params.id)) {
       throw new HttpError(400, "This collection can't be edited");
     }
-    const collection = await prisma.collection.findFirst({ where: { id: req.params.id, userId: req.userId } });
-    if (!collection) throw new HttpError(404, "Collection not found");
-    const print = await prisma.print.findFirst({ where: { id: req.params.printId, userId: req.userId } });
+    const { collection } = await requireCollectionRole(req.userId!, req.params.id, "EDIT");
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.printId, collectionItems: { some: { collectionId: collection.id } } },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     await prisma.collectionItem.deleteMany({ where: { collectionId: collection.id, printId: print.id } });
     await relocatePrintsForToken("collection", [print.id]);
@@ -237,7 +244,9 @@ router.post(
     if (isSystemCollectionId(req.params.id)) {
       throw new HttpError(400, "This collection can't be bookmarked");
     }
-    const collection = await prisma.collection.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const collection = await prisma.collection.findFirst({
+      where: { id: req.params.id, ...collectionReadWhere(req.userId!) },
+    });
     if (!collection) throw new HttpError(404, "Collection not found");
     await addCollectionBookmark(req.userId!, collection.id);
     res.json({ ok: true });
@@ -250,7 +259,9 @@ router.delete(
     if (isSystemCollectionId(req.params.id)) {
       throw new HttpError(400, "This collection can't be bookmarked");
     }
-    const collection = await prisma.collection.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const collection = await prisma.collection.findFirst({
+      where: { id: req.params.id, ...collectionReadWhere(req.userId!) },
+    });
     if (!collection) throw new HttpError(404, "Collection not found");
     await removeCollectionBookmark(req.userId!, collection.id);
     res.json({ ok: true });
@@ -282,6 +293,8 @@ async function assertOwnedCollection(collectionId: string, userId: string) {
   return collection;
 }
 
+const ROLE_VALUES = ["VIEW", "UPLOAD", "EDIT", "DELETE"] as const;
+
 router.get(
   "/collection/:id/shares",
   asyncHandler(async (req, res) => {
@@ -291,18 +304,36 @@ router.get(
       include: { sharedWithUser: { select: { id: true, displayName: true, email: true } } },
     });
     res.json(
-      shares.map((s) => ({ user_id: s.sharedWithUserId, display_name: s.sharedWithUser.displayName, email: s.sharedWithUser.email })),
+      shares.map((s) => ({
+        user_id: s.sharedWithUserId,
+        display_name: s.sharedWithUser.displayName,
+        email: s.sharedWithUser.email,
+        role: s.role.toLowerCase(),
+      })),
     );
   }),
 );
 
-const setSharesSchema = z.object({ user_ids: z.array(z.string()).default([]) });
+// `shares` carries a role per person; `user_ids` (everyone read-only) is still accepted.
+const setSharesSchema = z.object({
+  user_ids: z.array(z.string()).optional(),
+  shares: z
+    .array(
+      z.object({ user_id: z.string(), role: z.enum(ROLE_VALUES.map((r) => r.toLowerCase()) as [string, ...string[]]) }),
+    )
+    .optional(),
+});
 router.put(
   "/collection/:id/shares",
   asyncHandler(async (req, res) => {
     await assertOwnedCollection(req.params.id, req.userId!);
     const body = parseBody(setSharesSchema, req.body);
-    const targetIds = [...new Set(body.user_ids)].filter((id) => id !== req.userId);
+    const wanted = new Map<string, (typeof ROLE_VALUES)[number]>();
+    for (const id of body.user_ids ?? []) wanted.set(id, "VIEW");
+    for (const share of body.shares ?? [])
+      wanted.set(share.user_id, share.role.toUpperCase() as (typeof ROLE_VALUES)[number]);
+    wanted.delete(req.userId!);
+    const targetIds = [...wanted.keys()];
     if (targetIds.length) {
       const count = await prisma.user.count({ where: { id: { in: targetIds } } });
       if (count !== targetIds.length) throw new HttpError(400, "Share list contains an unknown user");
@@ -314,12 +345,17 @@ router.put(
       ...targetIds.map((uid) =>
         prisma.collectionShare.upsert({
           where: { collectionId_sharedWithUserId: { collectionId: req.params.id, sharedWithUserId: uid } },
-          create: { collectionId: req.params.id, sharedWithUserId: uid },
-          update: {},
+          create: { collectionId: req.params.id, sharedWithUserId: uid, role: wanted.get(uid) },
+          update: { role: wanted.get(uid) },
         }),
       ),
     ]);
-    void createLog({ userId: req.userId!, action: "collection_shared", targetId: req.params.id, details: { count: targetIds.length } });
+    void createLog({
+      userId: req.userId!,
+      action: "collection_shared",
+      targetId: req.params.id,
+      details: { count: targetIds.length },
+    });
     res.json({ ok: true });
   }),
 );

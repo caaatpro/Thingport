@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
@@ -13,6 +12,7 @@ import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import type { AuthUser } from "../../api/auth";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
+import CardLink, { aboveCardLink } from "../../components/CardLink";
 import StarToggle from "../../components/StarToggle";
 import VisibilityBadge from "../../components/VisibilityBadge";
 import { useFavoriteToggle } from "../../hooks/useFavoriteToggle";
@@ -48,7 +48,6 @@ export default function ModelRow({
   onToggleSelect,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const navigate = useNavigate();
   const muiTheme = useTheme();
   const { isFavorite, toggle, label } = useFavoriteToggle(item, { onUpdated: onFavoriteChange, onUnauthorized });
   const d = item.plates[0]?.dim_mm;
@@ -66,14 +65,13 @@ export default function ModelRow({
 
   return (
     <Box
-      onClick={() => (selectionActive && onToggleSelect ? onToggleSelect() : navigate(`/models/${item.id}`))}
       sx={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
         gap: 1.5,
         p: 1,
         pr: 1.5,
-        cursor: "pointer",
         bgcolor: "background.paper",
         border: 1,
         borderColor: selected ? "primary.main" : "divider",
@@ -81,8 +79,17 @@ export default function ModelRow({
         "&:hover": { borderColor: selected ? "primary.main" : muiTheme.thingport.borderStrong },
       }}
     >
+      <CardLink
+        to={`/models/${item.id}`}
+        label={item.title || item.name}
+        onPlainClick={() => {
+          if (!(selectionActive && onToggleSelect)) return false;
+          onToggleSelect();
+          return true;
+        }}
+      />
       {onToggleSelect ? (
-        <Box onClick={(e) => e.stopPropagation()} sx={{ lineHeight: 0 }}>
+        <Box onClick={(e) => e.stopPropagation()} sx={{ lineHeight: 0, ...aboveCardLink }}>
           <Checkbox
             size="small"
             checked={selected}
@@ -149,7 +156,12 @@ export default function ModelRow({
       <Typography variant="caption" sx={{ color: "text.secondary", width: 76, flexShrink: 0, textAlign: "right" }}>
         {item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}
       </Typography>
-      <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()} sx={{ flexShrink: 0 }}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        onClick={(e) => e.stopPropagation()}
+        sx={{ flexShrink: 0, ...aboveCardLink }}
+      >
         <StarToggle active={isFavorite} onClick={toggle} ariaLabel={label} size={20} />
         <ModelActionsMenu
           print={item}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import InputBase from "@mui/material/InputBase";
@@ -127,6 +127,13 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
     navigate(path);
   };
 
+  // Plain clicks close the dropdown; modified ones (new tab) leave it alone.
+  const onResultClick = (event: React.MouseEvent) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    closeDropdown();
+    setQuery("");
+  };
+
   const trimmedQuery = query.trim();
   const dropdownOpen = focused && trimmedQuery.length >= MIN_QUERY_LENGTH;
   const hasResults = Boolean(result && (result.models.length || result.collections.length || result.tags.length));
@@ -187,7 +194,11 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
           onFocus={() => setFocused(true)}
           onKeyDown={onInputKeyDown}
           slotProps={{
-            input: { "aria-label": t("app:search.placeholder") ?? undefined, role: "combobox", "aria-expanded": dropdownOpen },
+            input: {
+              "aria-label": t("app:search.placeholder") ?? undefined,
+              role: "combobox",
+              "aria-expanded": dropdownOpen,
+            },
           }}
           sx={{ fontSize: 14 }}
         />
@@ -281,7 +292,9 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                       key={print.id}
                       selected={activeIndex === result.models.indexOf(print)}
                       onMouseEnter={() => setActiveIndex(result.models.indexOf(print))}
-                      onClick={() => goTo(`/models/${print.id}`)}
+                      component={RouterLink}
+                      to={`/models/${print.id}`}
+                      onClick={onResultClick}
                     >
                       <ListItemAvatar sx={{ minWidth: 44 }}>
                         <Avatar
@@ -326,7 +339,9 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                       key={collection.id}
                       selected={activeIndex === collectionsStart + result.collections.indexOf(collection)}
                       onMouseEnter={() => setActiveIndex(collectionsStart + result.collections.indexOf(collection))}
-                      onClick={() => goTo(`/models/collections/${collection.id}`)}
+                      component={RouterLink}
+                      to={`/models/collections/${collection.id}`}
+                      onClick={onResultClick}
                     >
                       <ListItemAvatar sx={{ minWidth: 44 }}>
                         <Avatar variant="rounded" sx={{ width: 36, height: 36, bgcolor: "action.hover" }}>
@@ -366,7 +381,9 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                       key={tagResult.tag}
                       selected={activeIndex === tagsStart + result.tags.indexOf(tagResult)}
                       onMouseEnter={() => setActiveIndex(tagsStart + result.tags.indexOf(tagResult))}
-                      onClick={() => goTo(`/models/tags/${encodeURIComponent(tagResult.tag)}`)}
+                      component={RouterLink}
+                      to={`/models/tags/${encodeURIComponent(tagResult.tag)}`}
+                      onClick={onResultClick}
                     >
                       <ListItemAvatar sx={{ minWidth: 44 }}>
                         <Avatar variant="rounded" sx={{ width: 36, height: 36, bgcolor: "action.hover" }}>

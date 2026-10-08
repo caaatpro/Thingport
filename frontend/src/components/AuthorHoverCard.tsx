@@ -1,6 +1,6 @@
 import { type ReactElement, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
@@ -59,7 +59,6 @@ type CardProps = {
 
 function AuthorPreviewCard({ authorId, viewer }: CardProps) {
   const { t } = useTranslation(["models"]);
-  const navigate = useNavigate();
   const isSelf = authorId === SELF_AUTHOR_ID;
   const viewerAvatarUrl = useGravatarUrl(isSelf ? viewer?.email : undefined, 88);
   const [preview, setPreview] = useState<AuthorPreview | null>(null);
@@ -110,7 +109,8 @@ function AuthorPreviewCard({ authorId, viewer }: CardProps) {
         }}
       >
         <ButtonBase
-          onClick={() => navigate(`/authors/${authorId}`)}
+          component={Link}
+          to={`/authors/${authorId}`}
           sx={{
             position: "absolute",
             left: 12,
@@ -202,7 +202,8 @@ function AuthorPreviewCard({ authorId, viewer }: CardProps) {
                     return (
                       <Tooltip key={model.id} title={model.title || model.name} disableInteractive>
                         <ButtonBase
-                          onClick={() => navigate(`/models/${model.id}`)}
+                          component={Link}
+                          to={`/models/${model.id}`}
                           sx={{
                             aspectRatio: "1 / 1",
                             borderRadius: 1.5,

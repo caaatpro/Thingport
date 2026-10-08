@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import type { Theme } from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
@@ -49,7 +50,6 @@ type Props = {
 /** The detail page's sticky summary card. */
 export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized, onUpdated, viewer }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const navigate = useNavigate();
   const viewerAvatarUrl = useGravatarUrl(viewer?.email, 56);
   const {
     pickerOpen,
@@ -67,19 +67,23 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
   const [normalizedMenuAnchor, setNormalizedMenuAnchor] = useState<HTMLElement | null>(null);
   const normalized = useNormalizedOpen(print.id, recordUse, onUnauthorized);
 
-  const goToCategory = () => {
-    if (!print.category_id) return;
-    onSelectCategory(print.category_id);
-    // Go straight to the filtered URL; landing on plain /models makes the grid flicker.
-    navigate(`/models?category=${print.category_id}`);
-  };
-
   const importedDate = print.source_provider
     ? new Date(print.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     : null;
 
   const showViewerAsAuthor =
     !print.author?.name && !print.author?.handle && !print.creator && !print.source_provider && Boolean(viewer);
+
+  const authorLink = print.author
+    ? `/authors/${print.author.id}`
+    : showViewerAsAuthor
+      ? `/authors/${SELF_AUTHOR_ID}`
+      : null;
+  const authorSx = {
+    alignItems: "center",
+    width: "fit-content",
+    color: (muiTheme: Theme) => muiTheme.thingport.headingText,
+  } as const;
   const sourceInfo = importProviderInfo(print.source_provider);
   const sourceLink =
     sourceInfo && print.source_url ? { href: print.source_url, label: shortUrl(print.source_url) } : null;
@@ -136,31 +140,37 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
             viewer={viewer}
             disabled={!print.author && !showViewerAsAuthor}
           >
-            <Stack
-              direction="row"
-              spacing={1}
-              onClick={() => {
-                if (print.author) navigate(`/authors/${print.author.id}`);
-                else if (showViewerAsAuthor) navigate(`/authors/${SELF_AUTHOR_ID}`);
-              }}
-              sx={{
-                alignItems: "center",
-                width: "fit-content",
-                cursor: print.author || showViewerAsAuthor ? "pointer" : "default",
-                color: (muiTheme) => muiTheme.thingport.headingText,
-                ...(print.author || showViewerAsAuthor ? { "&:hover": { color: "primary.main" } } : undefined),
-              }}
-            >
-              <Avatar
-                src={authorAvatarUrl || undefined}
-                sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}
+            {authorLink ? (
+              <Stack
+                component={RouterLink}
+                to={authorLink}
+                direction="row"
+                spacing={1}
+                sx={{ ...authorSx, textDecoration: "none", "&:hover": { color: "primary.main" } }}
               >
-                {(authorName || "?").slice(0, 1).toUpperCase()}
-              </Avatar>
-              <Typography variant="body2" sx={{ color: "inherit" }}>
-                {authorName || t("models:card.unknownAuthor")}
-              </Typography>
-            </Stack>
+                <Avatar
+                  src={authorAvatarUrl || undefined}
+                  sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}
+                >
+                  {(authorName || "?").slice(0, 1).toUpperCase()}
+                </Avatar>
+                <Typography variant="body2" sx={{ color: "inherit" }}>
+                  {authorName || t("models:card.unknownAuthor")}
+                </Typography>
+              </Stack>
+            ) : (
+              <Stack direction="row" spacing={1} sx={authorSx}>
+                <Avatar
+                  src={authorAvatarUrl || undefined}
+                  sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}
+                >
+                  {(authorName || "?").slice(0, 1).toUpperCase()}
+                </Avatar>
+                <Typography variant="body2" sx={{ color: "inherit" }}>
+                  {authorName || t("models:card.unknownAuthor")}
+                </Typography>
+              </Stack>
+            )}
           </AuthorHoverCard>
         </Box>
 
@@ -203,7 +213,9 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
               {t("models:detail.category")}
             </Typography>
             <ButtonBase
-              onClick={goToCategory}
+              component={RouterLink}
+              to={`/models?category=${print.category_id}`}
+              onClick={() => onSelectCategory(print.category_id!)}
               sx={{
                 borderRadius: 1,
                 px: 0.5,

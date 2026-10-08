@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import { UnauthorizedError } from "../../api/client";
 import { type Collection, collectionsApi } from "../../api/collections";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
@@ -13,6 +16,7 @@ import type { AuthUser } from "../../api/auth";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
+import { hasRole } from "../../utils/access";
 import { collectionDisplayName } from "../../utils/collectionDisplay";
 import ModelCard from "../ModelsPage/ModelCard";
 import SortTabs from "../ModelsPage/SortTabs";
@@ -46,6 +50,9 @@ export default function CollectionDetailPage({
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const sortModeParam = searchParams.get("orderBy");
   const sortMode: PrintSortMode =
@@ -132,7 +139,7 @@ export default function CollectionDetailPage({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionId, sortMode]);
+  }, [collectionId, sortMode, reloadKey]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore || !collectionId) return;
@@ -152,6 +159,24 @@ export default function CollectionDetailPage({
     } finally {
       setLoadingMore(false);
     }
+  };
+
+  // Sequential, one model per file; the server files each into this collection (needs the upload role or better).
+  const uploadFiles = async (files: File[]) => {
+    if (!collectionId || !files.length) return;
+    setUploading(true);
+    const failed: string[] = [];
+    for (const file of files) {
+      try {
+        await printsApi.upload([file], { collection_id: collectionId });
+      } catch (err) {
+        if (handleError(err)) return;
+        failed.push(file.name);
+      }
+    }
+    setUploading(false);
+    setReloadKey((k) => k + 1);
+    if (failed.length) alert(t("models:collections.detail.uploadFailed", { names: failed.join(", ") }));
   };
 
   const loadMoreSentinelRef = useInfiniteScroll(loadMore, hasMore, loading || loadingMore);
@@ -196,7 +221,41 @@ export default function CollectionDetailPage({
           {collection.description}
         </Typography>
       )}
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          {!collection.system_key && hasRole(collection.my_role, "upload") && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                data-testid="collection-upload-input"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  e.target.value = "";
+                  void uploadFiles(files);
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                disabled={uploading}
+                startIcon={uploading ? <CircularProgress size={14} color="inherit" /> : <FileUploadOutlinedIcon />}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? t("models:collections.detail.uploading") : t("models:collections.detail.upload")}
+              </Button>
+            </>
+          )}
+          {collection.is_owner === false && collection.owner && (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`${t("models:collections.detail.sharedBy", { name: collection.owner.display_name })} · ${t(`models:share.roles.${collection.my_role ?? "view"}`)}`}
+            />
+          )}
+        </Stack>
         <SortTabs value={sortMode} onChange={setSortMode} />
       </Box>
       {items.length ? (
@@ -204,14 +263,8 @@ export default function CollectionDetailPage({
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              columnGap: "20px",
-              rowGap: "20px",
-              "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(6, 1fr)" },
-              "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(5, 1fr)" },
-              "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-              "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-              "@media (max-width: 860px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+              gridTemplateColumns: "repeat(auto-fill, minmax(236px, 1fr))",
+              gap: "20px",
             }}
           >
             {items.map((item) => (

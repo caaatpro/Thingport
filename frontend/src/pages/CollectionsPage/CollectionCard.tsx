@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -40,14 +40,12 @@ function CoverTile({
   overlayCount?: number;
 }) {
   const { t } = useTranslation(["models", "common"]);
-  const navigate = useNavigate();
   return (
     <Box
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate(`/models/${print.id}`);
-      }}
-      sx={{ position: "relative", width: "100%", height: "100%", cursor: "pointer", overflow: "hidden" }}
+      component={Link}
+      to={`/models/${print.id}`}
+      aria-label={print.title || print.name}
+      sx={{ display: "block", position: "relative", width: "100%", height: "100%", overflow: "hidden" }}
     >
       {renderPreviewContent(print, "card", theme, t, previewMode)}
       {Boolean(overlayCount && overlayCount > 0) && (
@@ -96,7 +94,6 @@ export default function CollectionCard({
   onBookmarksChanged,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const navigate = useNavigate();
   const coverItems = collection.cover_items.slice(0, COVER_TILE_LIMIT);
   const extraCount = collection.item_count > COVER_TILE_LIMIT ? collection.item_count - COVER_TILE_LIMIT : 0;
   const displayName = collectionDisplayName(collection, t);
@@ -189,8 +186,6 @@ export default function CollectionCard({
               position: "absolute",
               top: 8,
               right: 8,
-              opacity: 0,
-              transition: "opacity .15s ease",
               bgcolor: "rgba(0, 0, 0, 0.55)",
               borderRadius: "50%",
             }}
@@ -207,10 +202,13 @@ export default function CollectionCard({
         )}
 
         <Box
-          onClick={() => navigate(openTarget)}
+          component={Link}
+          to={openTarget}
           sx={{
+            display: "block",
+            color: "inherit",
+            textDecoration: "none",
             p: 1.5,
-            cursor: "pointer",
             transition: "background-color .15s ease",
             "&:hover": { bgcolor: "background.paper" },
           }}

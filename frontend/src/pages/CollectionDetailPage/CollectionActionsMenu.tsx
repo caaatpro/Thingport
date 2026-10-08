@@ -19,6 +19,7 @@ import { type Collection, type CollectionInput, collectionsApi } from "../../api
 import { useConfirm } from "../../components/ConfirmProvider";
 import DownloadZipConfirmDialog from "../../components/DownloadZipConfirmDialog";
 import ShareDialog from "../../components/ShareDialog";
+import { hasRole } from "../../utils/access";
 import CollectionFormModal from "../CollectionsPage/CollectionFormModal";
 
 type Props = {
@@ -143,17 +144,19 @@ export default function CollectionActionsMenu({
           </ListItemIcon>
           <ListItemText>{t("models:collections.downloadAllZip")}</ListItemText>
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            closeMenu();
-            setEditOpen(true);
-          }}
-        >
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{t("common:edit")}</ListItemText>
-        </MenuItem>
+        {hasRole(collection.my_role, "edit") && (
+          <MenuItem
+            onClick={() => {
+              closeMenu();
+              setEditOpen(true);
+            }}
+          >
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t("common:edit")}</ListItemText>
+          </MenuItem>
+        )}
         {collection.is_owner !== false && (
           <MenuItem
             onClick={() => {
@@ -167,12 +170,14 @@ export default function CollectionActionsMenu({
             <ListItemText>{t("models:share.menu")}</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
-        </MenuItem>
+        {hasRole(collection.my_role, "owner") && (
+          <MenuItem onClick={handleDelete}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
 
       {editOpen && (
@@ -194,7 +199,8 @@ export default function CollectionActionsMenu({
         name={collection.name}
         hint={t("models:share.collectionHint")}
         loadShares={() => collectionsApi.listShares(collection.id)}
-        saveShares={(ids) => collectionsApi.setShares(collection.id, ids)}
+        saveShares={(ids, roles) => collectionsApi.setShares(collection.id, ids, roles)}
+        withRoles
         onSaved={() => {
           collectionsApi
             .get(collection.id)

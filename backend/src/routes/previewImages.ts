@@ -1,3 +1,4 @@
+import { printWriteWhere } from "../services/access";
 import fs from "node:fs/promises";
 import { Router } from "express";
 import { z } from "zod";
@@ -19,7 +20,9 @@ router.post(
   asyncHandler(async (req, res) => {
     const files = (req.files as Express.Multer.File[]) || [];
     if (!files.length) throw new HttpError(400, "No files uploaded");
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     // Undecodable files are skipped rather than failing the batch.
     for (const file of files) {
@@ -32,7 +35,9 @@ router.post(
 router.delete(
   "/print/:id/preview-images/:imageId",
   asyncHandler(async (req, res) => {
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     const images = await prisma.previewImage.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     const target = images.find((img) => img.id === req.params.imageId);
@@ -60,7 +65,9 @@ router.post(
   "/print/:id/preview-images/reorder",
   asyncHandler(async (req, res) => {
     const body = parseBody(reorderSchema, req.body);
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     const images = await prisma.previewImage.findMany({ where: { printId: print.id } });
     const byId = new Map(images.map((img) => [img.id, img]));

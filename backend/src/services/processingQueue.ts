@@ -1,12 +1,7 @@
 import path from "node:path";
 import { prisma } from "../db";
 import { resolvePlateFilePath } from "./printCreation";
-import {
-  ensurePlateThumbnail,
-  extractFusionThumbnail,
-  renderPlateThumbnail,
-  saveThumbFromFile,
-} from "./printService";
+import { ensurePlateThumbnail, extractFusionThumbnail, renderPlateThumbnail, saveThumbFromFile } from "./printService";
 import { generateModelPreviewGlb } from "./modelPreviewCache";
 import { getPreviewMode } from "./settingsService";
 
@@ -49,7 +44,9 @@ async function claimNextJob(): Promise<{ id: string; plateId: string; attempts: 
     data: { status: "RUNNING" },
   });
   if (claimed.count === 0) return claimNextJob(); // raced (shouldn't happen with one drainer)
-  await prisma.plate.update({ where: { id: job.plateId }, data: { processingStatus: "PROCESSING" } }).catch(() => undefined);
+  await prisma.plate
+    .update({ where: { id: job.plateId }, data: { processingStatus: "PROCESSING" } })
+    .catch(() => undefined);
   return { id: job.id, plateId: job.plateId, attempts: job.attempts };
 }
 

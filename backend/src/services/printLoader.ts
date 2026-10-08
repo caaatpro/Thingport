@@ -1,8 +1,16 @@
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { toPrintOut, type PrintOut } from "../dto";
-import { printReadWhere, sharedViaCollectionSelect } from "./access";
-import type { Author, Category, Plate, PreviewImage, Print, PrintFile } from "../generated/prisma/client";
+import { printReadWhere, sharedViaCollectionSelect, viewerRolesByPrint } from "./access";
+import type {
+  Author,
+  Category,
+  CollectionRole,
+  Plate,
+  PreviewImage,
+  Print,
+  PrintFile,
+} from "../generated/prisma/client";
 
 type OwnerSel = { id: string; displayName: string };
 type ShareSel = { sharedWithUserId: string };
@@ -19,6 +27,7 @@ export type FullPrint = {
   files: PrintFile[];
   preparedFile: PrintFile | null;
   previewImages: PreviewImage[];
+  viewerRole: CollectionRole | null;
 };
 
 // loadFullPrint authorizes READ access (owner OR shared-with-me). Callers that mutate still guard
@@ -43,7 +52,9 @@ export async function loadFullPrint(userId: string, printId: string): Promise<Fu
   const preparedFile = print.preparedFileId
     ? await prisma.printFile.findUnique({ where: { id: print.preparedFileId } })
     : null;
-  return { print, plates, files, preparedFile, previewImages };
+  const viewerRole =
+    print.userId === userId ? null : ((await viewerRolesByPrint(userId, [printId])).get(printId) ?? null);
+  return { print, plates, files, preparedFile, previewImages, viewerRole };
 }
 
 export async function printOutById(userId: string, printId: string): Promise<PrintOut> {
@@ -58,6 +69,7 @@ export async function printOutById(userId: string, printId: string): Promise<Pri
     full.print.category,
     {
       viewerId: userId,
+      viewerRole: full.viewerRole,
       shares: full.print.shares,
       viaCollection: full.print.collectionItems.length > 0,
       owner: { id: full.print.user.id, display_name: full.print.user.displayName },
@@ -93,6 +105,7 @@ export async function printOutsByIds(userId: string, printIds: string[]): Promis
     prisma.printFile.findMany({ where: { printId: { in: printIds } } }),
     prisma.previewImage.findMany({ where: { printId: { in: printIds } }, orderBy: { position: "asc" } }),
   ]);
+  const rolesByPrint = await viewerRolesByPrint(userId, printIds);
   const platesByPrint = groupByPrintId(plates);
   const filesByPrint = groupByPrintId(files);
   const previewsByPrint = groupByPrintId(previewImages);
@@ -111,6 +124,7 @@ export async function printOutsByIds(userId: string, printIds: string[]): Promis
         undefined,
         {
           viewerId: userId,
+          viewerRole: rolesByPrint.get(print.id),
           shares: print.shares,
           viaCollection: print.collectionItems.length > 0,
           owner: { id: print.user.id, display_name: print.user.displayName },

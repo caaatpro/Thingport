@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -6,15 +7,15 @@ type Props = {
   icon: React.ReactNode;
   count: number;
   label: string;
-  onClick?: () => void;
+  /** When set, the whole card is a link. */
+  to?: string;
 };
 
-/** With `onClick`, the whole card is a link. */
-export default function CountCard({ icon, count, label, onClick }: Props) {
-  return (
+/** With `to`, the whole card is a link. */
+export default function CountCard({ icon, count, label, to }: Props) {
+  const card = (
     <Paper
       variant="outlined"
-      onClick={onClick}
       sx={{
         px: 2.5,
         py: 2,
@@ -22,7 +23,7 @@ export default function CountCard({ icon, count, label, onClick }: Props) {
         alignItems: "center",
         gap: 2,
         boxShadow: (theme) => theme.thingport.shadowCard,
-        ...(onClick && {
+        ...(to && {
           cursor: "pointer",
           transition: "box-shadow .15s ease, border-color .15s ease",
           "&:hover": {
@@ -60,5 +61,12 @@ export default function CountCard({ icon, count, label, onClick }: Props) {
         </Typography>
       </Box>
     </Paper>
+  );
+  return to ? (
+    <Link to={to} style={{ color: "inherit", textDecoration: "none", display: "block" }}>
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }

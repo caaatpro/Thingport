@@ -15,7 +15,15 @@ import { previewImagePath, deleteAllPreviewImages } from "../services/previewIma
 import { deleteAuthorIfOrphaned, getLinkedAuthorIds } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
-import { printReadWhere, collectionReadWhere, sharedViaCollectionSelect, sharedWithMeWhere } from "../services/access";
+import {
+  collectionReadWhere,
+  printReadWhere,
+  printWriteWhere,
+  requireCollectionRole,
+  sharedViaCollectionSelect,
+  sharedWithMeWhere,
+  viewerRolesByPrint,
+} from "../services/access";
 import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
 import { RENDERABLE_MODEL_EXTS } from "../config";
 import { estimateDownloadSize, resolvePrintsForDownload, sendPrintsZip } from "../services/downloadZip";
@@ -139,11 +147,19 @@ router.post(
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
+      // Uploading into a collection shared with you (UPLOAD role or better) stores the model under the
+      // collection's owner, who then owns everything in it.
+      const collectionId = (body.collection_id || "").trim();
+      const targetCollection =
+        collectionId && !systemCollectionKeyForId(collectionId)
+          ? await requireCollectionRole(req.userId!, collectionId, "UPLOAD")
+          : null;
+      const ownerId = targetCollection?.collection.userId ?? req.userId!;
       const meta = {
         title: body.title || null,
         notes: body.notes || null,
         tags,
-        categoryId: body.category_id || null,
+        categoryId: ownerId === req.userId ? body.category_id || null : null,
       };
 
       const printsOut = [];
@@ -151,7 +167,7 @@ router.post(
         for (const file of files) {
           const safeName = sanitizeFilename(file.originalname);
           const mime = mimeFromContentType(file.mimetype, safeName);
-          const { print, plates } = await createPrint(req.userId!, meta, path.parse(safeName).name, [
+          const { print, plates } = await createPrint(ownerId, meta, path.parse(safeName).name, [
             { filename: safeName, mime, tempFilePath: file.path },
           ]);
           printsOut.push(toPrintOut(print, plates, [], null));
@@ -174,13 +190,13 @@ router.post(
           return { filename: safeName, mime: mimeFromContentType(f.mimetype, safeName), tempFilePath: f.path };
         });
         const nameHint = path.parse(plateInputs[0].filename).name;
-        const { print } = await createPrint(req.userId!, meta, nameHint, plateInputs);
+        const { print } = await createPrint(ownerId, meta, nameHint, plateInputs);
 
         for (const f of supportingFiles) {
-          await saveFileFromTemp(req.userId!, print.id, f.path, f.originalname, f.mimetype);
+          await saveFileFromTemp(ownerId, print.id, f.path, f.originalname, f.mimetype);
         }
 
-        printsOut.push(await printOutById(req.userId!, print.id));
+        printsOut.push(await printOutById(ownerId, print.id));
         void createLog({
           userId: req.userId!,
           action: "model_uploaded",
@@ -188,15 +204,12 @@ router.post(
           details: { name: print.name },
         });
       }
-      // Collection-aware upload (drag & drop onto a collection page). Owned, non-system only.
-      const collectionId = (body.collection_id || "").trim();
-      if (collectionId && !systemCollectionKeyForId(collectionId) && printsOut.length) {
-        const owned = await prisma.collection.findFirst({ where: { id: collectionId, userId: req.userId } });
-        if (owned)
-          await addPrintsToCollection(
-            collectionId,
-            printsOut.map((p) => p.id),
-          );
+      // Collection-aware upload (drag & drop onto a collection page). Real collections only.
+      if (targetCollection && printsOut.length) {
+        await addPrintsToCollection(
+          targetCollection.collection.id,
+          printsOut.map((p) => p.id),
+        );
       }
       res.json({ prints: printsOut });
     } finally {
@@ -293,6 +306,7 @@ router.get(
         })
       : [];
     const fullById = new Map(full.map((p) => [p.id, p]));
+    const rolesByPrint = await viewerRolesByPrint(req.userId!, pageIds);
     const files = pageIds.length ? await prisma.printFile.findMany({ where: { printId: { in: pageIds } } }) : [];
     const filesByPrint = new Map<string, typeof files>();
     for (const f of files) {
@@ -309,6 +323,7 @@ router.get(
       return [
         toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages, p.category, {
           viewerId: req.userId,
+          viewerRole: rolesByPrint.get(p.id),
           shares: p.shares,
           viaCollection: p.collectionItems.length > 0,
           owner: { id: p.user.id, display_name: p.user.displayName },
@@ -522,7 +537,9 @@ router.post(
   "/print/:id/tags",
   asyncHandler(async (req, res) => {
     const body = parseBody(tagsSchema, req.body);
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     const updated = await prisma.print.update({
       where: { id: print.id },
@@ -550,13 +567,15 @@ router.post(
   "/print/:id/meta",
   asyncHandler(async (req, res) => {
     const body = parseBody(metaSchema, req.body);
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
 
     const data: Prisma.PrintUpdateInput = {};
     const requestedName = body.name !== undefined ? body.name : body.title;
     if (requestedName !== undefined) {
-      const nextName = await uniqueModelName(req.userId!, requestedName, print.categoryId, print.id);
+      const nextName = await uniqueModelName(print.userId, requestedName, print.categoryId, print.id);
       if (nextName !== print.name) {
         data.name = nextName;
         data.nameNormalized = nextName.trim().toLowerCase();
@@ -637,8 +656,11 @@ router.delete(
   "/print/:id",
   asyncHandler(async (req, res) => {
     const full = await loadFullPrint(req.userId!, req.params.id);
-    // loadFullPrint authorizes shared readers too; deleting is owner-only.
-    if (full.print.userId !== req.userId) throw new HttpError(404, "Print not found");
+    // loadFullPrint authorizes shared readers too; deleting needs ownership or the DELETE role.
+    const allowed = await prisma.print.count({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "DELETE") },
+    });
+    if (!allowed) throw new HttpError(full.print.userId === req.userId ? 404 : 403, "You can't delete this model");
     await deleteAllPrintFiles(req.params.id);
     await deleteAllPreviewImages(req.params.id);
     await prisma.print.delete({ where: { id: req.params.id } });

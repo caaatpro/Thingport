@@ -15,7 +15,7 @@ import {
 } from "../services/printFileService";
 import { toPrintFileOut } from "../dto";
 import { printOutById } from "../services/printLoader";
-import { printReadWhere } from "../services/access";
+import { printReadWhere, printWriteWhere } from "../services/access";
 
 const router = Router();
 router.use(requireAuth);
@@ -37,9 +37,11 @@ router.post(
     const file = req.file;
     try {
       if (!file) throw new HttpError(400, "No file uploaded");
-      const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+      const print = await prisma.print.findFirst({
+        where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+      });
       if (!print) throw new HttpError(404, "Print not found");
-      await saveFileFromTemp(req.userId!, print.id, file.path, file.originalname || "supporting-file", file.mimetype);
+      await saveFileFromTemp(print.userId, print.id, file.path, file.originalname || "supporting-file", file.mimetype);
       res.json({ print: await printOutById(req.userId!, print.id) });
     } finally {
       if (file && fs.existsSync(file.path)) fs.rmSync(file.path, { force: true });
@@ -67,7 +69,12 @@ router.get(
 router.delete(
   "/print/:id/files/:fileId",
   asyncHandler(async (req, res) => {
-    const print = await deleteSupportingFile(req.userId!, req.params.id, req.params.fileId);
+    const target = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+      select: { userId: true },
+    });
+    if (!target) throw new HttpError(404, "Print not found");
+    const print = await deleteSupportingFile(target.userId, req.params.id, req.params.fileId);
     res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
@@ -90,7 +97,12 @@ router.get(
 router.delete(
   "/print/:id/prepared-print",
   asyncHandler(async (req, res) => {
-    const print = await deletePreparedFile(req.userId!, req.params.id);
+    const target = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+      select: { userId: true },
+    });
+    if (!target) throw new HttpError(404, "Print not found");
+    const print = await deletePreparedFile(target.userId, req.params.id);
     res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );

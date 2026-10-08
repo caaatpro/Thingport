@@ -1,6 +1,6 @@
 import { authHeaders } from "../utils/auth";
 import { apiBase, assertOk, readErrorMessage, UnauthorizedError } from "./client";
-import type { Print, ShareUser } from "./prints";
+import type { AccessRole, CollectionRole, Print, ShareUser } from "./prints";
 
 export type SystemCollectionKey = "favorites" | "history";
 
@@ -19,6 +19,8 @@ export type Collection = {
   // Targeted sharing (optional: an older backend doesn't send these).
   visibility?: "private" | "shared";
   is_owner?: boolean;
+  /** "owner", or the role the owner gave you in this collection. */
+  my_role?: AccessRole;
   owner?: { id: string; display_name: string } | null;
   shared_with_count?: number;
 };
@@ -113,11 +115,11 @@ export const collectionsApi = {
     return res.json();
   },
 
-  setShares: async (id: string, userIds: string[]): Promise<void> => {
+  setShares: async (id: string, userIds: string[], roles: Record<string, CollectionRole> = {}): Promise<void> => {
     const res = await fetch(`${apiBase()}/collection/${id}/shares`, {
       method: "PUT",
       headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ user_ids: userIds }),
+      body: JSON.stringify({ shares: userIds.map((user_id) => ({ user_id, role: roles[user_id] ?? "view" })) }),
     });
     if (res.status === 401) throw new UnauthorizedError();
     if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to update sharing"));

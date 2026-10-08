@@ -78,6 +78,7 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
   const [categoryId, setCategoryId] = useState<string | null>(print.category_id ?? null);
   const [notes, setNotes] = useState(print.notes ?? "");
   const [tags, setTags] = useState<string[]>(print.tags);
+  const isOwner = print.is_owner !== false;
   const hasImportedAuthor = Boolean(print.author || print.creator || print.source_provider);
   const showViewerAsAuthor = !hasImportedAuthor && Boolean(viewer);
   const [authorResetPending, setAuthorResetPending] = useState(false);
@@ -185,13 +186,16 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
       const metaRes = await printsApi.updateMeta(print.id, { title, notes });
       latest = metaRes.print ?? latest;
 
-      const catRes = await printsApi.updateCategory(print.id, categoryId);
-      latest = catRes.print ?? latest;
+      // Categories and the author belong to the owner; someone editing through a shared collection can't change them.
+      if (isOwner) {
+        const catRes = await printsApi.updateCategory(print.id, categoryId);
+        latest = catRes.print ?? latest;
+      }
 
       const tagsRes = await printsApi.setTags(print.id, tags);
       latest = tagsRes.print ?? latest;
 
-      if (authorResetPending) {
+      if (isOwner && authorResetPending) {
         const authorRes = await printsApi.resetAuthor(print.id);
         latest = authorRes.print ?? latest;
       }
@@ -317,81 +321,85 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
             autoFocus
           />
 
-          <FormControl fullWidth disabled={saving || !categories}>
-            <InputLabel id="edit-model-category-label">{t("models:detail.category")}</InputLabel>
-            <Select
-              labelId="edit-model-category-label"
-              label={t("models:detail.category")}
-              value={categoryId ?? ""}
-              onChange={(e) => {
-                setCategoryId(e.target.value || null);
-                markDirty();
-              }}
-            >
-              <MenuItem value="">{t("models:edit.noCategory")}</MenuItem>
-              {flatCategories.map(({ category, depth }) =>
-                depth === 0 ? (
-                  // Top-level categories are headings. A disabled MenuItem, not ListSubheader: MUI's Select
-                  // still handles clicks on the latter and gets stuck open.
-                  <MenuItem key={category.id} disabled divider sx={{ fontWeight: 700, opacity: "1 !important" }}>
-                    {category.name}
-                  </MenuItem>
-                ) : (
-                  <MenuItem key={category.id} value={category.id} sx={{ pl: 1 + depth * 2 }}>
-                    {category.name}
-                  </MenuItem>
-                ),
-              )}
-            </Select>
-          </FormControl>
+          {isOwner && (
+            <FormControl fullWidth disabled={saving || !categories}>
+              <InputLabel id="edit-model-category-label">{t("models:detail.category")}</InputLabel>
+              <Select
+                labelId="edit-model-category-label"
+                label={t("models:detail.category")}
+                value={categoryId ?? ""}
+                onChange={(e) => {
+                  setCategoryId(e.target.value || null);
+                  markDirty();
+                }}
+              >
+                <MenuItem value="">{t("models:edit.noCategory")}</MenuItem>
+                {flatCategories.map(({ category, depth }) =>
+                  depth === 0 ? (
+                    // Top-level categories are headings. A disabled MenuItem, not ListSubheader: MUI's Select
+                    // still handles clicks on the latter and gets stuck open.
+                    <MenuItem key={category.id} disabled divider sx={{ fontWeight: 700, opacity: "1 !important" }}>
+                      {category.name}
+                    </MenuItem>
+                  ) : (
+                    <MenuItem key={category.id} value={category.id} sx={{ pl: 1 + depth * 2 }}>
+                      {category.name}
+                    </MenuItem>
+                  ),
+                )}
+              </Select>
+            </FormControl>
+          )}
 
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: "block",
-                mb: 0.5,
-              }}
-            >
-              {t("models:detail.author")}
-            </Typography>
-            <Stack
-              direction="row"
-              sx={{
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Typography variant="body2">
-                {authorResetPending
-                  ? t("models:edit.authorWillBeYou")
-                  : print.author?.name ||
-                    print.author?.handle ||
-                    print.creator ||
-                    (showViewerAsAuthor ? viewer!.display_name : null) ||
-                    t("models:card.unknownAuthor")}
+          {isOwner && (
+            <Box>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  display: "block",
+                  mb: 0.5,
+                }}
+              >
+                {t("models:detail.author")}
               </Typography>
-              {hasImportedAuthor &&
-                (authorResetPending ? (
-                  <Button size="small" disabled={saving} onClick={() => setAuthorResetPending(false)}>
-                    {t("models:edit.undoResetAuthor")}
-                  </Button>
-                ) : (
-                  <Button
-                    size="small"
-                    disabled={saving}
-                    startIcon={<RestartAltIcon fontSize="small" />}
-                    onClick={() => {
-                      setAuthorResetPending(true);
-                      markDirty();
-                    }}
-                  >
-                    {t("models:edit.resetAuthor")}
-                  </Button>
-                ))}
-            </Stack>
-          </Box>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Typography variant="body2">
+                  {authorResetPending
+                    ? t("models:edit.authorWillBeYou")
+                    : print.author?.name ||
+                      print.author?.handle ||
+                      print.creator ||
+                      (showViewerAsAuthor ? viewer!.display_name : null) ||
+                      t("models:card.unknownAuthor")}
+                </Typography>
+                {hasImportedAuthor &&
+                  (authorResetPending ? (
+                    <Button size="small" disabled={saving} onClick={() => setAuthorResetPending(false)}>
+                      {t("models:edit.undoResetAuthor")}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="small"
+                      disabled={saving}
+                      startIcon={<RestartAltIcon fontSize="small" />}
+                      onClick={() => {
+                        setAuthorResetPending(true);
+                        markDirty();
+                      }}
+                    >
+                      {t("models:edit.resetAuthor")}
+                    </Button>
+                  ))}
+              </Stack>
+            </Box>
+          )}
 
           <Divider />
 

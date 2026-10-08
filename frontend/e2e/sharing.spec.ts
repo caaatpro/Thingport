@@ -37,7 +37,8 @@ test("sharing a model with a member makes it appear under 'Shared with me' for t
       Authorization: `Bearer ${(await member.evaluate(() => localStorage.getItem("thingport_auth_token")))!}`,
     },
   });
-  expect(res.status()).toBe(404);
+  // Shared read-only: the member can see the model but is refused (403) when deleting it.
+  expect(res.status()).toBe(403);
   await memberCtx.close();
   expect(memberId).toBeTruthy();
 });

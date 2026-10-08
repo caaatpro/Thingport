@@ -17,9 +17,7 @@ router.get(
       orderBy: { displayName: "asc" },
     });
     res.json(
-      users
-        .filter((u) => u.id !== req.userId)
-        .map((u) => ({ id: u.id, display_name: u.displayName, email: u.email })),
+      users.filter((u) => u.id !== req.userId).map((u) => ({ id: u.id, display_name: u.displayName, email: u.email })),
     );
   }),
 );

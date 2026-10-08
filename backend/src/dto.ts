@@ -2,6 +2,7 @@ import fs from "node:fs";
 import type {
   Author,
   Collection,
+  CollectionRole,
   Category,
   ImportJob,
   Notification,
@@ -144,12 +145,23 @@ export type PrintOut = {
   // viewer only has shared access; owner is populated only then (so the UI can show "shared by X").
   visibility: "private" | "shared";
   is_owner: boolean;
+  /** What the viewer may do: "owner", or their role in a collection that shares this model with them. */
+  access_role: AccessRole;
   owner: { id: string; display_name: string } | null;
   shared_with_count: number;
 };
 
+export type AccessRole = "owner" | "view" | "upload" | "edit" | "delete";
+
+export function accessRoleOf(isOwner: boolean, role: CollectionRole | null | undefined): AccessRole {
+  if (isOwner) return "owner";
+  return role ? (role.toLowerCase() as AccessRole) : "view";
+}
+
 export type PrintAccessCtx = {
   viewerId?: string;
+  /** The viewer's role through a shared collection; ignored when they own the model. */
+  viewerRole?: CollectionRole | null;
   shares?: { sharedWithUserId: string }[];
   /** The model sits in one of the owner's collections that is shared with someone. */
   viaCollection?: boolean;
@@ -319,6 +331,7 @@ export function toPrintOut(
     source_url: buildImportSourceUrl(print.sourceProvider, print.sourceExternalId),
     visibility: (access?.shares?.length ?? 0) > 0 || access?.viaCollection ? "shared" : "private",
     is_owner: access?.viewerId ? print.userId === access.viewerId : true,
+    access_role: accessRoleOf(access?.viewerId ? print.userId === access.viewerId : true, access?.viewerRole),
     owner: access?.viewerId && print.userId !== access.viewerId ? (access.owner ?? null) : null,
     shared_with_count: access?.shares?.length ?? 0,
   };
@@ -340,13 +353,15 @@ export type CollectionOut = {
   bookmarked: boolean;
   visibility: "private" | "shared";
   is_owner: boolean;
+  /** "owner", or the role the owner gave the viewer. */
+  my_role: AccessRole;
   owner: { id: string; display_name: string } | null;
   shared_with_count: number;
 };
 
 export type CollectionAccessCtx = {
   viewerId?: string;
-  shares?: { sharedWithUserId: string }[];
+  shares?: { sharedWithUserId: string; role?: CollectionRole }[];
   owner?: { id: string; display_name: string } | null;
 };
 
@@ -370,6 +385,10 @@ export function toCollectionOut(
     bookmarked,
     visibility: (access?.shares?.length ?? 0) > 0 ? "shared" : "private",
     is_owner: access?.viewerId ? collection.userId === access.viewerId : true,
+    my_role: accessRoleOf(
+      access?.viewerId ? collection.userId === access.viewerId : true,
+      access?.shares?.find((share) => share.sharedWithUserId === access.viewerId)?.role,
+    ),
     owner: access?.viewerId && collection.userId !== access.viewerId ? (access.owner ?? null) : null,
     shared_with_count: access?.shares?.length ?? 0,
   };
@@ -395,6 +414,7 @@ export function toSystemCollectionOut(
     bookmarked: false,
     visibility: "private",
     is_owner: true,
+    my_role: "owner",
     owner: null,
     shared_with_count: 0,
   };

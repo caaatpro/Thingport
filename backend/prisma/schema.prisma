@@ -14,26 +14,26 @@ enum Role {
 }
 
 model User {
-  id                       String         @id @default(cuid())
-  email                    String         @unique
+  id                       String            @id @default(cuid())
+  email                    String            @unique
   passwordHash             String
   displayName              String
-  role                     Role           @default(MEMBER)
+  role                     Role              @default(MEMBER)
   // Defaults true so existing accounts aren't locked out; registration sets false when SMTP is on.
-  emailVerified            Boolean        @default(true)
-  emailVerificationToken   String?        @unique
+  emailVerified            Boolean           @default(true)
+  emailVerificationToken   String?           @unique
   emailVerificationExpires DateTime?
   // Awaiting confirmation of an email change.
   pendingEmail             String?
   // SHA-256 of the emailed token, so a database leak can't be used to take over accounts.
-  passwordResetTokenHash   String?        @unique
+  passwordResetTokenHash   String?           @unique
   passwordResetExpires     DateTime?
   // Per-user, unlike the instance-wide Thingiverse token.
   makerworldCookie         String?
   slicer                   String?
   // "light" | "dark" | "system"; null means never set.
   themePreference          String?
-  authorPreviewEnabled     Boolean        @default(true)
+  authorPreviewEnabled     Boolean           @default(true)
   // Filled from the first linked Author with this data; later links never overwrite it.
   bio                      String?
   backgroundUrl            String?
@@ -54,9 +54,9 @@ model User {
   disabledAt               DateTime?
   lastLoginAt              DateTime?
   // Embedded in session tokens; bumping it signs the user out everywhere.
-  sessionVersion           Int            @default(0)
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime       @updatedAt
+  sessionVersion           Int               @default(0)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
 }
 
 // Lets one email register while registrations are closed. Re-inviting replaces the token.
@@ -299,14 +299,14 @@ model AuthorLink {
 }
 
 model Plate {
-  id               String   @id @default(cuid())
+  id               String                @id @default(cuid())
   printId          String
-  print            Print    @relation(fields: [printId], references: [id], onDelete: Cascade)
+  print            Print                 @relation(fields: [printId], references: [id], onDelete: Cascade)
   position         Int
   filename         String
   mime             String
-  size             Int      @default(0)
-  storagePath      String   @unique
+  size             Int                   @default(0)
+  storagePath      String                @unique
   sourcePath       String?
   // The MakerWorld profile ("instance") this file came from. Each profile's 3MF has its own print
   // settings, so each gets its own Plate.
@@ -324,8 +324,8 @@ model Plate {
   processingStatus PlateProcessingStatus @default(READY)
   processingError  String?
   processingJobs   ProcessingJob[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@unique([printId, position])
   @@unique([printId, sourceInstanceId])
@@ -416,13 +416,22 @@ model PrintShare {
 
 /// Grants one user visibility of another user's Collection AND every model in it, including models
 /// added later (see services/access.ts). Writes stay owner-only.
+enum CollectionRole {
+  VIEW
+  UPLOAD
+  EDIT
+  DELETE
+}
+
 model CollectionShare {
-  id               String     @id @default(cuid())
+  id               String         @id @default(cuid())
   collectionId     String
-  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection       Collection     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   sharedWithUserId String
-  sharedWithUser   User       @relation("CollectionShareRecipient", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
-  createdAt        DateTime   @default(now())
+  sharedWithUser   User           @relation("CollectionShareRecipient", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  /// What the recipient may do with the collection and the models in it (a ladder: each level includes the ones below).
+  role             CollectionRole @default(VIEW)
+  createdAt        DateTime       @default(now())
 
   @@unique([collectionId, sharedWithUserId])
   @@index([sharedWithUserId])

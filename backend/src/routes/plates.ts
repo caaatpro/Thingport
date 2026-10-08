@@ -8,7 +8,7 @@ import { HttpError, sanitizeFilename, mimeFromContentType } from "../utils/fileU
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import { modelUpload, thumbnailUpload } from "../uploadMiddleware";
-import { printReadWhere } from "../services/access";
+import { printReadWhere, printWriteWhere } from "../services/access";
 import {
   addPlatesToPrint,
   deletePlateFiles,
@@ -38,14 +38,16 @@ router.post(
     const files = (req.files as Express.Multer.File[]) || [];
     try {
       if (!files.length) throw new HttpError(400, "No files uploaded");
-      const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+      const print = await prisma.print.findFirst({
+        where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+      });
       if (!print) throw new HttpError(404, "Print not found");
 
       const plateInputs: NewPlateInput[] = files.map((f) => {
         const safeName = sanitizeFilename(f.originalname);
         return { filename: safeName, mime: mimeFromContentType(f.mimetype, safeName), tempFilePath: f.path };
       });
-      await addPlatesToPrint(req.userId!, print.id, plateInputs);
+      await addPlatesToPrint(print.userId, print.id, plateInputs);
       res.json({ print: await printOutById(req.userId!, print.id) });
     } finally {
       for (const f of files) {
@@ -58,7 +60,9 @@ router.post(
 router.delete(
   "/print/:id/plates/:plateId",
   asyncHandler(async (req, res) => {
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     const target = plates.find((p) => p.id === req.params.plateId);
@@ -91,7 +95,9 @@ router.post(
   "/print/:id/plates/reorder",
   asyncHandler(async (req, res) => {
     const body = parseBody(reorderSchema, req.body);
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     const plates = await prisma.plate.findMany({ where: { printId: print.id } });
     const byId = new Map(plates.map((p) => [p.id, p]));
@@ -119,7 +125,9 @@ router.post(
   "/print/:id/plate/:plateId/rename",
   asyncHandler(async (req, res) => {
     const body = parseBody(renameSchema, req.body);
-    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    const print = await prisma.print.findFirst({
+      where: { id: req.params.id, ...printWriteWhere(req.userId!, "EDIT") },
+    });
     if (!print) throw new HttpError(404, "Print not found");
     const plate = await prisma.plate.findUnique({ where: { id: req.params.plateId } });
     if (!plate || plate.printId !== print.id) throw new HttpError(404, "Plate not found");
@@ -197,7 +205,7 @@ router.post(
     }
     if (file.size > 8 * 1024 * 1024) throw new HttpError(413, "Generated thumbnail exceeds 8 MB");
     const plate = await prisma.plate.findFirst({
-      where: { id: req.params.plateId, print: { userId: req.userId } },
+      where: { id: req.params.plateId, print: printWriteWhere(req.userId!, "UPLOAD") },
     });
     if (!plate) throw new HttpError(404, "Not found");
     // A thumbnail the server (or an earlier upload) already made is kept: this is only the fallback for

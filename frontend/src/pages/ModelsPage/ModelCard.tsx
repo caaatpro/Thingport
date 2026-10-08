@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
@@ -20,6 +20,7 @@ import { renderPreviewContent } from "../../components/media/renderPreviewConten
 import { printProviderInfo } from "../../constants/importProviders";
 import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
+import CardLink, { aboveCardLink } from "../../components/CardLink";
 import StarToggle from "../../components/StarToggle";
 import HoverSlideshow from "../../components/media/HoverSlideshow";
 import AuthorHoverCard from "../../components/AuthorHoverCard";
@@ -49,7 +50,7 @@ type Props = {
   onToggleSelect?: () => void;
 };
 
-const OVERLAY_BUTTON_SIZE = 30;
+const OVERLAY_BUTTON_SIZE = 34;
 const HOVER_ICON_SIZE = 18;
 const overlayButtonSx = {
   width: OVERLAY_BUTTON_SIZE,
@@ -77,7 +78,6 @@ export default function ModelCard({
   onToggleSelect,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const navigate = useNavigate();
   const muiTheme = useTheme();
   const overlayIconColor = muiTheme.thingport.headingText;
   const {
@@ -102,10 +102,25 @@ export default function ModelCard({
   const slideshowImages =
     item.preview_images.length > 1 ? item.preview_images.map((img) => printsApi.fileUrl(img.url)) : [];
 
+  const authorLink = author || showViewerAsAuthor ? `/authors/${author ? author.id : SELF_AUTHOR_ID}` : null;
+  const authorRowSx = { alignItems: "center", minWidth: 0, color: "text.secondary" } as const;
+  const authorRow = (
+    <>
+      <Avatar
+        src={authorAvatarUrl || undefined}
+        sx={{ width: 20, height: 20, fontSize: 11, color: "inherit !important" }}
+      >
+        {(authorName || "?").slice(0, 1).toUpperCase()}
+      </Avatar>
+      <Typography variant="caption" noWrap sx={{ color: "inherit" }}>
+        {authorName || t("models:card.unknownAuthor")}
+      </Typography>
+    </>
+  );
+
   return (
     <Paper
       variant="outlined"
-      onClick={() => (selectionActive && onToggleSelect ? onToggleSelect() : navigate(`/models/${item.id}`))}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       sx={{
@@ -128,6 +143,15 @@ export default function ModelCard({
         }),
       }}
     >
+      <CardLink
+        to={`/models/${item.id}`}
+        label={item.title || item.name}
+        onPlainClick={() => {
+          if (!(selectionActive && onToggleSelect)) return false;
+          onToggleSelect();
+          return true;
+        }}
+      />
       {/* zIndex 0 makes this its own stacking context, so the slideshow's layered slides stay
           under the provider badge and hover actions rendered after it. */}
       <Box
@@ -156,6 +180,8 @@ export default function ModelCard({
           <Box
             sx={{
               position: "absolute",
+              zIndex: 2,
+              pointerEvents: "none",
               top: 8,
               left: onToggleSelect ? 44 : 8,
               px: 1,
@@ -181,7 +207,7 @@ export default function ModelCard({
             position: "absolute",
             top: 6,
             left: 6,
-            zIndex: 1,
+            zIndex: 3,
             opacity: selectionActive || selected ? 1 : 0,
             transition: "opacity .15s ease",
             bgcolor: "background.paper",
@@ -205,10 +231,9 @@ export default function ModelCard({
         onClick={(e) => e.stopPropagation()}
         sx={{
           position: "absolute",
+          zIndex: 3,
           top: 8,
           right: 8,
-          opacity: 0,
-          transition: "opacity .15s ease",
         }}
       >
         <Tooltip title={favoriteLabel}>
@@ -374,33 +399,21 @@ export default function ModelCard({
             viewer={viewer}
             disabled={!author && !showViewerAsAuthor}
           >
-            <Stack
-              direction="row"
-              spacing={0.75}
-              onClick={(e) => {
-                if (!author && !showViewerAsAuthor) return;
-                e.stopPropagation();
-                navigate(`/authors/${author ? author.id : SELF_AUTHOR_ID}`);
-              }}
-              sx={{
-                alignItems: "center",
-                minWidth: 0,
-                color: "text.secondary",
-                ...(author || showViewerAsAuthor
-                  ? { cursor: "pointer", "&:hover": { color: "primary.main" } }
-                  : undefined),
-              }}
-            >
-              <Avatar
-                src={authorAvatarUrl || undefined}
-                sx={{ width: 20, height: 20, fontSize: 11, color: "inherit !important" }}
+            {authorLink ? (
+              <Stack
+                component={Link}
+                to={authorLink}
+                direction="row"
+                spacing={0.75}
+                sx={{ ...authorRowSx, ...aboveCardLink, textDecoration: "none", "&:hover": { color: "primary.main" } }}
               >
-                {(authorName || "?").slice(0, 1).toUpperCase()}
-              </Avatar>
-              <Typography variant="caption" noWrap sx={{ color: "inherit" }}>
-                {authorName || t("models:card.unknownAuthor")}
-              </Typography>
-            </Stack>
+                {authorRow}
+              </Stack>
+            ) : (
+              <Stack direction="row" spacing={0.75} sx={authorRowSx}>
+                {authorRow}
+              </Stack>
+            )}
           </AuthorHoverCard>
           <Stack direction="row" spacing={1.5} sx={{ color: "text.secondary", flexShrink: 0 }}>
             <Stack
