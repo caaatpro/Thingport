@@ -516,7 +516,7 @@ async function persistPlateMeasure(
 
 /** Server-side rendered thumbnail for mesh/CAD models (STL/OBJ/STEP); also persists dimensions. */
 export async function renderPlateThumbnail(plateId: string, srcPath: string): Promise<boolean> {
-  const { renderModelThumbnail } = await import("./thumbnailRender");
+  const { renderModelThumbnail } = await import("./thumbnailRender.js");
   const result = await renderModelThumbnail(srcPath);
   if (!result) return false;
   const ok = await saveThumbBuffer(plateId, result.png);
@@ -526,7 +526,7 @@ export async function renderPlateThumbnail(plateId: string, srcPath: string): Pr
 
 /** Measures a mesh/CAD model's bounding box + triangle count without rendering (for backfill). */
 export async function measurePlate(plateId: string, srcPath: string): Promise<boolean> {
-  const { measureModel } = await import("./thumbnailRender");
+  const { measureModel } = await import("./thumbnailRender.js");
   const m = await measureModel(srcPath);
   if (!m) return false;
   await persistPlateMeasure(plateId, m);

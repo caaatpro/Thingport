@@ -134,7 +134,7 @@ async function createPlateAtPosition(
 
   // Thumbnail / preview / geometry run off-request in the durable processing queue. Dynamic import
   // avoids a static import cycle (processingQueue imports resolvePlateFilePath from here).
-  const { enqueuePlate } = await import("./processingQueue");
+  const { enqueuePlate } = await import("./processingQueue.js");
   await enqueuePlate(record.id);
   return { record, effectivePath };
 }

@@ -68,7 +68,7 @@ export function mountPanel(root: ShadowRoot, onFirstOpen: () => void): () => voi
   contentEl = content;
   let loaded = false;
   return () => {
-    const open = panel.hidden;
+    const open = Boolean(panel.hidden);
     setPanelOpen(open);
     if (open && !loaded) {
       loaded = true;
