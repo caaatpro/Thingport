@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 import { prisma } from "../db";
 
 async function getBoolSetting(key: string, fallback: boolean): Promise<boolean> {

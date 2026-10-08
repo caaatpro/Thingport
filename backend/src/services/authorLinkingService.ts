@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../db";
 import { IMPORT_COLLECTION_DELAY_MS, IMPORT_MAKERWORLD_CALL_DELAY_MS } from "../config";
 import { maybeSleep } from "../utils/concurrency";

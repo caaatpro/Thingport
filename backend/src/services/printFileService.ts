@@ -5,7 +5,7 @@ import { prisma } from "../db";
 import { STORAGE, IMPORT_MAX_BYTES } from "../config";
 import { HttpError, sanitizeFilename, mimeFromContentType } from "../utils/fileUtils";
 import { isPreparedPrintFilename, inspectPreparedPrint } from "./preparedPrint";
-import type { Prisma, Print, PrintFile } from "@prisma/client";
+import type { Prisma, Print, PrintFile } from "../generated/prisma/client";
 
 export function managedPrintFilePath(printFile: Pick<PrintFile, "storagePath">): string {
   const candidate = path.resolve(STORAGE, printFile.storagePath);

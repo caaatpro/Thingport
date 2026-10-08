@@ -3,7 +3,7 @@ import { HttpError } from "../utils/fileUtils";
 import { printOutsByIds } from "./printLoader";
 import { relocatePrintsForToken } from "./printService";
 import { toSystemCollectionOut, type CollectionOut, type SystemCollectionKey } from "../dto";
-import type { Collection, Prisma } from "@prisma/client";
+import type { Collection, Prisma } from "../generated/prisma/client";
 
 export function normalizeCollectionName(name: string): string {
   return name.trim().toLowerCase();

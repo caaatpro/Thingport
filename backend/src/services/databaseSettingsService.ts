@@ -1,5 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-import { setActiveClient } from "../db";
+import { createPrismaClient, setActiveClient } from "../db";
 
 export type PostgresCredentials = {
   database: string;
@@ -70,7 +69,7 @@ export async function testAndSwitchDatabase(creds: PostgresCredentials): Promise
   const url = buildCandidateUrl(creds);
   if (!url) throw new Error("DATABASE_URL is not set for this instance -- nothing to switch relative to.");
 
-  const candidate = new PrismaClient({ datasources: { db: { url } } });
+  const candidate = createPrismaClient(url);
   try {
     await candidate.$connect();
     await candidate.$queryRawUnsafe('SELECT 1 FROM "User" LIMIT 1');

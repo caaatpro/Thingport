@@ -3,7 +3,7 @@
 // mailbox ownership, so invitees skip email verification.
 
 import crypto from "node:crypto";
-import type { Invitation } from "@prisma/client";
+import type { Invitation } from "../generated/prisma/client";
 import { PUBLIC_URL } from "../config";
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";

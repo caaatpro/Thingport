@@ -13,7 +13,7 @@ import { findValidInvitation } from "../services/invitationService";
 import { createLog } from "../services/auditLog";
 import { seedDefaultCategories } from "../services/categoryService";
 import { toUserOut } from "../dto";
-import type { Prisma, Role } from "@prisma/client";
+import type { Prisma, Role } from "../generated/prisma/client";
 
 const router = Router();
 

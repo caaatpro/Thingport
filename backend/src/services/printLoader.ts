@@ -2,7 +2,7 @@ import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { toPrintOut, type PrintOut } from "../dto";
 import { printReadWhere, sharedViaCollectionSelect } from "./access";
-import type { Author, Category, Plate, PreviewImage, Print, PrintFile } from "@prisma/client";
+import type { Author, Category, Plate, PreviewImage, Print, PrintFile } from "../generated/prisma/client";
 
 type OwnerSel = { id: string; displayName: string };
 type ShareSel = { sharedWithUserId: string };

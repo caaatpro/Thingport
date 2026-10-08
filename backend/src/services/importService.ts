@@ -69,8 +69,8 @@ import {
 import { plateThumbExists, saveThumbFromBytes } from "./printService";
 import { addPreviewImage } from "./previewImageService";
 import { prisma } from "../db";
-import { Prisma } from "@prisma/client";
-import type { Author, Plate, PreviewImage, Print } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client";
+import type { Author, Plate, PreviewImage, Print } from "../generated/prisma/client";
 
 import { isMakerworldHost, validateRemoteUrl } from "../utils/urlUtils";
 import { listZipEntries, readZipEntry } from "../utils/zipReader";

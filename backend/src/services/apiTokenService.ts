@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { prisma } from "../db";
-import type { Role } from "@prisma/client";
+import type { Role } from "../generated/prisma/client";
 
 // Revocable credentials for non-browser clients (the Thingport Grab extension). The secret is shown
 // once at creation; only its SHA-256 is stored, so a database leak can't be replayed. Revoking a token

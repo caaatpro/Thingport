@@ -10,7 +10,7 @@ import { validateParentCategory } from "../services/categoryService";
 import { availableModelName, reorganizeManagedPrints } from "../services/printService";
 import { toCategoryOut } from "../dto";
 import { sendPrintsZip } from "../services/downloadZip";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 
 const router = Router();
 router.use(requireAuth);

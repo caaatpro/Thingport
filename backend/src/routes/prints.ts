@@ -22,7 +22,7 @@ import { estimateDownloadSize, resolvePrintsForDownload, sendPrintsZip } from ".
 import { systemCollectionKeyForId, addPrintsToCollection } from "../services/collectionService";
 import { createLog } from "../services/auditLog";
 import { isNormalizable3mf, normalize3mfStatus, normalized3mfFor } from "../services/normalized3mfCache";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 
 const router = Router();
 router.use(requireAuth);

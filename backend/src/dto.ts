@@ -10,7 +10,7 @@ import type {
   Print,
   PrintFile,
   User,
-} from "@prisma/client";
+} from "./generated/prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";

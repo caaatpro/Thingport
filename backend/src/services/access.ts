@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 
 // Read access for targeted sharing: a user may READ a resource they own OR that has been shared
 // with them. Writes stay owner-only and are enforced separately (routes keep their { id, userId }

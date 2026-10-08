@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import type { ImportJob, ImportJobType, Prisma } from "@prisma/client";
+import type { ImportJob, ImportJobType, Prisma } from "../generated/prisma/client";
 
 export async function getActiveJob(userId: string): Promise<ImportJob | null> {
   return prisma.importJob.findFirst({ where: { userId, status: "RUNNING" } });

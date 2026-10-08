@@ -1,8 +1,8 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import type { ImportedAuthorInfo } from "./importResolvers";
-import type { Author, User } from "@prisma/client";
+import type { Author, User } from "../generated/prisma/client";
 
 export function buildAuthorId(provider: string, externalId: string): string {
   return `${provider}:${externalId}`;

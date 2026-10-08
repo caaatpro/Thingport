@@ -8,7 +8,7 @@ import { HttpError } from "../utils/fileUtils";
 import { writeZip, type ZipEntryDescriptor } from "../utils/zipWriter";
 import { resolvePlateFilePath } from "./printCreation";
 import { managedPrintFilePath } from "./printFileService";
-import type { Category, Plate, Print, Prisma } from "@prisma/client";
+import type { Category, Plate, Print, Prisma } from "../generated/prisma/client";
 
 type PrintWithPlatesAndCategory = Print & { plates: Plate[]; category: Category | null };
 

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { DEFAULT_CATEGORIES, type DefaultCategoryNode } from "../seedData/defaultCategories";

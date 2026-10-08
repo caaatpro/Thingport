@@ -9,7 +9,7 @@ import { listZipEntries as listRawZipEntries, readZipEntry } from "../utils/zipR
 import { validateParentCategory } from "./categoryService";
 import { attachImportedPreviewImages } from "./importService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
-import type { Print, Plate, PreviewImage } from "@prisma/client";
+import type { Print, Plate, PreviewImage } from "../generated/prisma/client";
 
 export type ZipEntrySummary = { path: string; size: number };
 

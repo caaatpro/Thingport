@@ -14,8 +14,8 @@ import {
   renderPlateStoragePath,
 } from "./printService";
 import { deleteNormalized3mf } from "./normalized3mfCache";
-import { Prisma } from "@prisma/client";
-import type { Plate, Print } from "@prisma/client";
+import { Prisma } from "../generated/prisma/client";
+import type { Plate, Print } from "../generated/prisma/client";
 
 export type NewPlateInput = {
   /** Untrusted; will be sanitized. */

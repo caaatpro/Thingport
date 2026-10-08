@@ -6,7 +6,7 @@ import { HttpError } from "../utils/fileUtils";
 import { STORAGE, THUMBS } from "../config";
 import { prisma } from "../db";
 import { listZipEntries, readZipEntry } from "../utils/zipReader";
-import type { Category, Plate, Print } from "@prisma/client";
+import type { Category, Plate, Print } from "../generated/prisma/client";
 
 export const STORAGE_TEMPLATE_TOKENS = [
   "category",
@@ -504,7 +504,12 @@ async function persistPlateMeasure(
   await prisma.plate
     .update({
       where: { id: plateId },
-      data: { dimXmm: round2(m.dims.x), dimYmm: round2(m.dims.y), dimZmm: round2(m.dims.z), triangleCount: m.triangleCount },
+      data: {
+        dimXmm: round2(m.dims.x),
+        dimYmm: round2(m.dims.y),
+        dimZmm: round2(m.dims.z),
+        triangleCount: m.triangleCount,
+      },
     })
     .catch(() => undefined);
 }

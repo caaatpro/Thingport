@@ -4,7 +4,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { PREVIEWS } from "../config";
 import { prisma } from "../db";
-import type { PreviewImage } from "@prisma/client";
+import type { PreviewImage } from "../generated/prisma/client";
 
 export function previewImagePath(id: string): string {
   return path.join(PREVIEWS, `${id}.jpg`);

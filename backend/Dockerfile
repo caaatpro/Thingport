@@ -2,8 +2,14 @@ FROM node:24-alpine AS dependencies
 WORKDIR /app
 RUN apk add --no-cache openssl
 COPY package*.json ./
+RUN npm ci --no-audit --no-fund
+# sharp's native libraries are optional dependencies, which npm skips without any error if a download
+# fails. Fail the build here rather than ship an image that crashes at startup.
+RUN node -e "require('sharp')"
 COPY prisma ./prisma
-RUN npm ci --no-audit --no-fund && npx prisma generate
+COPY prisma.config.ts ./
+# The client is generated into src/generated (see prisma.config.ts and the schema), not node_modules.
+RUN npx prisma generate
 
 FROM dependencies AS test
 COPY . .
@@ -13,7 +19,7 @@ CMD ["npm", "test"]
 
 FROM dependencies AS build
 COPY . .
-RUN npm run build
+RUN npx prisma generate && npm run build
 
 FROM node:24-alpine AS runtime
 # Set by build-image.yml to the commit that triggered this image's build -- exposed via
@@ -30,6 +36,8 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package*.json ./
 COPY prisma ./prisma
+# Read by `prisma migrate deploy` in the entrypoint.
+COPY prisma.config.ts ./
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # node:24-alpine already ships a "node" user/group at uid/gid 1000; remove it first so our own
 # "appuser"/"appgroup" (which docker-entrypoint.sh re-aligns to PUID/PGID at container start)
