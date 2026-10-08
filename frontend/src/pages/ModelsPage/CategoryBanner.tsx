@@ -1,9 +1,7 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
-import { useTranslation } from "react-i18next";
 import { type Category } from "../../api/categories";
-import { translateCategoryDisplay } from "../../utils/translateCategoryDisplay";
 
 type Props = {
   category: Category;
@@ -11,8 +9,7 @@ type Props = {
 
 /** Shown above the grid when the category has meta text. Nothing without a title. */
 export default function CategoryBanner({ category }: Props) {
-  const { i18n } = useTranslation();
-  const display = translateCategoryDisplay(category, i18n);
+  const display = { metaTitle: category.meta_title, metaDescription: category.meta_description };
   if (!display.metaTitle) return null;
   return (
     <Box

@@ -9,7 +9,6 @@ import Divider from "@mui/material/Divider";
 import type { AuthUser } from "../../api/auth";
 import type { MakerWorldSettings } from "../../utils/settings";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
-import LanguagePicker from "./LanguagePicker";
 import MakerworldCookieSection from "./MakerworldCookieSection";
 import SlicerPicker from "./SlicerPicker";
 import AuthorPreviewSetting from "./AuthorPreviewSetting";
@@ -117,7 +116,6 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
       />
 
       <Divider />
-      <LanguagePicker />
 
       <Divider />
       <AuthorPreviewSetting onUnauthorized={onUnauthorized} />

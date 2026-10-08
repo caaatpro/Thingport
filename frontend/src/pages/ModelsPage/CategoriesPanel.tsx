@@ -14,7 +14,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import type { Category, CategoryMetaInput } from "../../api/categories";
-import { translateCategoryDisplay } from "../../utils/translateCategoryDisplay";
 import { dividerBorderColor } from "../../theme";
 import { ancestorPath, buildCategoryTree } from "../../utils/categoryTree";
 import CategoryManagerModal from "./CategoryManagerModal";
@@ -72,9 +71,8 @@ export default function CategoriesPanel({
   onMove,
   onUpdateMeta,
 }: Props) {
-  const { t, i18n } = useTranslation(["models", "common"]);
+  const { t } = useTranslation(["models", "common"]);
   const [managerOpen, setManagerOpen] = useState(false);
-  const displayName = (category: Category) => translateCategoryDisplay(category, i18n).name;
 
   const untitledLabel = t("models:categories.untitled");
 
@@ -94,7 +92,7 @@ export default function CategoriesPanel({
       <Stack key={category.id}>
         <ListItemButton onClick={() => onSelect(category.id)} sx={{ pl: 1 + depth * 2, ...rowSx(isSelected) }}>
           <ListItemText
-            primary={displayName(category) || untitledLabel}
+            primary={category.name || untitledLabel}
             slotProps={{
               primary: rowTextSx(
                 isSelected,

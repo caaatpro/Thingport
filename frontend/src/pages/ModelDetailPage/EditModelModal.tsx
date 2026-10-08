@@ -35,7 +35,6 @@ import { UnauthorizedError } from "../../api/client";
 import { useConfirm } from "../../components/ConfirmProvider";
 import { useToast } from "../../components/ToastProvider";
 import TagInput from "../../components/TagInput";
-import { translateCategoryDisplay } from "../../utils/translateCategoryDisplay";
 import { buildCategoryTree, flattenCategoryTree } from "../../utils/categoryTree";
 import { localId } from "../../utils/localId";
 
@@ -71,7 +70,7 @@ type Props = {
 
 /** Edits are staged locally and committed only on "Update"; "Cancel" discards them. */
 export default function EditModelModal({ print, onClose, onUnauthorized, onUpdated, viewer }: Props) {
-  const { t, i18n } = useTranslation(["models", "common"]);
+  const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const showToast = useToast();
 
@@ -110,7 +109,6 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
   const markDirty = () => setDirty(true);
 
   const flatCategories = useMemo(() => flattenCategoryTree(buildCategoryTree(categories ?? [])), [categories]);
-  const categoryName = (c: Category) => translateCategoryDisplay(c, i18n).name;
 
   const onAddImages = (fileList: FileList | null) => {
     if (!fileList?.length) return;
@@ -336,11 +334,11 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
                   // Top-level categories are headings. A disabled MenuItem, not ListSubheader: MUI's Select
                   // still handles clicks on the latter and gets stuck open.
                   <MenuItem key={category.id} disabled divider sx={{ fontWeight: 700, opacity: "1 !important" }}>
-                    {categoryName(category)}
+                    {category.name}
                   </MenuItem>
                 ) : (
                   <MenuItem key={category.id} value={category.id} sx={{ pl: 1 + depth * 2 }}>
-                    {categoryName(category)}
+                    {category.name}
                   </MenuItem>
                 ),
               )}
