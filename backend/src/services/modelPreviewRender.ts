@@ -253,6 +253,19 @@ function partFileTargetIds(objects: Map<string, string>, objectId: string | null
  * objectid, so a component takes only the object it names.
  *
  * Uses its own regex instances: callers are mid-way through a global OBJECT_RE/COMPONENT_RE scan. */
+const innerRefs = (inner: string, objects: Map<string, string>) => {
+  const refs: { refId: string; transform: number[] | null }[] = [];
+  const componentRe = new RegExp(COMPONENT_RE.source, "g");
+  let cm: RegExpExecArray | null;
+  while ((cm = componentRe.exec(inner))) {
+    const refId = getAttr(cm[1], "objectid");
+    const hasPath = (getAttr(cm[1], "p:path") ?? getAttr(cm[1], "path")) !== null;
+    if (refId && !hasPath && objects.has(refId))
+      refs.push({ refId, transform: parseTransform3MF(getAttr(cm[1], "transform")) });
+  }
+  return refs;
+};
+
 function createPartFileResolver(loadExternalModel: (path: string) => Promise<string | null>) {
   const objectsByPath = new Map<string, Map<string, string> | null>();
   const meshCache = new Map<string, FastMesh[]>();
@@ -273,19 +286,6 @@ function createPartFileResolver(loadExternalModel: (path: string) => Promise<str
     }
     objectsByPath.set(path, objects);
     return objects;
-  };
-
-  const innerRefs = (inner: string, objects: Map<string, string>) => {
-    const refs: { refId: string; transform: number[] | null }[] = [];
-    const componentRe = new RegExp(COMPONENT_RE.source, "g");
-    let cm: RegExpExecArray | null;
-    while ((cm = componentRe.exec(inner))) {
-      const refId = getAttr(cm[1], "objectid");
-      const hasPath = (getAttr(cm[1], "p:path") ?? getAttr(cm[1], "path")) !== null;
-      if (refId && !hasPath && objects.has(refId))
-        refs.push({ refId, transform: parseTransform3MF(getAttr(cm[1], "transform")) });
-    }
-    return refs;
   };
 
   /** Parsed once however many times it's placed. */

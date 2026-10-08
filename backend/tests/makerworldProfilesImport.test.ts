@@ -68,6 +68,58 @@ describe("selectMakerworldProfiles", () => {
   });
 });
 
+function mockMakerworld(designId: string) {
+  const fetched: string[] = [];
+  global.fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
+    const url = String(input);
+    fetched.push(url);
+    if (url === `https://api.bambulab.com/v1/design-service/design/${designId}`) return json(design(designId));
+    const profile = url.match(/^https:\/\/api\.bambulab\.com\/v1\/iot-service\/api\/user\/profile\/(\d+)/);
+    if (profile)
+      return json({
+        message: "success",
+        url: `https://s3.example.com/phoenix-${profile[1]}.stl`,
+        filename: `phoenix-${profile[1]}.stl`,
+      });
+    const file = url.match(/^https:\/\/s3\.example\.com\/phoenix-(\d+)\.stl$/);
+    if (file)
+      return new Response(`solid phoenix-${file[1]}\nendsolid\n`, {
+        headers: { "content-type": "application/octet-stream" },
+      });
+    if (url === "https://makerworld.bblmw.com/phoenix/cover.jpg") {
+      return new Response(
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+          "base64",
+        ),
+        {
+          headers: { "content-type": "image/png" },
+        },
+      );
+    }
+    return new Response("not found", { status: 404 }); // e.g. the author profile, behind Cloudflare
+  }) as unknown as typeof fetch;
+  return fetched;
+}
+
+async function runJob(designId: string, scope: "designer" | "all") {
+  const start = await request(app)
+    .post("/api/import/makerworld-profiles")
+    .set(auth())
+    .send({
+      url: `https://makerworld.com/en/models/${designId}-articulated-phoenix`,
+      scope,
+      makerworld_cookie: "token=test-bearer",
+    });
+  expect(start.status).toBe(202);
+  let job = (await request(app).get(`/api/import/jobs/${start.body.job_id}`).set(auth())).body;
+  for (let i = 0; i < 100 && job.status === "RUNNING"; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    job = (await request(app).get(`/api/import/jobs/${start.body.job_id}`).set(auth())).body;
+  }
+  return job;
+}
+
 describe("importing several MakerWorld print profiles", () => {
   beforeAll(async () => {
     const res = await request(app)
@@ -83,58 +135,6 @@ describe("importing several MakerWorld print profiles", () => {
   afterEach(() => {
     global.fetch = originalFetch;
   });
-
-  function mockMakerworld(designId: string) {
-    const fetched: string[] = [];
-    global.fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
-      const url = String(input);
-      fetched.push(url);
-      if (url === `https://api.bambulab.com/v1/design-service/design/${designId}`) return json(design(designId));
-      const profile = url.match(/^https:\/\/api\.bambulab\.com\/v1\/iot-service\/api\/user\/profile\/(\d+)/);
-      if (profile)
-        return json({
-          message: "success",
-          url: `https://s3.example.com/phoenix-${profile[1]}.stl`,
-          filename: `phoenix-${profile[1]}.stl`,
-        });
-      const file = url.match(/^https:\/\/s3\.example\.com\/phoenix-(\d+)\.stl$/);
-      if (file)
-        return new Response(`solid phoenix-${file[1]}\nendsolid\n`, {
-          headers: { "content-type": "application/octet-stream" },
-        });
-      if (url === "https://makerworld.bblmw.com/phoenix/cover.jpg") {
-        return new Response(
-          Buffer.from(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-            "base64",
-          ),
-          {
-            headers: { "content-type": "image/png" },
-          },
-        );
-      }
-      return new Response("not found", { status: 404 }); // e.g. the author profile, behind Cloudflare
-    }) as unknown as typeof fetch;
-    return fetched;
-  }
-
-  async function runJob(designId: string, scope: "designer" | "all") {
-    const start = await request(app)
-      .post("/api/import/makerworld-profiles")
-      .set(auth())
-      .send({
-        url: `https://makerworld.com/en/models/${designId}-articulated-phoenix`,
-        scope,
-        makerworld_cookie: "token=test-bearer",
-      });
-    expect(start.status).toBe(202);
-    let job = (await request(app).get(`/api/import/jobs/${start.body.job_id}`).set(auth())).body;
-    for (let i = 0; i < 100 && job.status === "RUNNING"; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      job = (await request(app).get(`/api/import/jobs/${start.body.job_id}`).set(auth())).body;
-    }
-    return job;
-  }
 
   it("imports every designer profile as one model with a file per profile", async () => {
     const designId = String(stamp % 1_000_000_000);

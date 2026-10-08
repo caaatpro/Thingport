@@ -101,39 +101,49 @@ function profileFileContents(instanceId: string) {
   return `solid profile-${instanceId} endsolid`;
 }
 
+function mockMakerworldFetch() {
+  const fetchMock = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
+    const url = String(input);
+    if (url.startsWith("https://makerworld.com/en/models/")) {
+      return new Response("<html><head><title>Profile Test</title></head><body></body></html>", {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
+    const file = url.match(/^https:\/\/makerworld\.com\/files\/profile-(\w+)\.stl$/);
+    if (file) {
+      return new Response(profileFileContents(file[1]), { headers: { "content-type": "application/octet-stream" } });
+    }
+    throw new Error(`Unexpected fetch to ${url}`);
+  });
+  global.fetch = fetchMock as unknown as typeof fetch;
+  return fetchMock;
+}
+
+function importProfile(url: string, instanceId: string | null) {
+  return importPrintFromUrl(userId, url, {
+    url,
+    tags: [],
+    resolved_download_url: `https://makerworld.com/files/profile-${instanceId ?? "unknown"}.stl`,
+    resolved_instance_id: instanceId,
+  });
+}
+
+const post = (url: string, instanceId: string) =>
+  request(app)
+    .post("/api/import")
+    .set(auth())
+    .send({
+      url,
+      resolved_download_url: `https://makerworld.com/files/profile-${instanceId}.stl`,
+      resolved_instance_id: instanceId,
+    });
+
 describe("MakerWorld print profiles", () => {
   // One design with several profiles, each its own 3MF, imported via the extension's pre-resolved
   // path.
   const designId = "888777";
   const pageUrl = `https://makerworld.com/en/models/${designId}-profile-slug`;
   const originalFetch = global.fetch;
-
-  function mockMakerworldFetch() {
-    const fetchMock = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
-      const url = String(input);
-      if (url.startsWith("https://makerworld.com/en/models/")) {
-        return new Response("<html><head><title>Profile Test</title></head><body></body></html>", {
-          headers: { "content-type": "text/html; charset=utf-8" },
-        });
-      }
-      const file = url.match(/^https:\/\/makerworld\.com\/files\/profile-(\w+)\.stl$/);
-      if (file) {
-        return new Response(profileFileContents(file[1]), { headers: { "content-type": "application/octet-stream" } });
-      }
-      throw new Error(`Unexpected fetch to ${url}`);
-    });
-    global.fetch = fetchMock as unknown as typeof fetch;
-    return fetchMock;
-  }
-
-  function importProfile(url: string, instanceId: string | null) {
-    return importPrintFromUrl(userId, url, {
-      url,
-      tags: [],
-      resolved_download_url: `https://makerworld.com/files/profile-${instanceId ?? "unknown"}.stl`,
-      resolved_instance_id: instanceId,
-    });
-  }
 
   async function createLegacyPrint(contents: string) {
     const uploadRes = await request(app)
@@ -177,15 +187,6 @@ describe("MakerWorld print profiles", () => {
 
   it("reports what POST /import did via import_outcome", async () => {
     mockMakerworldFetch();
-    const post = (url: string, instanceId: string) =>
-      request(app)
-        .post("/api/import")
-        .set(auth())
-        .send({
-          url,
-          resolved_download_url: `https://makerworld.com/files/profile-${instanceId}.stl`,
-          resolved_instance_id: instanceId,
-        });
 
     expect((await post(pageUrl, "100")).body.import_outcome).toBe("created");
     expect((await post(`${pageUrl}#profileId-200`, "200")).body.import_outcome).toBe("profile_added");

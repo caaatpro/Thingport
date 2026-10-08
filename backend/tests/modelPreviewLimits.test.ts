@@ -21,10 +21,11 @@ const MODEL_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </model>
 `;
 
+const cacheDir = () => path.dirname(modelPreviewGlbPath("x"));
+
 describe("modelPreviewCache -- worker limits", () => {
   let fixture: string;
   const plateId = `test-fixture-limits-${Date.now()}`;
-  const cacheDir = () => path.dirname(modelPreviewGlbPath("x"));
 
   beforeAll(async () => {
     await fs.mkdir(cacheDir(), { recursive: true });

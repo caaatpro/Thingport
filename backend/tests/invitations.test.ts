@@ -180,14 +180,14 @@ describe("inviting", () => {
   });
 });
 
-describe("registering with an invitation", () => {
-  async function invite(address: string): Promise<string> {
-    await closeRegistrationsWithSmtp();
-    const res = await request(app).post("/api/admin/invitations").set(auth(adminToken)).send({ email: address });
-    expect(res.status).toBe(200);
-    return lastInvitationToken();
-  }
+async function invite(address: string): Promise<string> {
+  await closeRegistrationsWithSmtp();
+  const res = await request(app).post("/api/admin/invitations").set(auth(adminToken)).send({ email: address });
+  expect(res.status).toBe(200);
+  return lastInvitationToken();
+}
 
+describe("registering with an invitation", () => {
   it("creates a verified account while registrations are closed, and the link works only once", async () => {
     const invitee = email("accepts");
     const token = await invite(invitee);

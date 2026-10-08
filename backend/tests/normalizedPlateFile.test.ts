@@ -108,9 +108,9 @@ describe("GET plate file with ?normalize=1", () => {
   });
 });
 
-describe("POST plate normalize status", () => {
-  const normalizeUrl = () => `/api${fileUrl.replace(/\/file\/[^/]+$/, "/normalize")}`;
+const normalizeUrl = () => `/api${fileUrl.replace(/\/file\/[^/]+$/, "/normalize")}`;
 
+describe("POST plate normalize status", () => {
   it("reports ready once the copy exists", async () => {
     let status = "";
     for (let i = 0; i < 50 && status !== "ready"; i++) {
