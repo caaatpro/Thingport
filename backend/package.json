@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-only",
   "type": "commonjs",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -44,7 +44,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/mime-types": "^2.1.4",
     "@types/multer": "^2.2.0",
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.19.1",
     "@types/nodemailer": "^8.0.1",
     "@types/supertest": "^7.2.1",
     "@types/three": "^0.160.0",

@@ -17,7 +17,7 @@ services:
       retries: 10
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
     restart: unless-stopped
     environment:
       - LOG_LEVEL=${FLARESOLVERR_LOG_LEVEL:-info}

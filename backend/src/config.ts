@@ -42,7 +42,13 @@ export const NORMALIZED_3MFS = path.join(STORAGE, "normalized-3mf");
 export const NORMALIZE_3MF_TIMEOUT_SECONDS = envInt("NORMALIZE_3MF_TIMEOUT_SECONDS", 600);
 // Past either limit the render worker is killed and the plate gets no 3D preview. Memory is a
 // watchdog check, so a fast burst can overshoot it briefly.
-export const MODEL_PREVIEW_MAX_MEMORY_MB = envInt("MODEL_PREVIEW_MAX_MEMORY_MB", defaultPreviewMemoryMb());
+// Floored: a worker heap limit below its own startup cost (a few MB) makes Node 24 abort the whole
+// process, where older versions only failed the worker.
+const MIN_PREVIEW_MEMORY_MB = 16;
+export const MODEL_PREVIEW_MAX_MEMORY_MB = Math.max(
+  MIN_PREVIEW_MEMORY_MB,
+  envInt("MODEL_PREVIEW_MAX_MEMORY_MB", defaultPreviewMemoryMb()),
+);
 export const MODEL_PREVIEW_TIMEOUT_SECONDS = envInt("MODEL_PREVIEW_TIMEOUT_SECONDS", 180);
 
 // For absolute links in emails.
