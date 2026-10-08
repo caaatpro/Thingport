@@ -65,10 +65,20 @@ export default function LinkAuthorsSection({ onUnauthorized }: Props) {
     <Paper variant="outlined" sx={{ p: 2.5 }}>
       <Stack spacing={2}>
         <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 600,
+            }}
+          >
             {t("adminSettings.triggers.linkAuthorsTitle")}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("adminSettings.triggers.linkAuthorsDesc")}
           </Typography>
         </Box>
@@ -89,11 +99,24 @@ export default function LinkAuthorsSection({ onUnauthorized }: Props) {
           </Stack>
         ) : (
           (linkable > 0 || lookup > 0) && (
-            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              useFlexGap
+              sx={{
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <Button variant="contained" onClick={() => void start()} disabled={starting}>
                 {t("adminSettings.triggers.linkAuthorsButton")}
               </Button>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {[
                   linkable > 0 ? t("adminSettings.triggers.linkAuthorsLinkable", { count: linkable }) : null,
                   lookup > 0 ? t("adminSettings.triggers.linkAuthorsLookup", { count: lookup }) : null,

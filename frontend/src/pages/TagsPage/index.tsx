@@ -83,7 +83,12 @@ export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) 
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress size={22} />
       </Stack>
     );
@@ -91,13 +96,24 @@ export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) 
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <FormControlLabel
           control={
             <Switch size="small" checked={hideRarelyUsed} onChange={(e) => setHideRarelyUsed(e.target.checked)} />
           }
           label={
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("models:tags.hideRarelyUsed")}
             </Typography>
           }
@@ -106,7 +122,14 @@ export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) 
       </Stack>
 
       {visibleTags.length ? (
-        <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
+        <Stack
+          direction="row"
+          useFlexGap
+          spacing={1}
+          sx={{
+            flexWrap: "wrap",
+          }}
+        >
           {visibleTags.map((tag) => (
             <Chip
               key={tag.name}
@@ -138,7 +161,14 @@ export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) 
           ))}
         </Stack>
       ) : (
-        <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+        <Stack
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            py: 8,
+            color: "text.secondary",
+          }}
+        >
           <Typography variant="body2">{tags.length ? t("models:tags.allHidden") : t("models:tags.empty")}</Typography>
         </Stack>
       )}

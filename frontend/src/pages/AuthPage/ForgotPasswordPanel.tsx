@@ -38,10 +38,22 @@ export default function ForgotPasswordPanel({ initialEmail, onBack }: Props) {
 
   if (sentTo) {
     return (
-      <Stack spacing={2} alignItems="center" sx={{ textAlign: "center", py: 1 }}>
+      <Stack
+        spacing={2}
+        sx={{
+          alignItems: "center",
+          textAlign: "center",
+          py: 1,
+        }}
+      >
         <MarkEmailReadIcon sx={{ fontSize: 40, color: "primary.main" }} />
         <Typography variant="h6">{t("auth.forgotPassword.sentHeading")}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("auth.forgotPassword.sentBody", { email: sentTo })}
         </Typography>
         <Button variant="outlined" onClick={onBack}>
@@ -55,7 +67,12 @@ export default function ForgotPasswordPanel({ initialEmail, onBack }: Props) {
     <Box component="form" onSubmit={handleSubmit}>
       <Stack spacing={2}>
         <Typography variant="h6">{t("auth.forgotPassword.heading")}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("auth.forgotPassword.body")}
         </Typography>
         {error && <Alert severity="error">{error}</Alert>}

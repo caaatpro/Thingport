@@ -117,10 +117,21 @@ export default function ApiTokensSection({ onUnauthorized }: Props) {
   return (
     <Stack spacing={2} id="api-tokens">
       <Box>
-        <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 600,
+            color: (muiTheme) => muiTheme.thingport.headingText,
+          }}
+        >
           {t("app:profile.apiTokens.title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("app:profile.apiTokens.description")}
         </Typography>
       </Box>
@@ -130,11 +141,22 @@ export default function ApiTokensSection({ onUnauthorized }: Props) {
       {fresh && (
         <Alert severity="success" onClose={() => setFresh(null)}>
           <Stack spacing={1}>
-            <Typography variant="body2" fontWeight={600}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("app:profile.apiTokens.created", { name: fresh.name })}
             </Typography>
             <Typography variant="body2">{t("app:profile.apiTokens.copyNow")}</Typography>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <TextField
                 size="small"
                 fullWidth
@@ -154,7 +176,12 @@ export default function ApiTokensSection({ onUnauthorized }: Props) {
       {tokens === null ? (
         <CircularProgress size={20} />
       ) : tokens.length === 0 ? (
-        <Typography variant="body2" color="text.disabled">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.disabled",
+          }}
+        >
           {t("app:profile.apiTokens.none")}
         </Typography>
       ) : (
@@ -162,24 +189,65 @@ export default function ApiTokensSection({ onUnauthorized }: Props) {
           {tokens.map((token) => {
             const expired = token.expires_at ? new Date(token.expires_at).getTime() <= loadedAt : false;
             return (
-              <Stack key={token.id} direction="row" alignItems="center" spacing={1.5} sx={{ py: 1 }}>
+              <Stack
+                key={token.id}
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  alignItems: "center",
+                  py: 1,
+                }}
+              >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2" fontWeight={600} noWrap>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      noWrap
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {token.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                        fontFamily: "monospace",
+                      }}
+                    >
                       {token.prefix}…
                     </Typography>
-                    {expired && <Chip size="small" color="warning" variant="outlined" label={t("app:profile.apiTokens.expired")} />}
+                    {expired && (
+                      <Chip
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                        label={t("app:profile.apiTokens.expired")}
+                      />
+                    )}
                   </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      display: "block",
+                    }}
+                  >
                     {[
                       t("app:profile.apiTokens.createdAt", { date: formatDate(token.created_at) }),
                       token.last_used_at
                         ? t("app:profile.apiTokens.lastUsed", { date: formatDate(token.last_used_at) })
                         : t("app:profile.apiTokens.neverUsed"),
-                      token.expires_at ? t("app:profile.apiTokens.expiresAt", { date: formatDate(token.expires_at) }) : null,
+                      token.expires_at
+                        ? t("app:profile.apiTokens.expiresAt", { date: formatDate(token.expires_at) })
+                        : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -194,7 +262,13 @@ export default function ApiTokensSection({ onUnauthorized }: Props) {
         </Stack>
       )}
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "flex-start" }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1}
+        sx={{
+          alignItems: { sm: "flex-start" },
+        }}
+      >
         <TextField
           size="small"
           label={t("app:profile.apiTokens.nameLabel")}
@@ -202,8 +276,10 @@ export default function ApiTokensSection({ onUnauthorized }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={creating}
-          inputProps={{ maxLength: 60 }}
           sx={{ flex: 1 }}
+          slotProps={{
+            htmlInput: { maxLength: 60 },
+          }}
         />
         <TextField
           select

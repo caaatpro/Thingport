@@ -34,7 +34,13 @@ export default function ImportProgressBar() {
         }}
       >
         <Stack spacing={0.5} sx={{ maxWidth: 480, mx: "auto" }}>
-          <Typography variant="caption" color="text.secondary" textAlign="center">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              textAlign: "center",
+            }}
+          >
             {label}
           </Typography>
           <LinearProgress

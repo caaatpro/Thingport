@@ -206,7 +206,12 @@ function ZipImportModal({
           <Typography variant="h6" component="div">
             {title}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {label}
           </Typography>
         </Box>
@@ -219,7 +224,14 @@ function ZipImportModal({
           {stage === "choice" && (
             <Stack spacing={2}>
               <Typography variant="body2">{t("zipImport.prompt")}</Typography>
-              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                useFlexGap
+                sx={{
+                  flexWrap: "wrap",
+                }}
+              >
                 <Button variant="contained" onClick={onImportAsZip} disabled={busy}>
                   {t("zipImport.importAsZip")}
                 </Button>
@@ -232,8 +244,21 @@ function ZipImportModal({
 
           {stage === "select" && (
             <Stack spacing={1.5}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 1,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {t("zipImport.selectedCount", { selected: selectedCount, total: entryCount })}
                 </Typography>
                 <Stack direction="row" spacing={1}>
@@ -254,7 +279,14 @@ function ZipImportModal({
                 onToggleEntry={onToggleEntry}
               />
 
-              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                useFlexGap
+                sx={{
+                  flexWrap: "wrap",
+                }}
+              >
                 <Button variant="contained" onClick={onImportSelected} disabled={busy || selectedCount === 0}>
                   {t("zipImport.importSelected")}
                 </Button>

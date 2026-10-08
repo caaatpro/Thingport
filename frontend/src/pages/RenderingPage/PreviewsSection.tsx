@@ -124,10 +124,20 @@ export default function PreviewsSection({ onUnauthorized, onSaved }: Props) {
                     }}
                     label={
                       <Box>
-                        <Typography variant="body2" fontWeight={600}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        >
                           {option.label}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           {option.description}
                         </Typography>
                       </Box>
@@ -138,10 +148,21 @@ export default function PreviewsSection({ onUnauthorized, onSaved }: Props) {
             </Stack>
           </RadioGroup>
           {(saving || status) && (
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               {saving && <CircularProgress size={14} />}
               {status && (
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {status}
                 </Typography>
               )}

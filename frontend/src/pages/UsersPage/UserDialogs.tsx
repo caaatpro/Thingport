@@ -121,7 +121,13 @@ export function ResetLinkDialog({ user, onClose, onUnauthorized }: Omit<BaseProp
           </DialogContentText>
           {error && <Alert severity="error">{error}</Alert>}
           {busy && !link && (
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress size={16} />
               <span>{t("adminSettings.users.reset.creating")}</span>
             </Stack>
@@ -133,8 +139,10 @@ export function ResetLinkDialog({ user, onClose, onUnauthorized }: Omit<BaseProp
                   value={link.url}
                   size="small"
                   fullWidth
-                  InputProps={{ readOnly: true, sx: { fontFamily: "monospace", fontSize: 12 } }}
                   onFocus={(e) => e.target.select()}
+                  slotProps={{
+                    input: { readOnly: true, sx: { fontFamily: "monospace", fontSize: 12 } },
+                  }}
                 />
                 <Button
                   variant="outlined"

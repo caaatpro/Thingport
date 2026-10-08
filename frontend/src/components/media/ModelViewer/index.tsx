@@ -678,11 +678,23 @@ const ModelViewer = forwardRef<ModelViewerHandle, ModelViewerProps>(function Mod
             bgcolor: "action.hover",
           }}
         >
-          <Stack alignItems="center" spacing={1.5}>
+          <Stack
+            spacing={1.5}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <BrandMark theme={theme} size="lg" />
             <CircularProgress size={22} />
             {waitingForServer && (
-              <Typography variant="caption" color="text.secondary" sx={{ px: 2, textAlign: "center" }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  px: 2,
+                  textAlign: "center",
+                }}
+              >
                 {t("library:modelViewer.previewPreparing")}
               </Typography>
             )}
@@ -702,7 +714,13 @@ const ModelViewer = forwardRef<ModelViewerHandle, ModelViewerProps>(function Mod
             bgcolor: "rgba(0, 0, 0, 0.55)",
           }}
         >
-          <Typography variant="body2" fontWeight={600} color="error.light">
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              color: "error.light",
+            }}
+          >
             {viewError === "unsupported"
               ? t("library:modelViewer.previewUnsupported")
               : viewError === "tooComplex"

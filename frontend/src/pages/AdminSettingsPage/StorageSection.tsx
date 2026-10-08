@@ -129,10 +129,20 @@ export default function StorageSection({ onUnauthorized }: Props) {
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <Box>
-            <Typography variant="subtitle1" fontWeight={600}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("adminSettings.storage.templateHeading")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("adminSettings.storage.templateDesc")}
             </Typography>
           </Box>
@@ -146,9 +156,18 @@ export default function StorageSection({ onUnauthorized }: Props) {
             }}
             placeholder={t("adminSettings.storage.templatePlaceholder") ?? undefined}
             disabled={storageLoading || storageSaving}
-            InputProps={{ sx: { fontFamily: "monospace" } }}
+            slotProps={{
+              input: { sx: { fontFamily: "monospace" } },
+            }}
           />
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              flexWrap: "wrap",
+            }}
+          >
             {storageTokens.map((token) => (
               <Tooltip key={token} title={t(`adminSettings.storage.tokens.${token}`, { defaultValue: "" })}>
                 <Button
@@ -175,8 +194,11 @@ export default function StorageSection({ onUnauthorized }: Props) {
           <Paper variant="outlined" sx={{ p: 1.5, borderStyle: "dashed" }}>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+              sx={{
+                color: "text.secondary",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
             >
               {t("adminSettings.storage.examplePathsHeading")}
             </Typography>
@@ -207,13 +229,25 @@ export default function StorageSection({ onUnauthorized }: Props) {
             label={
               <Box>
                 <Typography variant="body2">{t("adminSettings.storage.reorganizeLabel")}</Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {t("adminSettings.storage.reorganizeHint")}
                 </Typography>
               </Box>
             }
           />
-          <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <Button
               variant="contained"
               disabled={storageLoading || storageSaving || (!isDirty && !storageApplyExisting)}
@@ -222,7 +256,12 @@ export default function StorageSection({ onUnauthorized }: Props) {
               {storageSaving ? t("adminSettings.storage.saving") : t("adminSettings.storage.save")}
             </Button>
             {storageStatus && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {storageStatus}
               </Typography>
             )}

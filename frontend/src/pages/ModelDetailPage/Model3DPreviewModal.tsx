@@ -144,8 +144,10 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
                   </ListItemIcon>
                   <ListItemText
                     {...fileRowText(t, plate.filename, idx)}
-                    primaryTypographyProps={{ variant: "body2", noWrap: true }}
-                    secondaryTypographyProps={{ variant: "caption", noWrap: true }}
+                    slotProps={{
+                      primary: { variant: "body2", noWrap: true },
+                      secondary: { variant: "caption", noWrap: true },
+                    }}
                   />
                 </ListItemButton>
               ))}
@@ -156,7 +158,12 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
             <>
               {showFileRows && (
                 <Divider sx={{ my: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {t("models:detail.internalPlatesDivider", { count: internalPlates.length })}
                   </Typography>
                 </Divider>
@@ -200,8 +207,10 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
                           : t("models:detail.plateLabel", { n: plate.index })
                       }
                       secondary={t("models:detail.internalPlateObjectCount", { count: plate.objectCount })}
-                      primaryTypographyProps={{ variant: "body2", noWrap: true }}
-                      secondaryTypographyProps={{ variant: "caption" }}
+                      slotProps={{
+                        primary: { variant: "body2", noWrap: true },
+                        secondary: { variant: "caption" },
+                      }}
                     />
                   </ListItemButton>
                 ))}
@@ -230,7 +239,13 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
             />
           ) : (
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-              <Typography color="text.secondary">{t("library:modelViewer.previewUnavailable")}</Typography>
+              <Typography
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
+                {t("library:modelViewer.previewUnavailable")}
+              </Typography>
             </Box>
           )}
         </Box>

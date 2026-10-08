@@ -118,10 +118,22 @@ export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout }
       >
         <Box sx={{ pl: 2, pr: 1, py: 1.25, minWidth: 220, display: "flex", alignItems: "center", gap: 1 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-            <Typography variant="body2" fontWeight={600} noWrap>
+            <Typography
+              variant="body2"
+              noWrap
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {user?.display_name}
             </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {user?.email}
             </Typography>
           </Box>

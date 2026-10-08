@@ -55,7 +55,12 @@ export default function VerifyEmailPage({ onSuccess }: Props) {
           <Wordmark size="lg" />
         </Box>
         {error ? (
-          <Stack spacing={2} alignItems="center">
+          <Stack
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Alert severity="error" sx={{ width: "100%" }}>
               {error}
             </Alert>
@@ -70,9 +75,19 @@ export default function VerifyEmailPage({ onSuccess }: Props) {
             </Button>
           </Stack>
         ) : (
-          <Stack spacing={2} alignItems="center">
+          <Stack
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <CircularProgress size={28} />
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("auth.verifyEmail.verifying")}
             </Typography>
           </Stack>

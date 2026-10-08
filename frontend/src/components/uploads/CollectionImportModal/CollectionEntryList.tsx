@@ -44,7 +44,15 @@ export default function CollectionEntryList({ entries, selected, busy, noEntries
             />
           }
           label={
-            <Stack direction="row" sx={{ width: "100%", minWidth: 0 }} alignItems="center" spacing={1.5}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                alignItems: "center",
+                width: "100%",
+                minWidth: 0,
+              }}
+            >
               <Box
                 component="img"
                 src={entry.cover ?? undefined}
@@ -78,7 +86,12 @@ export default function CollectionEntryList({ entries, selected, busy, noEntries
       ))}
       {entries.length === 0 && (
         <Box sx={{ px: 1.5, py: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {noEntriesLabel}
           </Typography>
         </Box>

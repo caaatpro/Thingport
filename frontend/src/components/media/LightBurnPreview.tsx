@@ -81,11 +81,21 @@ export default function LightBurnPreview({ url, assetId, filename, imgSx }: Ligh
       {preview ? (
         <Box component="img" src={preview} alt={filename} sx={imgSx} />
       ) : state === "loading" ? (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("library:lightburn.generatingPreview")}
         </Typography>
       ) : (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("library:lightburn.previewUnavailable")}
         </Typography>
       )}

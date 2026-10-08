@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import Chip from "@mui/material/Chip";
 import Tooltip from "@mui/material/Tooltip";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
+import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 
 type Props = {
   visibility?: "private" | "shared";
@@ -21,7 +21,7 @@ export default function VisibilityBadge({ visibility, ownerName, compact }: Prop
   const chip = (
     <Chip
       size="small"
-      icon={shared || ownerName ? <PeopleOutlineIcon /> : <LockOutlinedIcon />}
+      icon={shared || ownerName ? <PeopleOutlinedIcon /> : <LockOutlinedIcon />}
       label={compact ? undefined : label}
       variant="outlined"
       sx={{

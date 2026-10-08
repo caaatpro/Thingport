@@ -70,7 +70,12 @@ export default function SmtpTab({ onUnauthorized }: Props) {
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 4 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 4,
+        }}
+      >
         <CircularProgress size={20} />
       </Stack>
     );
@@ -80,7 +85,12 @@ export default function SmtpTab({ onUnauthorized }: Props) {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {t("adminSettings.smtp.helpText")}
       </Typography>
 
@@ -88,7 +98,14 @@ export default function SmtpTab({ onUnauthorized }: Props) {
         {settings.configured ? t("adminSettings.smtp.statusConfigured") : t("adminSettings.smtp.statusNotConfigured")}
       </Alert>
 
-      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing={2}
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+        }}
+      >
         <TextField
           label={t("adminSettings.smtp.hostLabel")}
           value={settings.host ?? ""}
@@ -118,14 +135,26 @@ export default function SmtpTab({ onUnauthorized }: Props) {
         label={
           <Box>
             <Typography variant="body2">{t("adminSettings.smtp.secureLabel")}</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("adminSettings.smtp.secureHint")}
             </Typography>
           </Box>
         }
       />
 
-      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing={2}
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+        }}
+      >
         <TextField
           label={t("adminSettings.smtp.userLabel")}
           value={settings.user ?? ""}
@@ -155,13 +184,25 @@ export default function SmtpTab({ onUnauthorized }: Props) {
         fullWidth
       />
 
-      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <Button variant="contained" onClick={save} disabled={disabled}>
           {saving ? t("adminSettings.smtp.saving") : t("adminSettings.smtp.save")}
         </Button>
         {saving && <CircularProgress size={14} />}
         {status && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {status}
           </Typography>
         )}

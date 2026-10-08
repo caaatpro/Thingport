@@ -21,8 +21,20 @@ type Props = {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="baseline" spacing={2}>
-      <Typography variant="body2" color="text.secondary">
+    <Stack
+      direction="row"
+      spacing={2}
+      sx={{
+        justifyContent: "space-between",
+        alignItems: "baseline",
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {label}
       </Typography>
       <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
@@ -87,7 +99,12 @@ export default function DatabaseTab({ onUnauthorized }: Props) {
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 4 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 4,
+        }}
+      >
         <CircularProgress size={20} />
       </Stack>
     );
@@ -103,7 +120,12 @@ export default function DatabaseTab({ onUnauthorized }: Props) {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {t("adminSettings.database.helpText")}
       </Typography>
 
@@ -140,7 +162,14 @@ export default function DatabaseTab({ onUnauthorized }: Props) {
             autoComplete="new-password"
           />
 
-          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <Button
               variant="contained"
               onClick={() => setConfirmOpen(true)}
@@ -150,7 +179,12 @@ export default function DatabaseTab({ onUnauthorized }: Props) {
             </Button>
             {saving && <CircularProgress size={14} />}
             {status && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {status}
               </Typography>
             )}

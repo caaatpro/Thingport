@@ -94,7 +94,12 @@ export default function ThingiverseSection({ onUnauthorized }: Props) {
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Stack spacing={2}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("adminSettings.thingiverse.helpText")}
           </Typography>
 
@@ -115,7 +120,15 @@ export default function ThingiverseSection({ onUnauthorized }: Props) {
             autoComplete="off"
           />
 
-          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            useFlexGap
+            sx={{
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <Button variant="contained" onClick={save} disabled={loading || saving || !draft.trim()}>
               {saving ? t("adminSettings.thingiverse.saving") : t("adminSettings.thingiverse.save")}
             </Button>

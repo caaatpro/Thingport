@@ -206,7 +206,12 @@ function CollectionImportModalView({
           <Typography variant="h6" component="div">
             {collectionTitle || t("collectionImport.title")}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {label}
           </Typography>
         </Box>
@@ -222,9 +227,20 @@ function CollectionImportModalView({
       <DialogContent dividers>
         <Stack spacing={2}>
           {stage === "loading" && (
-            <Stack alignItems="center" spacing={1.5} sx={{ py: 4 }}>
+            <Stack
+              spacing={1.5}
+              sx={{
+                alignItems: "center",
+                py: 4,
+              }}
+            >
               <CircularProgress size={28} />
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("collectionImport.loading")}
               </Typography>
             </Stack>
@@ -237,8 +253,21 @@ function CollectionImportModalView({
                   {t("collectionImport.truncatedNotice", { loaded: entries.length, total })}
                 </Alert>
               )}
-              <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 1,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {t("collectionImport.selectedCount", { selected: selectedCount, total: entries.length })}
                 </Typography>
                 <Stack direction="row" spacing={1}>
@@ -259,7 +288,14 @@ function CollectionImportModalView({
                 onToggleEntry={onToggleEntry}
               />
 
-              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                useFlexGap
+                sx={{
+                  flexWrap: "wrap",
+                }}
+              >
                 <Button
                   variant="contained"
                   onClick={onImportSelected}

@@ -62,7 +62,14 @@ export default function NotificationBell() {
         slotProps={{ paper: { sx: { width: 360, maxHeight: 420 } } }}
       >
         {items.length === 0 && (
-          <Stack alignItems="center" spacing={0.5} sx={{ py: 3, color: "text.secondary" }}>
+          <Stack
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              py: 3,
+              color: "text.secondary",
+            }}
+          >
             <Typography variant="body2">{t("notifications.empty")}</Typography>
           </Stack>
         )}
@@ -74,16 +81,38 @@ export default function NotificationBell() {
               sx={{ whiteSpace: "normal", alignItems: "flex-start", py: 1 }}
             >
               <Stack spacing={0.25} sx={{ minWidth: 0, width: "100%" }}>
-                <Typography variant="body2" fontWeight={notification.read ? 400 : 700}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: notification.read ? 400 : 700,
+                  }}
+                >
                   {notification.title}
                 </Typography>
                 {notification.body && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {notification.body}
                   </Typography>
                 )}
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.25 }}>
-                  <Typography variant="caption" color="text.disabled">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mt: 0.25,
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.disabled",
+                    }}
+                  >
                     {relativeTime(notification.created_at, t)}
                   </Typography>
                   {notification.external_url && (

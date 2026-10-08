@@ -140,14 +140,24 @@ function AuthorPreviewCard({ authorId, viewer }: CardProps) {
                 <Typography
                   className="author-popup-name"
                   variant="subtitle2"
-                  fontWeight={700}
                   noWrap
-                  sx={{ color: (theme) => theme.thingport.headingText, transition: "color .15s ease" }}
+                  sx={{
+                    fontWeight: 700,
+                    color: (theme) => theme.thingport.headingText,
+                    transition: "color .15s ease",
+                  }}
                 >
                   {name || t("models:card.unknownAuthor")}
                 </Typography>
                 {handle && (
-                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    sx={{
+                      color: "text.secondary",
+                      display: "block",
+                    }}
+                  >
                     @{handle}
                   </Typography>
                 )}
@@ -159,12 +169,23 @@ function AuthorPreviewCard({ authorId, viewer }: CardProps) {
 
       <Box sx={{ p: 1.5 }}>
         {failed ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("models:author.popup.loadFailed")}
           </Typography>
         ) : (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 1.25,
+              }}
+            >
               {countLabel ?? <Skeleton width={180} />}
             </Typography>
             <Box sx={{ display: "grid", gridTemplateColumns: `repeat(${PREVIEW_MODEL_COUNT}, 1fr)`, gap: 0.75 }}>

@@ -69,7 +69,13 @@ export default function CollectionDetailPage({
     subtitle: collection ? t("models:collections.detail.subtitle") : undefined,
     actions:
       collection && !collection.system_key ? (
-        <Stack direction="row" alignItems="center" spacing={0.5}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <CollectionBookmarkButton
             collectionId={collection.id}
             bookmarked={collection.bookmarked}
@@ -152,7 +158,12 @@ export default function CollectionDetailPage({
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress size={22} />
       </Stack>
     );
@@ -160,7 +171,14 @@ export default function CollectionDetailPage({
 
   if (notFound || !collection) {
     return (
-      <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+      <Stack
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          py: 8,
+          color: "text.secondary",
+        }}
+      >
         <Typography variant="body2">{t("models:collections.errors.notFound")}</Typography>
       </Stack>
     );
@@ -169,7 +187,12 @@ export default function CollectionDetailPage({
   return (
     <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
       {collection.description && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {collection.description}
         </Typography>
       )}
@@ -215,9 +238,23 @@ export default function CollectionDetailPage({
             ))}
           </Box>
           {hasMore && (
-            <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
+            <Stack
+              ref={loadMoreSentinelRef}
+              direction="row"
+              sx={{
+                justifyContent: "center",
+                py: 1,
+              }}
+            >
               {loadingMore && (
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                    color: "text.secondary",
+                  }}
+                >
                   <CircularProgress size={14} />
                   <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
                 </Stack>
@@ -226,7 +263,14 @@ export default function CollectionDetailPage({
           )}
         </Stack>
       ) : (
-        <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+        <Stack
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            py: 8,
+            color: "text.secondary",
+          }}
+        >
           <Typography variant="body2">{t("models:collections.detail.empty")}</Typography>
         </Stack>
       )}

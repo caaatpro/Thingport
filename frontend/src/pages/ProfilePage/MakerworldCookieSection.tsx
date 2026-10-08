@@ -92,10 +92,22 @@ export default function MakerworldCookieSection({ cookie, onUpdateMakerWorld, on
 
   return (
     <Box>
-      <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 600,
+          color: (muiTheme) => muiTheme.thingport.headingText,
+        }}
+      >
         {t("profile.makerworld.heading")}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 1.5,
+        }}
+      >
         {t("profile.makerworld.description")}
       </Typography>
 
@@ -125,7 +137,15 @@ export default function MakerworldCookieSection({ cookie, onUpdateMakerWorld, on
             </Stack>
           </Stack>
         ) : (
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <Chip
               label={configured ? t("profile.makerworld.added") : t("profile.makerworld.notAdded")}
               size="small"

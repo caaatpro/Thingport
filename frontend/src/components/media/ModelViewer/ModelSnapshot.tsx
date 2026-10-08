@@ -143,12 +143,27 @@ export function ModelSnapshot({ url, ext, plateId, mode = "automatic", compact =
       ) : compact ? (
         state === "loading" && <CircularProgress size={14} />
       ) : state === "loading" ? (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("library:modelViewer.generatingPreview")}
         </Typography>
       ) : state === "error" ? (
-        <Stack alignItems="center" spacing={0.5}>
-          <Typography variant="caption" color="error.main">
+        <Stack
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              color: "error.main",
+            }}
+          >
             {t("library:modelViewer.previewFailed")}
           </Typography>
           <Button
@@ -177,7 +192,12 @@ export function ModelSnapshot({ url, ext, plateId, mode = "automatic", compact =
           {t("library:modelViewer.generatePreview")}
         </Button>
       ) : (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("library:modelViewer.waitingToGenerate")}
         </Typography>
       )}

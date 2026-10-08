@@ -95,8 +95,10 @@ export default function CreateUserDialog({ open, onClose, onCreated, onUnauthori
                     value={created.generatedPassword}
                     size="small"
                     fullWidth
-                    InputProps={{ readOnly: true, sx: { fontFamily: "monospace" } }}
                     onFocus={(e) => e.target.select()}
+                    slotProps={{
+                      input: { readOnly: true, sx: { fontFamily: "monospace" } },
+                    }}
                   />
                   <Button
                     variant="outlined"

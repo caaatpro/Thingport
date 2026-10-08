@@ -12,10 +12,22 @@ export default function LanguagePicker() {
   const { t, i18n } = useTranslation("app");
   return (
     <Box>
-      <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 600,
+          color: (muiTheme) => muiTheme.thingport.headingText,
+        }}
+      >
         {t("profile.language.heading")}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 1.5,
+        }}
+      >
         {t("profile.language.subtitle")}
       </Typography>
       <Paper
@@ -43,7 +55,12 @@ export default function LanguagePicker() {
                   p: 1.5,
                 }}
               >
-                <Typography variant="body2" fontWeight={selected ? 600 : 400}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: selected ? 600 : 400,
+                  }}
+                >
                   {lang.label}
                 </Typography>
                 {selected && <CheckIcon fontSize="small" color="primary" />}

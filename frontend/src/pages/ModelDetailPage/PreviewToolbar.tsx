@@ -76,7 +76,14 @@ export default function PreviewToolbar({
         borderRadius: "12px",
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ width: "max-content" }}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          alignItems: "center",
+          width: "max-content",
+        }}
+      >
         {/* Selecting goes through MenuItem onClick so re-picking the current view still re-frames,
             since the camera may have been orbited away since. */}
         <Select size="small" value={cameraView} sx={selectSx}>

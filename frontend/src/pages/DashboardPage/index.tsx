@@ -56,7 +56,13 @@ export default function DashboardPage({ onUnauthorized }: Props) {
 
   if (!summary) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 10 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          py: 10,
+        }}
+      >
         <CircularProgress />
       </Stack>
     );

@@ -92,17 +92,33 @@ export default function AddToCollectionModal({
           </Alert>
         )}
         {collections === null && !error && (
-          <Stack alignItems="center" sx={{ py: 3 }}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              py: 3,
+            }}
+          >
             <CircularProgress size={24} />
           </Stack>
         )}
         {collections?.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("models:detail.addToCollectionEmpty")}
           </Typography>
         )}
         {collections && collections.length > 0 && (
-          <Stack direction="row" flexWrap="wrap" gap={1}>
+          <Stack
+            direction="row"
+            sx={{
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
             {collections.map((c) => (
               <Chip
                 key={c.id}

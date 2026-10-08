@@ -30,13 +30,24 @@ export default function ProviderListCard({ providers }: Props) {
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         <PublicIcon />
-        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 700,
+            color: (theme) => theme.thingport.headingText,
+          }}
+        >
           {t("dashboard.topProviders.title")}
         </Typography>
       </Box>
 
       {providers.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 2 }}>
+        <Typography
+          sx={{
+            color: "text.secondary",
+            py: 2,
+          }}
+        >
           {t("dashboard.topProviders.empty")}
         </Typography>
       ) : (
@@ -45,13 +56,27 @@ export default function ProviderListCard({ providers }: Props) {
             const info = printProviderInfo(p.provider);
             return (
               <ListItem key={p.provider} sx={{ px: 1 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "100%" }}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
                   <Chip
                     label={info.label}
                     size="small"
                     sx={{ bgcolor: info.color, color: info.textColor ?? "#fff", fontWeight: 600 }}
                   />
-                  <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, pl: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.secondary",
+                      flexShrink: 0,
+                      pl: 1,
+                    }}
+                  >
                     {t("dashboard.topProviders.modelCount", { count: p.model_count })}
                   </Typography>
                 </Stack>

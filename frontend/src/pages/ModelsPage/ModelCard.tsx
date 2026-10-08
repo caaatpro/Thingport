@@ -190,13 +190,23 @@ export default function ModelCard({
         />
       </Stack>
       <Box sx={{ px: 1.5, pt: 0.75, pb: 1.5 }}>
-        <Stack direction="row" alignItems="center" spacing={0.5}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography
             variant="body2"
-            fontWeight={600}
             noWrap
             title={item.title || item.name}
-            sx={{ color: muiTheme.thingport.headingText, flex: 1, minWidth: 0 }}
+            sx={{
+              fontWeight: 600,
+              color: muiTheme.thingport.headingText,
+              flex: 1,
+              minWidth: 0,
+            }}
           >
             {item.title || item.name}
           </Typography>
@@ -227,7 +237,9 @@ export default function ModelCard({
           const created = item.created_at ? new Date(item.created_at).toLocaleDateString() : null;
           const shownTags = item.tags.slice(0, 3);
           const moreTags = item.tags.length - shownTags.length;
-          const processing = item.plates.some((p) => p.processing_status === "queued" || p.processing_status === "processing");
+          const processing = item.plates.some(
+            (p) => p.processing_status === "queued" || p.processing_status === "processing",
+          );
           const failed = item.plates.some((p) => p.processing_status === "failed");
           return (
             <Box sx={{ mt: 0.25 }}>
@@ -236,9 +248,25 @@ export default function ModelCard({
                   {line1.join(" · ")}
                 </Typography>
               )}
-              <Stack direction="row" alignItems="center" spacing={0.75} sx={{ color: "#9aa0a6", mt: 0.25, minWidth: 0 }}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                  color: "#9aa0a6",
+                  mt: 0.25,
+                  minWidth: 0,
+                }}
+              >
                 {item.category_name && (
-                  <Stack direction="row" alignItems="center" spacing={0.25} sx={{ minWidth: 0 }}>
+                  <Stack
+                    direction="row"
+                    spacing={0.25}
+                    sx={{
+                      alignItems: "center",
+                      minWidth: 0,
+                    }}
+                  >
                     <FolderOutlinedIcon sx={{ fontSize: 13 }} />
                     <Typography variant="caption" noWrap title={item.category_name}>
                       {item.category_name}
@@ -258,7 +286,9 @@ export default function ModelCard({
               </Stack>
               {(shownTags.length > 0 || processing || failed) && (
                 <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap", rowGap: 0.5 }}>
-                  {processing && <Chip size="small" label={t("models:card.processing")} sx={{ height: 20, fontSize: 11 }} />}
+                  {processing && (
+                    <Chip size="small" label={t("models:card.processing")} sx={{ height: 20, fontSize: 11 }} />
+                  )}
                   {failed && (
                     <Chip
                       size="small"
@@ -277,13 +307,22 @@ export default function ModelCard({
                       sx={{ height: 20, fontSize: 11, maxWidth: 110, bgcolor: "background.paper" }}
                     />
                   ))}
-                  {moreTags > 0 && <Chip size="small" variant="outlined" label={`+${moreTags}`} sx={{ height: 20, fontSize: 11 }} />}
+                  {moreTags > 0 && (
+                    <Chip size="small" variant="outlined" label={`+${moreTags}`} sx={{ height: 20, fontSize: 11 }} />
+                  )}
                 </Stack>
               )}
             </Box>
           );
         })()}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.75 }}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            mt: 0.75,
+          }}
+        >
           <AuthorHoverCard
             authorId={author ? author.id : SELF_AUTHOR_ID}
             viewer={viewer}
@@ -291,17 +330,17 @@ export default function ModelCard({
           >
             <Stack
               direction="row"
-              alignItems="center"
               spacing={0.75}
-              sx={{
-                minWidth: 0,
-                color: "#858585",
-                ...(author || showViewerAsAuthor ? { cursor: "pointer", "&:hover": { color: "#00b800" } } : undefined),
-              }}
               onClick={(e) => {
                 if (!author && !showViewerAsAuthor) return;
                 e.stopPropagation();
                 navigate(`/authors/${author ? author.id : SELF_AUTHOR_ID}`);
+              }}
+              sx={{
+                alignItems: "center",
+                minWidth: 0,
+                color: "#858585",
+                ...(author || showViewerAsAuthor ? { cursor: "pointer", "&:hover": { color: "#00b800" } } : undefined),
               }}
             >
               <Avatar
@@ -316,11 +355,23 @@ export default function ModelCard({
             </Stack>
           </AuthorHoverCard>
           <Stack direction="row" spacing={1.5} sx={{ color: "#858585", flexShrink: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={0.4}>
+            <Stack
+              direction="row"
+              spacing={0.4}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <VisibilityIcon sx={{ fontSize: 14 }} />
               <Typography variant="caption">{item.view_count}</Typography>
             </Stack>
-            <Stack direction="row" alignItems="center" spacing={0.4}>
+            <Stack
+              direction="row"
+              spacing={0.4}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <PrintIcon sx={{ fontSize: 14 }} />
               <Typography variant="caption">
                 <RollingNumber value={item.print_count} />

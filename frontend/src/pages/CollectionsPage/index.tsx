@@ -72,7 +72,12 @@ export default function CollectionsPage({ onUnauthorized, onBookmarksChanged, th
   return (
     <Stack spacing={2}>
       {loading ? (
-        <Stack alignItems="center" sx={{ py: 8 }}>
+        <Stack
+          sx={{
+            alignItems: "center",
+            py: 8,
+          }}
+        >
           <CircularProgress size={22} />
         </Stack>
       ) : collections.length ? (
@@ -103,7 +108,14 @@ export default function CollectionsPage({ onUnauthorized, onBookmarksChanged, th
           ))}
         </Box>
       ) : (
-        <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+        <Stack
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            py: 8,
+            color: "text.secondary",
+          }}
+        >
           <Typography variant="body2">{t("models:collections.empty")}</Typography>
         </Stack>
       )}

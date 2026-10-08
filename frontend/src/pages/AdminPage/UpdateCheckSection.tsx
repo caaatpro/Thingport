@@ -63,20 +63,41 @@ export default function UpdateCheckSection({ onUnauthorized }: Props) {
       />
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         {status.kind === "checking" && (
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <CircularProgress size={14} />
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("adminSettings.updateCheck.checking")}
             </Typography>
           </Stack>
         )}
         {status.kind === "unknown" && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("adminSettings.updateCheck.unknown")}
           </Typography>
         )}
         {status.kind === "error" && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("adminSettings.updateCheck.failed")}
           </Typography>
         )}

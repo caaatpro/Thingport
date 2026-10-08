@@ -15,7 +15,12 @@ export type PreviewVariant = "card" | "modal";
 function PreviewPlaceholder({ text }: { text: string }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
-      <Typography variant="body2" color="text.disabled">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.disabled",
+        }}
+      >
         {text}
       </Typography>
     </Box>

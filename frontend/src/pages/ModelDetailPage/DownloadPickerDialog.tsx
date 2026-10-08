@@ -62,8 +62,10 @@ export default function DownloadPickerDialog({
                 </ListItemIcon>
                 <ListItemText
                   {...fileRowText(t, plate.filename, idx)}
-                  primaryTypographyProps={{ noWrap: true }}
-                  secondaryTypographyProps={{ noWrap: true }}
+                  slotProps={{
+                    primary: { noWrap: true },
+                    secondary: { noWrap: true },
+                  }}
                 />
               </ListItemButton>
             ))}

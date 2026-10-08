@@ -146,7 +146,12 @@ function SortableBookmarkRow({
       <ListItemIcon sx={{ minWidth: 30 }}>
         <BookmarkIcon fontSize="small" />
       </ListItemIcon>
-      <ListItemText primary={label} primaryTypographyProps={{ variant: "body2", noWrap: true }} />
+      <ListItemText
+        primary={label}
+        slotProps={{
+          primary: { variant: "body2", noWrap: true },
+        }}
+      />
       <DragIndicatorIcon fontSize="small" sx={{ ml: "auto", flexShrink: 0, color: "text.disabled" }} />
     </ListItemButton>
   );
@@ -267,9 +272,13 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
     >
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent={collapsed ? "center" : "space-between"}
-        sx={{ px: collapsed ? 1 : 2, pt: "20px", pb: "20px" }}
+        sx={{
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          px: collapsed ? 1 : 2,
+          pt: "20px",
+          pb: "20px",
+        }}
       >
         {!collapsed && (
           <Link
@@ -306,7 +315,12 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <SpaceDashboardIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText primary={t("sidebar.dashboard")} primaryTypographyProps={{ variant: "body2" }} />
+              <ListItemText
+                primary={t("sidebar.dashboard")}
+                slotProps={{
+                  primary: { variant: "body2" },
+                }}
+              />
             </ListItemButton>
           )}
 
@@ -326,7 +340,12 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <ViewInArIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText primary={t("sidebar.models")} primaryTypographyProps={{ variant: "body2" }} />
+              <ListItemText
+                primary={t("sidebar.models")}
+                slotProps={{
+                  primary: { variant: "body2" },
+                }}
+              />
             </ListItemButton>
           )}
 
@@ -346,7 +365,12 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <CollectionsIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText primary={t("sidebar.collections")} primaryTypographyProps={{ variant: "body2" }} />
+              <ListItemText
+                primary={t("sidebar.collections")}
+                slotProps={{
+                  primary: { variant: "body2" },
+                }}
+              />
             </ListItemButton>
           )}
 
@@ -366,7 +390,12 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <LocalOfferIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText primary={t("sidebar.tags")} primaryTypographyProps={{ variant: "body2" }} />
+              <ListItemText
+                primary={t("sidebar.tags")}
+                slotProps={{
+                  primary: { variant: "body2" },
+                }}
+              />
             </ListItemButton>
           )}
 
@@ -386,7 +415,12 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <DownloadIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText primary={t("sidebar.downloads")} primaryTypographyProps={{ variant: "body2" }} />
+              <ListItemText
+                primary={t("sidebar.downloads")}
+                slotProps={{
+                  primary: { variant: "body2" },
+                }}
+              />
             </ListItemButton>
           )}
 
@@ -403,8 +437,13 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               {!collapsed && (
                 <Typography
                   variant="caption"
-                  fontWeight={700}
-                  sx={{ display: "block", px: 1.5, mb: 0.5, color: (theme) => theme.thingport.navInactiveText }}
+                  sx={{
+                    fontWeight: 700,
+                    display: "block",
+                    px: 1.5,
+                    mb: 0.5,
+                    color: (theme) => theme.thingport.navInactiveText,
+                  }}
                 >
                   {t("sidebar.bookmarks")}
                 </Typography>
@@ -481,7 +520,12 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
                   <ListItemIcon sx={{ minWidth: 30 }}>
                     <AdminPanelSettingsIcon fontSize="small" />
                   </ListItemIcon>
-                  <ListItemText primary={t("sidebar.administration")} primaryTypographyProps={{ variant: "body2" }} />
+                  <ListItemText
+                    primary={t("sidebar.administration")}
+                    slotProps={{
+                      primary: { variant: "body2" },
+                    }}
+                  />
                 </ListItemButton>
               )}
             </>

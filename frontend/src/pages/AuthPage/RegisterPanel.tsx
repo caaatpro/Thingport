@@ -142,7 +142,12 @@ export default function RegisterPanel({ onSuccess, invite = null }: Props) {
             fullWidth
             size="small"
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("auth.register.passwordHelp")}
           </Typography>
         </Stack>

@@ -14,12 +14,30 @@ type Props = {
 /** `onBack` only when the section was reached from a menu grid. */
 export default function SectionHeader({ title, subtitle, onBack, backLabel }: Props) {
   return (
-    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} flexWrap="wrap">
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 2,
+        flexWrap: "wrap",
+      }}
+    >
       <Box>
-        <Typography variant="h5" fontWeight={600}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 600,
+          }}
+        >
           {title}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {subtitle}
         </Typography>
       </Box>

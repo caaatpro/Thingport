@@ -296,7 +296,13 @@ export default function ModelsPage({
         </Stack>
         <SortTabs value={sortMode} onChange={setSortMode} />
       </Box>
-      <Stack direction="row" spacing={2} alignItems="flex-start">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "flex-start",
+        }}
+      >
         <CategoriesPanel
           categories={categories}
           loading={categoriesLoading}
@@ -370,9 +376,23 @@ export default function ModelsPage({
                 ))}
               </Box>
               {hasMore && (
-                <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
+                <Stack
+                  ref={loadMoreSentinelRef}
+                  direction="row"
+                  sx={{
+                    justifyContent: "center",
+                    py: 1,
+                  }}
+                >
                   {loadingMore && (
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: "center",
+                        color: "text.secondary",
+                      }}
+                    >
                       <CircularProgress size={14} />
                       <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
                     </Stack>
@@ -381,9 +401,24 @@ export default function ModelsPage({
               )}
             </Stack>
           ) : (
-            <Stack alignItems="center" spacing={1} sx={{ py: 10, px: 2, color: "text.secondary", textAlign: "center" }}>
+            <Stack
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                py: 10,
+                px: 2,
+                color: "text.secondary",
+                textAlign: "center",
+              }}
+            >
               <ViewInArIcon sx={{ fontSize: 56, opacity: 0.35, mb: 1 }} />
-              <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  fontWeight: 600,
+                  color: (muiTheme) => muiTheme.thingport.headingText,
+                }}
+              >
                 {t(emptyKey("Title"))}
               </Typography>
               <Typography variant="body2" sx={{ maxWidth: 420 }}>

@@ -74,11 +74,19 @@ export default function RegistrationsPanel({ onUnauthorized }: Props) {
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
-          alignItems={{ sm: "center" }}
-          justifyContent="space-between"
+          sx={{
+            alignItems: { sm: "center" },
+            justifyContent: "space-between",
+          }}
         >
           <Stack spacing={0.5}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <FormControlLabel
                 control={
                   <Switch
@@ -91,17 +99,33 @@ export default function RegistrationsPanel({ onUnauthorized }: Props) {
               />
               {saving && <CircularProgress size={16} />}
             </Stack>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {allow ? t("adminSettings.registrations.openHelp") : t("adminSettings.registrations.closedHelp")}
             </Typography>
           </Stack>
 
           {canInvite && (
-            <Stack spacing={0.5} alignItems={{ xs: "flex-start", sm: "flex-end" }} sx={{ flexShrink: 0 }}>
+            <Stack
+              spacing={0.5}
+              sx={{
+                alignItems: { xs: "flex-start", sm: "flex-end" },
+                flexShrink: 0,
+              }}
+            >
               <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setInviteOpen(true)}>
                 {t("adminSettings.registrations.inviteButton")}
               </Button>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("adminSettings.registrations.inviteHelp")}
               </Typography>
             </Stack>

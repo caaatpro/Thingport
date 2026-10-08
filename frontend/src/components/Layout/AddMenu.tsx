@@ -138,7 +138,13 @@ export default function AddMenu({ categoryId, makerworldCookie, onUploaded, onUn
 
           {exampleProvider && (
             <Alert severity="info" sx={{ mb: 1.5 }} onClose={() => setExampleProvider(null)}>
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  mb: 0.5,
+                }}
+              >
                 {t("addMenu.exampleLinksFor", { provider: IMPORT_PROVIDER_INFO[exampleProvider].label })}
               </Typography>
               <Typography variant="caption" component="div" sx={{ wordBreak: "break-all" }}>

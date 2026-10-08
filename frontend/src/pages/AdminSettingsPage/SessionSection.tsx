@@ -127,13 +127,26 @@ export default function SessionSection({ onUnauthorized }: Props) {
             sx={{ maxWidth: 320 }}
           />
 
-          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            useFlexGap
+            sx={{
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <Button variant="contained" onClick={save} disabled={loading || saving || !isValid || parsed === seconds}>
               {saving ? t("adminSettings.session.saving") : t("adminSettings.session.save")}
             </Button>
             {saving && <CircularProgress size={14} />}
             {status && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {status}
               </Typography>
             )}

@@ -108,21 +108,35 @@ function StatCard({
     >
       <Typography
         variant="caption"
-        color="text.secondary"
-        sx={{ textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 600 }}
+        sx={{
+          color: "text.secondary",
+          textTransform: "uppercase",
+          letterSpacing: 0.6,
+          fontWeight: 600,
+        }}
       >
         {title}
       </Typography>
       <Typography
         variant="h5"
-        fontWeight={700}
-        sx={{ mt: 0.5, mb: 0.75, color: (theme) => theme.thingport.headingText }}
+        sx={{
+          fontWeight: 700,
+          mt: 0.5,
+          mb: 0.75,
+          color: (theme) => theme.thingport.headingText,
+        }}
       >
         {value}
       </Typography>
       <Stack spacing={0.25}>
         {lines.map((line) => (
-          <Typography key={line} variant="body2" color="text.secondary">
+          <Typography
+            key={line}
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {line}
           </Typography>
         ))}
@@ -279,10 +293,21 @@ export default function AdminPage({ onUnauthorized }: Props) {
               {section.icon}
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 700,
+                  color: (theme) => theme.thingport.headingText,
+                }}
+              >
                 {t(section.labelKey)}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t(`adminSettings.overview.descriptions.${section.descriptionKey}`)}
               </Typography>
             </Box>
@@ -294,12 +319,22 @@ export default function AdminPage({ onUnauthorized }: Props) {
       <Stack
         direction="row"
         spacing={3}
-        alignItems="center"
-        flexWrap="wrap"
         useFlexGap
-        sx={{ px: 0.5, color: "text.secondary" }}
+        sx={{
+          alignItems: "center",
+          flexWrap: "wrap",
+          px: 0.5,
+          color: "text.secondary",
+        }}
       >
-        <Stack direction="row" alignItems="center" spacing={1} title={t("adminSettings.website.hint")}>
+        <Stack
+          direction="row"
+          spacing={1}
+          title={t("adminSettings.website.hint")}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <PublicIcon fontSize="small" />
           <Link href={THINGPORT_WEBSITE_URL} target="_blank" rel="noopener" variant="body2" underline="hover">
             {t("adminSettings.website.link")}

@@ -28,7 +28,12 @@ export default function ResendVerificationButton({ email }: Props) {
 
   if (state === "sent") {
     return (
-      <Typography variant="body2" color="success.main">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "success.main",
+        }}
+      >
         {t("auth.checkEmail.resent")}
       </Typography>
     );

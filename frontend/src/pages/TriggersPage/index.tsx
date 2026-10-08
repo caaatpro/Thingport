@@ -96,20 +96,43 @@ export default function TriggersPage({ onUnauthorized }: Props) {
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <Box>
-            <Typography variant="subtitle1" fontWeight={600}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("adminSettings.triggers.deleteAllTitle")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("adminSettings.triggers.deleteAllDesc")}
             </Typography>
           </Box>
 
           {loading ? (
-            <Stack alignItems="center" sx={{ py: 2 }}>
+            <Stack
+              sx={{
+                alignItems: "center",
+                py: 2,
+              }}
+            >
               <CircularProgress size={20} />
             </Stack>
           ) : (
-            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              useFlexGap
+              sx={{
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <FormControl size="small" sx={{ minWidth: 300 }}>
                 <InputLabel id="trigger-user-select-label">{t("adminSettings.triggers.userLabel")}</InputLabel>
                 <Select

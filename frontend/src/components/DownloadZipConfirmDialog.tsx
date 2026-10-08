@@ -94,7 +94,14 @@ export default function DownloadZipConfirmDialog({ open, onClose, filter, filena
       <DialogContent>
         <Stack spacing={1.5} sx={{ mt: 0.5 }}>
           {loading && (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                color: "text.secondary",
+              }}
+            >
               <CircularProgress size={16} />
               <Typography variant="body2">{t("models:downloadZip.loading")}</Typography>
             </Stack>

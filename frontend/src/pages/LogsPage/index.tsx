@@ -141,7 +141,15 @@ export default function LogsPage({ onUnauthorized }: Props) {
   return (
     <Stack spacing={3}>
       <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          useFlexGap
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <FormControl size="small" sx={{ minWidth: 220 }}>
             <InputLabel id="logs-user-select-label">{t("adminSettings.logs.userLabel")}</InputLabel>
             <Select
@@ -184,12 +192,22 @@ export default function LogsPage({ onUnauthorized }: Props) {
       )}
 
       {loading ? (
-        <Stack alignItems="center" sx={{ py: 2 }}>
+        <Stack
+          sx={{
+            alignItems: "center",
+            py: 2,
+          }}
+        >
           <CircularProgress size={20} />
         </Stack>
       ) : logs.length === 0 ? (
         <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("adminSettings.logs.empty")}
           </Typography>
         </Paper>
@@ -212,7 +230,12 @@ export default function LogsPage({ onUnauthorized }: Props) {
                     <TableCell>
                       <Box>
                         <Typography variant="body2">{log.user_display_name}</Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           {log.user_email}
                         </Typography>
                       </Box>

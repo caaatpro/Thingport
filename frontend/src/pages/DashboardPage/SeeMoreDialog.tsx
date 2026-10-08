@@ -44,11 +44,21 @@ export default function SeeMoreDialog<T>({ open, onClose, title, emptyText, fetc
         {error ? (
           <Alert severity="error">{error}</Alert>
         ) : items === null ? (
-          <Stack alignItems="center" sx={{ py: 3 }}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              py: 3,
+            }}
+          >
             <CircularProgress size={28} />
           </Stack>
         ) : items.length === 0 ? (
-          <Typography color="text.secondary" sx={{ py: 2 }}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+              py: 2,
+            }}
+          >
             {emptyText}
           </Typography>
         ) : (

@@ -348,10 +348,23 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
           </FormControl>
 
           <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
               {t("models:detail.author")}
             </Typography>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
               <Typography variant="body2">
                 {authorResetPending
                   ? t("models:edit.authorWillBeYou")
@@ -507,7 +520,13 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
           />
 
           <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 0.5,
+              }}
+            >
               {t("models:detail.tags")}
             </Typography>
             <TagInput
@@ -533,9 +552,15 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
                   <Stack
                     key={key}
                     direction="row"
-                    alignItems="center"
                     spacing={1}
-                    sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, px: 1, py: 0.5 }}
+                    sx={{
+                      alignItems: "center",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.5,
+                    }}
                   >
                     <InsertDriveFileIcon fontSize="small" color="action" />
                     <Typography variant="body2" noWrap sx={{ flex: 1 }}>

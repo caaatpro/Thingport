@@ -90,8 +90,10 @@ export default function SlicerFileMenu({
             </ListItemIcon>
             <ListItemText
               {...text}
-              primaryTypographyProps={{ variant: "body2", noWrap: true }}
-              secondaryTypographyProps={{ variant: "caption", noWrap: true }}
+              slotProps={{
+                primary: { variant: "body2", noWrap: true },
+                secondary: { variant: "caption", noWrap: true },
+              }}
             />
           </MenuItem>
         );

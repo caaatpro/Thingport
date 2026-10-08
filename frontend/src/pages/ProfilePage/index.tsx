@@ -29,7 +29,13 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
 
   return (
     <Stack spacing={4} sx={{ maxWidth: 560 }}>
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Avatar
           alt={user?.display_name}
           src={avatarUrl}
@@ -38,21 +44,44 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
           {user?.display_name?.[0]?.toUpperCase()}
         </Avatar>
         <Box>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 600,
+              color: (muiTheme) => muiTheme.thingport.headingText,
+            }}
+          >
             {user?.display_name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {user?.email}
           </Typography>
         </Box>
       </Stack>
 
       <Stack spacing={2}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+          }}
+        >
           <Box>
             <Typography variant="body1">{user?.email}</Typography>
             {user?.pending_email && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("profile.pendingEmail", { email: user.pending_email })}
               </Typography>
             )}
@@ -62,7 +91,14 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
           </Button>
         </Stack>
 
-        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+          }}
+        >
           <Typography variant="body1">••••••••</Typography>
           <Button variant="text" onClick={() => navigate("/profile/password")}>
             {t("profile.changePasswordLink")}

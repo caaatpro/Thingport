@@ -9,7 +9,7 @@ import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { isFileDrag } from "../../utils/dragEvents";
@@ -158,7 +158,13 @@ export default function GlobalDropZone({ categoryId, onUploaded, onUnauthorized 
           >
             <CloudUploadOutlinedIcon sx={{ fontSize: 56, color: "primary.main", mb: 1 }} />
             <Typography variant="h6">{t("models:upload.dropHere")}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mt: 0.5,
+              }}
+            >
               {collectionId ? t("models:upload.dropToCollection") : t("models:upload.dropHint")}
             </Typography>
           </Box>
@@ -183,14 +189,24 @@ export default function GlobalDropZone({ categoryId, onUploaded, onUnauthorized 
         >
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ px: 1.5, py: 1, borderBottom: "1px solid", borderColor: "divider" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              px: 1.5,
+              py: 1,
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            }}
           >
             <Typography variant="subtitle2">
               {activeCount > 0 ? t("models:upload.uploadingCount", { count: activeCount }) : t("models:upload.done")}
             </Typography>
-            <IconButton size="small" onClick={dismiss} disabled={activeCount > 0} aria-label={t("common:close") ?? undefined}>
+            <IconButton
+              size="small"
+              onClick={dismiss}
+              disabled={activeCount > 0}
+              aria-label={t("common:close") ?? undefined}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           </Stack>
@@ -204,22 +220,22 @@ export default function GlobalDropZone({ categoryId, onUploaded, onUnauthorized 
                 <Stack
                   key={it.id}
                   direction="row"
-                  alignItems="center"
                   spacing={1}
                   onClick={open}
                   role={openable ? "button" : undefined}
                   tabIndex={openable ? 0 : undefined}
                   onKeyDown={openable ? (e) => (e.key === "Enter" || e.key === " ") && open() : undefined}
+                  title={it.error || (openable ? t("models:upload.openHint") : it.name)}
                   sx={{
+                    alignItems: "center",
                     px: 1.5,
                     py: 0.75,
                     ...(openable ? { cursor: "pointer", "&:hover": { bgcolor: "action.hover" } } : {}),
                   }}
-                  title={it.error || (openable ? t("models:upload.openHint") : it.name)}
                 >
                   {it.status === "uploading" && <CircularProgress size={16} />}
                   {it.status === "ready" && <CheckCircleIcon fontSize="small" color="success" />}
-                  {it.status === "failed" && <ErrorOutlineIcon fontSize="small" color="error" />}
+                  {it.status === "failed" && <ErrorOutlinedIcon fontSize="small" color="error" />}
                   <Typography variant="body2" noWrap sx={{ flex: 1 }}>
                     {it.name}
                   </Typography>

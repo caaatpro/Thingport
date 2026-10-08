@@ -83,7 +83,13 @@ export default function SimplifySection({ onUnauthorized }: Props) {
               </li>
             </Box>
           </Alert>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <FormControlLabel
               control={
                 <Switch
@@ -94,10 +100,20 @@ export default function SimplifySection({ onUnauthorized }: Props) {
               }
               label={
                 <Box>
-                  <Typography variant="body2" fontWeight={600}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                    }}
+                  >
                     {t("adminSettings.rendering.simplify.label")}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {t(
                       enabled ? "adminSettings.rendering.simplify.helpOn" : "adminSettings.rendering.simplify.helpOff",
                     )}

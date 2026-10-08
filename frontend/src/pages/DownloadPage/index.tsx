@@ -107,33 +107,76 @@ export default function DownloadPage() {
   return (
     <Stack spacing={3} sx={{ maxWidth: 720 }}>
       <Box>
-        <Typography variant="h6" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 600,
+            color: (muiTheme) => muiTheme.thingport.headingText,
+          }}
+        >
           {t("download.pageTitle")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("download.intro")}
         </Typography>
       </Box>
 
       <Stack spacing={2}>
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "flex-start",
+          }}
+        >
           <Box component="img" src={extensionIcon} alt="" sx={{ width: 24, height: 24, mt: 0.5 }} />
           <Box>
-            <Typography variant="subtitle1" fontWeight={600}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("download.extension.heading")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("download.extension.intro")}
             </Typography>
           </Box>
         </Stack>
         <Paper variant="outlined" sx={{ p: 2.5, maxWidth: 520 }}>
-          <Stack spacing={1.5} alignItems="flex-start">
-            <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            spacing={1.5}
+            sx={{
+              alignItems: "flex-start",
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Box component="img" src={extensionIcon} alt="" sx={{ width: 40, height: 40 }} />
               <Box component="img" src={chromeLogo} alt="Chrome" sx={{ width: 32, height: 32 }} />
             </Stack>
-            <Typography variant="subtitle2" fontWeight={600}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("download.extension.name")} (Chrome)
             </Typography>
             <Button
@@ -146,7 +189,12 @@ export default function DownloadPage() {
             >
               {t("download.extension.download")}
             </Button>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("download.extension.install")}
             </Typography>
           </Stack>
@@ -156,13 +204,29 @@ export default function DownloadPage() {
       <Divider />
 
       <Stack spacing={2}>
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "flex-start",
+          }}
+        >
           <CableIcon color="primary" sx={{ mt: 0.5 }} />
           <Box>
-            <Typography variant="subtitle1" fontWeight={600}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {t("download.bridge.heading")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("download.bridge.intro")}
             </Typography>
           </Box>
@@ -172,9 +236,19 @@ export default function DownloadPage() {
             const Icon = OS_ICON[os];
             return (
               <Paper key={os} variant="outlined" sx={{ p: 2.5, flex: 1 }}>
-                <Stack spacing={1.5} alignItems="flex-start">
+                <Stack
+                  spacing={1.5}
+                  sx={{
+                    alignItems: "flex-start",
+                  }}
+                >
                   <Icon fontSize="large" />
-                  <Typography variant="subtitle2" fontWeight={600}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 600,
+                    }}
+                  >
                     {label}
                   </Typography>
                   <Button
@@ -199,12 +273,25 @@ export default function DownloadPage() {
           <>
             <DialogTitle>{t(`download.modal.${installOs}.heading`)}</DialogTitle>
             <DialogContent>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mb: 2.5,
+                }}
+              >
                 {t("download.modal.startedNote")}
               </Typography>
               <InstallSteps steps={installSteps[installOs]} />
               {installOs === "macos" && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2.5 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    mt: 2.5,
+                  }}
+                >
                   {t("download.modal.macos.note")}
                 </Typography>
               )}

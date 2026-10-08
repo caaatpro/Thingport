@@ -60,7 +60,13 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized, onBo
     title: tag ? t("models:tags.detail.title", { name: tag }) : undefined,
     subtitle: tag ? t("models:tags.detail.subtitle") : undefined,
     actions: tag ? (
-      <Stack direction="row" alignItems="center" spacing={0.5}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <TagBookmarkButton
           tag={tag}
           bookmarked={bookmarked}
@@ -163,7 +169,12 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized, onBo
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress size={22} />
       </Stack>
     );
@@ -216,9 +227,23 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized, onBo
             ))}
           </Box>
           {hasMore && (
-            <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
+            <Stack
+              ref={loadMoreSentinelRef}
+              direction="row"
+              sx={{
+                justifyContent: "center",
+                py: 1,
+              }}
+            >
               {loadingMore && (
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                    color: "text.secondary",
+                  }}
+                >
                   <CircularProgress size={14} />
                   <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
                 </Stack>
@@ -227,7 +252,14 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized, onBo
           )}
         </Stack>
       ) : (
-        <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+        <Stack
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            py: 8,
+            color: "text.secondary",
+          }}
+        >
           <Typography variant="body2">{t("models:tags.detail.empty")}</Typography>
         </Stack>
       )}

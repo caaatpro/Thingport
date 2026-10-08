@@ -110,7 +110,12 @@ function ImportModeModal({
           <Typography variant="h6" component="div">
             {t("importMode.title", { count })}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {label}
           </Typography>
         </Box>
@@ -137,7 +142,12 @@ function ImportModeModal({
               }}
             >
               <Typography variant="subtitle2">{t("importMode.separateTitle")}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("importMode.separateDesc")}
               </Typography>
             </ButtonBase>
@@ -156,13 +166,23 @@ function ImportModeModal({
               }}
             >
               <Typography variant="subtitle2">{t("importMode.multiplateTitle")}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("importMode.multiplateDesc")}
               </Typography>
             </ButtonBase>
           </Stack>
           {busy && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("importMode.importing")}
             </Typography>
           )}

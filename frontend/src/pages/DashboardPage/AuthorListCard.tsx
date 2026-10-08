@@ -40,8 +40,20 @@ function AuthorRow({
             <PersonIcon fontSize="small" />
           </Avatar>
         </ListItemAvatar>
-        <ListItemText primary={author.name || author.handle || "—"} primaryTypographyProps={{ noWrap: true }} />
-        <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, pl: 1 }}>
+        <ListItemText
+          primary={author.name || author.handle || "—"}
+          slotProps={{
+            primary: { noWrap: true },
+          }}
+        />
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            flexShrink: 0,
+            pl: 1,
+          }}
+        >
           {modelCountLabel(author.model_count)}
         </Typography>
       </ListItemButton>
@@ -68,13 +80,24 @@ export default function AuthorListCard({ authors }: Props) {
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         <StarIcon />
-        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 700,
+            color: (theme) => theme.thingport.headingText,
+          }}
+        >
           {t("dashboard.topAuthors.title")}
         </Typography>
       </Box>
 
       {authors.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 2 }}>
+        <Typography
+          sx={{
+            color: "text.secondary",
+            py: 2,
+          }}
+        >
           {t("dashboard.topAuthors.empty")}
         </Typography>
       ) : (

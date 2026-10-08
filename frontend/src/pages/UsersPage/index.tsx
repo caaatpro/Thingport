@@ -36,7 +36,7 @@ import KeyIcon from "@mui/icons-material/Key";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PersonAddIcon from "@mui/icons-material/PersonAddAlt1";
-import RestoreIcon from "@mui/icons-material/CheckCircleOutline";
+import RestoreIcon from "@mui/icons-material/CheckCircleOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import ShieldIcon from "@mui/icons-material/AdminPanelSettings";
 import PersonIcon from "@mui/icons-material/Person";
@@ -196,19 +196,27 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
       )}
 
       <Stack spacing={1.5}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1.5}
+          sx={{
+            alignItems: { md: "center" },
+          }}
+        >
           <TextField
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("adminSettings.users.searchPlaceholder")}
             size="small"
             sx={{ width: { xs: "100%", md: 320 } }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              },
             }}
           />
           <ToggleButtonGroup
@@ -225,7 +233,12 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
             </ToggleButton>
           </ToggleButtonGroup>
           <Box sx={{ flex: 1 }} />
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("adminSettings.users.summary", counts)}
           </Typography>
           <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setCreateOpen(true)}>
@@ -234,7 +247,12 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
         </Stack>
 
         {loading ? (
-          <Stack alignItems="center" sx={{ py: 4 }}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              py: 4,
+            }}
+          >
             <CircularProgress size={22} />
           </Stack>
         ) : (
@@ -257,13 +275,31 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
                   {visible.map((u) => (
                     <TableRow key={u.id} hover sx={u.disabled ? { opacity: 0.6 } : undefined}>
                       <TableCell>
-                        <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Stack
+                          direction="row"
+                          spacing={1.5}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>
                             {(u.display_name || u.email).slice(0, 1).toUpperCase()}
                           </Avatar>
                           <Box sx={{ minWidth: 0 }}>
-                            <Stack direction="row" spacing={0.75} alignItems="center">
-                              <Typography variant="body2" fontWeight={600} noWrap>
+                            <Stack
+                              direction="row"
+                              spacing={0.75}
+                              sx={{
+                                alignItems: "center",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                noWrap
+                                sx={{
+                                  fontWeight: 600,
+                                }}
+                              >
                                 {u.display_name}
                               </Typography>
                               {u.id === currentUserId && (
@@ -274,7 +310,14 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
                                 />
                               )}
                             </Stack>
-                            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+                            <Typography
+                              variant="caption"
+                              noWrap
+                              sx={{
+                                color: "text.secondary",
+                                display: "block",
+                              }}
+                            >
                               {u.email}
                             </Typography>
                           </Box>
@@ -289,7 +332,14 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
                         />
                       </TableCell>
                       <TableCell>
-                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          useFlexGap
+                          sx={{
+                            flexWrap: "wrap",
+                          }}
+                        >
                           <Chip
                             size="small"
                             label={

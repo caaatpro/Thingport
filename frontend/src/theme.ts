@@ -146,25 +146,23 @@ export function buildTheme(id: ResolvedTheme): Theme {
       // Success toasts always use the brand green, not MUI's success palette.
       MuiAlert: {
         styleOverrides: {
-          filledSuccess: { backgroundColor: d.accent, color: d.accentContrast },
-          // MUI's dark alerts are near-black boxes on navy panels; use a translucent severity tint instead.
-          // Filled alerts (toasts) keep their own styling.
-          ...(d.mode === "dark"
-            ? {
-                root: ({ ownerState, theme }) => {
-                  if (ownerState.variant === "filled") return {};
-                  const severity = ownerState.severity ?? "success";
-                  const color = severity === "success" ? d.accent : theme.palette[severity].main;
-                  return {
-                    backgroundColor: alpha(color, ownerState.variant === "outlined" ? 0.04 : 0.1),
-                    border: `1px solid ${alpha(color, ownerState.variant === "outlined" ? 0.6 : 0.35)}`,
-                    color: alpha("#ffffff", 0.8),
-                    "& .MuiAlert-icon": { color },
-                    "& .MuiAlertTitle-root": { color: d.headingText },
-                  };
-                },
-              }
-            : {}),
+          root: ({ ownerState, theme }) => {
+            if (ownerState.variant === "filled") {
+              return ownerState.severity === "success" ? { backgroundColor: d.accent, color: d.accentContrast } : {};
+            }
+            // MUI's dark alerts are near-black boxes on navy panels; use a translucent severity tint
+            // instead. Filled alerts (toasts) keep their own styling.
+            if (d.mode !== "dark") return {};
+            const severity = ownerState.severity ?? "success";
+            const color = severity === "success" ? d.accent : theme.palette[severity].main;
+            return {
+              backgroundColor: alpha(color, ownerState.variant === "outlined" ? 0.04 : 0.1),
+              border: `1px solid ${alpha(color, ownerState.variant === "outlined" ? 0.6 : 0.35)}`,
+              color: alpha("#ffffff", 0.8),
+              "& .MuiAlert-icon": { color },
+              "& .MuiAlertTitle-root": { color: d.headingText },
+            };
+          },
         },
       },
       // Dark mode is square everywhere. `sx` radii beat theme overrides, so only a global !important

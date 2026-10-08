@@ -54,7 +54,13 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
     title: print ? print.title || print.name : undefined,
     subtitle: print ? t("models:detail.subtitle") : undefined,
     actions: print ? (
-      <Stack direction="row" alignItems="center" spacing={0.5}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
         <ModelActionsMenu
           print={print}
@@ -97,7 +103,12 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress size={22} />
       </Stack>
     );
@@ -105,7 +116,14 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
 
   if (notFound || !print) {
     return (
-      <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+      <Stack
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          py: 8,
+          color: "text.secondary",
+        }}
+      >
         <Typography variant="body2">{t("models:errors.notFound")}</Typography>
       </Stack>
     );
@@ -295,8 +313,11 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
           >
             <Typography
               variant="subtitle1"
-              fontWeight={700}
-              sx={{ mb: 1, color: (muiTheme) => muiTheme.thingport.headingText }}
+              sx={{
+                fontWeight: 700,
+                mb: 1,
+                color: (muiTheme) => muiTheme.thingport.headingText,
+              }}
             >
               {t("models:detail.description")}
             </Typography>
@@ -309,13 +330,24 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
 
             <Typography
               variant="subtitle1"
-              fontWeight={700}
-              sx={{ mt: 2.5, mb: 1, color: (muiTheme) => muiTheme.thingport.headingText }}
+              sx={{
+                fontWeight: 700,
+                mt: 2.5,
+                mb: 1,
+                color: (muiTheme) => muiTheme.thingport.headingText,
+              }}
             >
               {t("models:detail.tags")}
             </Typography>
             {print.tags.length ? (
-              <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
+              <Stack
+                direction="row"
+                useFlexGap
+                spacing={1}
+                sx={{
+                  flexWrap: "wrap",
+                }}
+              >
                 {print.tags.map((tag) => (
                   <Chip
                     key={tag}
@@ -336,7 +368,12 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
                 ))}
               </Stack>
             ) : (
-              <Typography variant="body2" color="text.disabled">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.disabled",
+                }}
+              >
                 {t("models:detail.noTags")}
               </Typography>
             )}

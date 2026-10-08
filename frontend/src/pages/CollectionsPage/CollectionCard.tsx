@@ -61,7 +61,13 @@ function CoverTile({
             bgcolor: "rgba(0, 0, 0, 0.55)",
           }}
         >
-          <Typography variant="subtitle1" fontWeight={700} sx={{ color: "#fff" }}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+              color: "#fff",
+            }}
+          >
             +{overlayCount}
           </Typography>
         </Box>
@@ -139,9 +145,13 @@ export default function CollectionCard({
         >
           {coverItems.length === 0 && (
             <Stack
-              alignItems="center"
-              justifyContent="center"
-              sx={{ width: "100%", height: "100%", color: "text.disabled" }}
+              sx={{
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                height: "100%",
+                color: "text.disabled",
+              }}
             >
               <Typography variant="caption">{t("models:collections.card.empty")}</Typography>
             </Stack>
@@ -205,14 +215,25 @@ export default function CollectionCard({
             "&:hover": { bgcolor: "background.paper" },
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={0.5} minWidth={0}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              minWidth: 0,
+            }}
+          >
             {collection.system_key && <LockIcon sx={{ fontSize: 14, color: "text.disabled", flexShrink: 0 }} />}
             <Typography
               variant="body2"
-              fontWeight={600}
               noWrap
               title={displayName}
-              sx={{ color: (muiTheme) => muiTheme.thingport.headingText, flex: 1, minWidth: 0 }}
+              sx={{
+                fontWeight: 600,
+                color: (muiTheme) => muiTheme.thingport.headingText,
+                flex: 1,
+                minWidth: 0,
+              }}
             >
               {displayName}
             </Typography>
@@ -224,7 +245,15 @@ export default function CollectionCard({
               />
             )}
           </Stack>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5, color: "#858585" }}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              mt: 0.5,
+              color: "#858585",
+            }}
+          >
             <Inventory2OutlinedIcon sx={{ fontSize: 14 }} />
             <Typography variant="caption">
               {t("models:collections.card.itemCount", { count: collection.item_count })}

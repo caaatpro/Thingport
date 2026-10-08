@@ -82,7 +82,14 @@ export default function TopBar({
           column refuses to shrink below its content's natural width (the title, mainly), which
           would push the center/right columns off `justify-content` center/right well before the
           window actually runs out of room. */}
-      <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          minWidth: 0,
+        }}
+      >
         {onBack && (
           <Tooltip title={t("shell.backToLibrary")}>
             <IconButton size="small" onClick={onBack}>
@@ -91,7 +98,13 @@ export default function TopBar({
           </Tooltip>
         )}
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h6" fontWeight={700} noWrap>
+          <Typography
+            variant="h6"
+            noWrap
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {title}
           </Typography>
           {subtitle && (
@@ -105,7 +118,15 @@ export default function TopBar({
       <Box sx={{ minWidth: 0, justifySelf: "center", width: "100%" }}>
         <GlobalSearch onUnauthorized={onUnauthorized} />
       </Box>
-      <Stack direction="row" alignItems="center" spacing={1} minWidth={0} justifySelf="end">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          minWidth: 0,
+          justifySelf: "end",
+        }}
+      >
         <AddMenu
           categoryId={categoryId}
           makerworldCookie={makerworldCookie}

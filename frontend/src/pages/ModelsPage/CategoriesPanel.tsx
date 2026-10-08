@@ -95,10 +95,12 @@ export default function CategoriesPanel({
         <ListItemButton onClick={() => onSelect(category.id)} sx={{ pl: 1 + depth * 2, ...rowSx(isSelected) }}>
           <ListItemText
             primary={displayName(category) || untitledLabel}
-            primaryTypographyProps={rowTextSx(
-              isSelected,
-              isRoot ? { fontWeight: 600 } : isSelected ? { fontWeight: 700 } : undefined,
-            )}
+            slotProps={{
+              primary: rowTextSx(
+                isSelected,
+                isRoot ? { fontWeight: 600 } : isSelected ? { fontWeight: 700 } : undefined,
+              ),
+            }}
           />
           {(isRoot || children.length > 0) && (
             <ChevronRightIcon
@@ -117,7 +119,15 @@ export default function CategoriesPanel({
           <List component="div" disablePadding>
             {children.map((child) => renderCategory(child, depth + 1))}
             {isRoot && !children.length && (
-              <Typography variant="caption" color="text.secondary" sx={{ pl: 4, display: "block", py: 0.5 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  pl: 4,
+                  display: "block",
+                  py: 0.5,
+                }}
+              >
                 {t("models:categories.noSubcategories")}
               </Typography>
             )}
@@ -141,8 +151,21 @@ export default function CategoriesPanel({
           borderColor: dividerBorderColor,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 0.5, pb: 1 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: 0.5,
+            pb: 1,
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {t("models:categories.title")}
           </Typography>
           <Tooltip title={t("models:categories.manageTooltip") ?? ""}>
@@ -160,12 +183,19 @@ export default function CategoriesPanel({
           <ListItemButton onClick={() => onSelect(null)} sx={rowSx(selectedId === null)}>
             <ListItemText
               primary={t("models:categories.all")}
-              primaryTypographyProps={rowTextSx(selectedId === null, { fontWeight: 600 })}
+              slotProps={{
+                primary: rowTextSx(selectedId === null, { fontWeight: 600 }),
+              }}
             />
           </ListItemButton>
 
           {loading && (
-            <Stack alignItems="center" sx={{ py: 2 }}>
+            <Stack
+              sx={{
+                alignItems: "center",
+                py: 2,
+              }}
+            >
               <CircularProgress size={18} />
             </Stack>
           )}
@@ -173,7 +203,14 @@ export default function CategoriesPanel({
           {!loading && tree.roots.map((root) => renderCategory(root, 0))}
 
           {!loading && !tree.roots.length && (
-            <Typography variant="body2" color="text.secondary" sx={{ px: 1, py: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                px: 1,
+                py: 1,
+              }}
+            >
               {t("models:categories.empty")}
             </Typography>
           )}

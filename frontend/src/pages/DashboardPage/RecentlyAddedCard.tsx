@@ -44,13 +44,24 @@ export default function RecentlyAddedCard({ models }: Props) {
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         <NewReleasesIcon />
-        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 700,
+            color: (theme) => theme.thingport.headingText,
+          }}
+        >
           {t("dashboard.recentlyAdded.title")}
         </Typography>
       </Box>
 
       {models.length === 0 ? (
-        <Typography color="text.secondary" sx={{ py: 2 }}>
+        <Typography
+          sx={{
+            color: "text.secondary",
+            py: 2,
+          }}
+        >
           {t("dashboard.recentlyAdded.empty")}
         </Typography>
       ) : (
@@ -70,8 +81,20 @@ export default function RecentlyAddedCard({ models }: Props) {
                   <ViewInArIcon fontSize="small" />
                 </Avatar>
               </ListItemAvatar>
-              <ListItemText primary={model.name} primaryTypographyProps={{ noWrap: true }} />
-              <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, pl: 1 }}>
+              <ListItemText
+                primary={model.name}
+                slotProps={{
+                  primary: { noWrap: true },
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  flexShrink: 0,
+                  pl: 1,
+                }}
+              >
                 {relativeTime(model.created_at, t)}
               </Typography>
             </ListItemButton>

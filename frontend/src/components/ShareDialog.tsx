@@ -110,13 +110,23 @@ export default function ShareDialog({
       <DialogTitle>{t("models:share.title", { name })}</DialogTitle>
       <DialogContent>
         <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {selected.size > 0
               ? t("models:share.summaryShared", { count: selected.size })
               : t("models:share.summaryPrivate")}
           </Typography>
           {hint && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {hint}
             </Typography>
           )}
@@ -126,7 +136,14 @@ export default function ShareDialog({
               <CircularProgress size={24} />
             </Box>
           ) : users && users.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                py: 3,
+                textAlign: "center",
+              }}
+            >
               {t("models:share.empty")}
             </Typography>
           ) : (

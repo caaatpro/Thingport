@@ -101,7 +101,14 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
     >
       <Stack spacing={2}>
         <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: "block",
+              mb: 0.5,
+            }}
+          >
             {t("models:detail.title")}
           </Typography>
           {/* Full title, wrapped -- unlike the page header, this box never truncates it. */}
@@ -114,7 +121,14 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
         </Box>
 
         <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: "block",
+              mb: 0.5,
+            }}
+          >
             {t("models:detail.author")}
           </Typography>
           <AuthorHoverCard
@@ -124,17 +138,17 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
           >
             <Stack
               direction="row"
-              alignItems="center"
               spacing={1}
+              onClick={() => {
+                if (print.author) navigate(`/authors/${print.author.id}`);
+                else if (showViewerAsAuthor) navigate(`/authors/${SELF_AUTHOR_ID}`);
+              }}
               sx={{
+                alignItems: "center",
                 width: "fit-content",
                 cursor: print.author || showViewerAsAuthor ? "pointer" : "default",
                 color: (muiTheme) => muiTheme.thingport.headingText,
                 ...(print.author || showViewerAsAuthor ? { "&:hover": { color: "primary.main" } } : undefined),
-              }}
-              onClick={() => {
-                if (print.author) navigate(`/authors/${print.author.id}`);
-                else if (showViewerAsAuthor) navigate(`/authors/${SELF_AUTHOR_ID}`);
               }}
             >
               <Avatar
@@ -152,7 +166,14 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
 
         {sourceLink && (
           <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
               {t("models:detail.source")}
             </Typography>
             <Link
@@ -171,7 +192,14 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
 
         {print.category_id && print.category_name && (
           <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
               {t("models:detail.category")}
             </Typography>
             <ButtonBase
@@ -187,7 +215,12 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
               }}
             >
               <FolderIcon fontSize="small" />
-              <Typography variant="body2" fontWeight={600}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {print.category_name}
               </Typography>
             </ButtonBase>
@@ -196,18 +229,33 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
 
         {typeof print.total_size === "number" && (
           <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
               {t("models:detail.size")}
             </Typography>
             <Stack
               direction="row"
-              alignItems="center"
               spacing={0.75}
               title={t("models:detail.sizeHint")}
-              sx={{ width: "fit-content", color: (muiTheme) => muiTheme.thingport.headingText }}
+              sx={{
+                alignItems: "center",
+                width: "fit-content",
+                color: (muiTheme) => muiTheme.thingport.headingText,
+              }}
             >
               <StorageIcon fontSize="small" />
-              <Typography variant="body2" fontWeight={600}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {formatFileSize(print.total_size)}
               </Typography>
             </Stack>
@@ -284,25 +332,47 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
         <Stack direction="row" spacing={1.5}>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="center"
             spacing={0.75}
-            sx={{ flex: 1, py: 1, border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "center",
+              flex: 1,
+              py: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
           >
             <VisibilityIcon fontSize="small" sx={{ color: "text.secondary" }} />
-            <Typography variant="body2" fontWeight={600}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {print.view_count}
             </Typography>
           </Stack>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="center"
             spacing={0.75}
-            sx={{ flex: 1, py: 1, border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "center",
+              flex: 1,
+              py: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
           >
             <PrintIcon fontSize="small" sx={{ color: "text.secondary" }} />
-            <Typography variant="body2" fontWeight={600}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               <RollingNumber value={print.print_count} />
             </Typography>
           </Stack>

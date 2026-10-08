@@ -71,17 +71,37 @@ export default function SlicerPicker({ onUnauthorized }: Props) {
 
   return (
     <Box>
-      <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 600,
+          color: (muiTheme) => muiTheme.thingport.headingText,
+        }}
+      >
         {t("profile.slicer.heading")}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 1.5,
+        }}
+      >
         {t("profile.slicer.description")}
       </Typography>
       <Paper
         variant="outlined"
         sx={{ p: 2.5, borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider") }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          useFlexGap
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <FormControl size="small" disabled={loading || saving} sx={{ minWidth: 220 }}>
             <InputLabel id="profile-slicer-select-label">{t("profile.slicer.label")}</InputLabel>
             <Select
@@ -100,7 +120,14 @@ export default function SlicerPicker({ onUnauthorized }: Props) {
           {saving && <CircularProgress size={16} />}
         </Stack>
         {isBridgedSlicer(value) && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: "block",
+              mt: 1,
+            }}
+          >
             {t("profile.slicer.bridgeRequiredPrefix", {
               slicer: SLICER_OPTIONS.find((opt) => opt.id === value)?.label ?? value,
             })}{" "}

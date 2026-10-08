@@ -45,7 +45,12 @@ export default function AuthPage({ onSuccess, apiUp, allowRegistrations, passwor
         <Box sx={{ display: "flex", justifyContent: "center" }}>
           <Wordmark size="lg" />
         </Box>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("auth.subtitle")}
         </Typography>
       </Stack>

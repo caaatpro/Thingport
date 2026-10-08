@@ -96,8 +96,21 @@ export default function ModelFilesPanel({ print, onUnauthorized, onUpdated }: Pr
 
   return (
     <Paper variant="outlined" sx={{ mt: 3, p: 2, borderRadius: "12px", borderColor: dividerBorderColor }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1,
+        }}
+      >
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 700,
+            color: (muiTheme) => muiTheme.thingport.headingText,
+          }}
+        >
           {t("models:files.title", { count: totalFiles })}
         </Typography>
         {totalFiles > 1 && (
@@ -118,13 +131,35 @@ export default function ModelFilesPanel({ print, onUnauthorized, onUpdated }: Pr
           const failed = plate.processing_status === "failed";
           const pending = plate.processing_status === "queued" || plate.processing_status === "processing";
           return (
-            <Stack key={plate.id} direction="row" alignItems="center" spacing={1.5} sx={{ py: 1 }}>
+            <Stack
+              key={plate.id}
+              direction="row"
+              spacing={1.5}
+              sx={{
+                alignItems: "center",
+                py: 1,
+              }}
+            >
               <PlateThumbnail plate={plate} size={48} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap title={plate.filename}>
+                <Typography
+                  variant="body2"
+                  noWrap
+                  title={plate.filename}
+                  sx={{
+                    fontWeight: 600,
+                  }}
+                >
                   {plate.filename}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                  }}
+                >
                   {plateMeta(plate, t)}
                 </Typography>
               </Box>
@@ -144,15 +179,34 @@ export default function ModelFilesPanel({ print, onUnauthorized, onUpdated }: Pr
         })}
 
         {preparedSeparate && (
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ py: 1 }}>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              alignItems: "center",
+              py: 1,
+            }}
+          >
             <Box sx={{ width: 48, height: 48, display: "grid", placeItems: "center", color: "text.secondary" }}>
               <AttachFileIcon />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} noWrap title={print.slicer_filename ?? undefined}>
+              <Typography
+                variant="body2"
+                noWrap
+                title={print.slicer_filename ?? undefined}
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {print.slicer_filename}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("models:files.prepared")}
               </Typography>
             </Box>
@@ -171,15 +225,35 @@ export default function ModelFilesPanel({ print, onUnauthorized, onUpdated }: Pr
         )}
 
         {supporting.map((file) => (
-          <Stack key={file.id} direction="row" alignItems="center" spacing={1.5} sx={{ py: 1 }}>
+          <Stack
+            key={file.id}
+            direction="row"
+            spacing={1.5}
+            sx={{
+              alignItems: "center",
+              py: 1,
+            }}
+          >
             <Box sx={{ width: 48, height: 48, display: "grid", placeItems: "center", color: "text.secondary" }}>
               <AttachFileIcon />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600} noWrap title={file.filename}>
+              <Typography
+                variant="body2"
+                noWrap
+                title={file.filename}
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {file.filename}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {`${t("models:files.supporting")} · ${formatFileSize(file.size)}`}
               </Typography>
             </Box>

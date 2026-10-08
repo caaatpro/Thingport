@@ -40,11 +40,24 @@ export default function ZipEntryList({ entries, selected, busy, noFilesLabel, on
             />
           }
           label={
-            <Stack direction="row" sx={{ width: "100%", minWidth: 0 }} alignItems="center" spacing={1}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                width: "100%",
+                minWidth: 0,
+              }}
+            >
               <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0 }}>
                 {entry.path}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {formatFileSize(entry.size)}
               </Typography>
             </Stack>
@@ -53,7 +66,12 @@ export default function ZipEntryList({ entries, selected, busy, noFilesLabel, on
       ))}
       {entries.length === 0 && (
         <Box sx={{ px: 1.5, py: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {noFilesLabel}
           </Typography>
         </Box>

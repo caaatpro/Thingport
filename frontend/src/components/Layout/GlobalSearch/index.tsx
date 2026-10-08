@@ -157,7 +157,12 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
         slotProps={{ paper: { sx: { width: anchorWidth, mt: 0, maxHeight: 480, overflow: "auto" } } }}
       >
         {loading && (
-          <Stack alignItems="center" sx={{ py: 3 }}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              py: 3,
+            }}
+          >
             <CircularProgress size={20} />
           </Stack>
         )}
@@ -167,7 +172,13 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
           </Typography>
         )}
         {!loading && !error && result && !hasResults && (
-          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              p: 2,
+            }}
+          >
             {t("app:search.noResults", { query: trimmedQuery })}
           </Typography>
         )}
@@ -177,8 +188,14 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
               <Box sx={{ py: 0.5 }}>
                 <Typography
                   variant="caption"
-                  fontWeight={700}
-                  sx={{ display: "block", px: 2, pt: 1, pb: 0.5, color: "text.secondary" }}
+                  sx={{
+                    fontWeight: 700,
+                    display: "block",
+                    px: 2,
+                    pt: 1,
+                    pb: 0.5,
+                    color: "text.secondary",
+                  }}
                 >
                   {t("app:search.sectionModels")}
                 </Typography>
@@ -196,9 +213,11 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                       </ListItemAvatar>
                       <ListItemText
                         primary={print.title || print.name}
-                        primaryTypographyProps={{ noWrap: true }}
                         secondary={print.category_name || undefined}
-                        secondaryTypographyProps={{ noWrap: true }}
+                        slotProps={{
+                          primary: { noWrap: true },
+                          secondary: { noWrap: true },
+                        }}
                       />
                     </ListItemButton>
                   ))}
@@ -209,8 +228,14 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
               <Box sx={{ py: 0.5 }}>
                 <Typography
                   variant="caption"
-                  fontWeight={700}
-                  sx={{ display: "block", px: 2, pt: 1, pb: 0.5, color: "text.secondary" }}
+                  sx={{
+                    fontWeight: 700,
+                    display: "block",
+                    px: 2,
+                    pt: 1,
+                    pb: 0.5,
+                    color: "text.secondary",
+                  }}
                 >
                   {t("app:search.sectionCollections")}
                 </Typography>
@@ -224,8 +249,10 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                       </ListItemAvatar>
                       <ListItemText
                         primary={collection.name}
-                        primaryTypographyProps={{ noWrap: true }}
                         secondary={t("app:search.modelCount", { count: collection.item_count })}
+                        slotProps={{
+                          primary: { noWrap: true },
+                        }}
                       />
                     </ListItemButton>
                   ))}
@@ -236,8 +263,14 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
               <Box sx={{ py: 0.5 }}>
                 <Typography
                   variant="caption"
-                  fontWeight={700}
-                  sx={{ display: "block", px: 2, pt: 1, pb: 0.5, color: "text.secondary" }}
+                  sx={{
+                    fontWeight: 700,
+                    display: "block",
+                    px: 2,
+                    pt: 1,
+                    pb: 0.5,
+                    color: "text.secondary",
+                  }}
                 >
                   {t("app:search.sectionTags")}
                 </Typography>
@@ -254,8 +287,10 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                       </ListItemAvatar>
                       <ListItemText
                         primary={tagResult.tag}
-                        primaryTypographyProps={{ noWrap: true }}
                         secondary={t("app:search.modelCount", { count: tagResult.count })}
+                        slotProps={{
+                          primary: { noWrap: true },
+                        }}
                       />
                     </ListItemButton>
                   ))}

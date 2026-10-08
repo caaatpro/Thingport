@@ -73,7 +73,12 @@ export default function CollectionFormModal({ collection, onClose, onSubmit }: P
             minRows={3}
           />
           <Stack spacing={0.5}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("models:collections.form.tagsLabel")}
             </Typography>
             <TagInput

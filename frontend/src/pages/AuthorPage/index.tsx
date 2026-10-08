@@ -176,7 +176,12 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
 
   if (loading) {
     return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress size={22} />
       </Stack>
     );
@@ -184,7 +189,14 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
 
   if (notFound || (!isSelf && !author)) {
     return (
-      <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+      <Stack
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          py: 8,
+          color: "text.secondary",
+        }}
+      >
         <Typography variant="body2">{t("models:author.notFound")}</Typography>
       </Stack>
     );
@@ -234,17 +246,37 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
             <Avatar src={avatarUrl} sx={{ width: 112, height: 112, fontSize: 40 }}>
               <PersonIcon fontSize="large" />
             </Avatar>
-            <Typography variant="h5" fontWeight={700} sx={{ mt: 2 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                mt: 2,
+              }}
+            >
               {displayName}
             </Typography>
             {!isSelf && author?.handle && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mt: 0.25,
+                }}
+              >
                 @{author.handle}
               </Typography>
             )}
             {isSelf
               ? myLinks.length > 0 && (
-                  <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ mt: 1.5 }}>
+                  <Stack
+                    direction="row"
+                    useFlexGap
+                    spacing={1}
+                    sx={{
+                      flexWrap: "wrap",
+                      mt: 1.5,
+                    }}
+                  >
                     {myLinks.map((linked) => {
                       const info = printProviderInfo(linked.provider);
                       return (
@@ -261,7 +293,15 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
                   </Stack>
                 )
               : (providerInfo || linkedToMe || canClaim) && (
-                  <Stack direction="row" flexWrap="wrap" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      mt: 1.5,
+                    }}
+                  >
                     {providerInfo && profileUrl && (
                       <Box
                         component="a"
@@ -286,9 +326,22 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
                       </Box>
                     )}
                     {linkedToMe && (
-                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: "success.main" }}>
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        sx={{
+                          alignItems: "center",
+                          color: "success.main",
+                        }}
+                      >
                         <CheckCircleIcon sx={{ fontSize: 16 }} />
-                        <Typography variant="caption" fontWeight={600} color="inherit">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 600,
+                            color: "inherit",
+                          }}
+                        >
                           {t("models:author.linkedBadge")}
                         </Typography>
                       </Stack>
@@ -301,7 +354,14 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
                   </Stack>
                 )}
 
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 700,
+                mt: 3,
+                mb: 1,
+              }}
+            >
               {t("models:author.bio")}
             </Typography>
             <Typography
@@ -313,7 +373,13 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
           </Box>
 
           <Box sx={{ minWidth: 0, pt: 3, pb: 3 }}>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                mb: 2,
+              }}
+            >
               {t("models:pageTitle")}
             </Typography>
             {items.length ? (
@@ -347,9 +413,23 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
                   ))}
                 </Box>
                 {hasMore && (
-                  <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
+                  <Stack
+                    ref={loadMoreSentinelRef}
+                    direction="row"
+                    sx={{
+                      justifyContent: "center",
+                      py: 1,
+                    }}
+                  >
                     {loadingMore && (
-                      <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: "center",
+                          color: "text.secondary",
+                        }}
+                      >
                         <CircularProgress size={14} />
                         <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
                       </Stack>
@@ -358,7 +438,12 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
                 )}
               </Stack>
             ) : (
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("models:author.noModels")}
               </Typography>
             )}

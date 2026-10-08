@@ -71,7 +71,12 @@ export default function ResetPasswordPage({ onSuccess }: Props) {
   let content: React.ReactNode;
   if (linkError) {
     content = (
-      <Stack spacing={2} alignItems="center">
+      <Stack
+        spacing={2}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Alert severity="error" sx={{ width: "100%" }}>
           {linkError}
         </Alert>
@@ -82,9 +87,19 @@ export default function ResetPasswordPage({ onSuccess }: Props) {
     );
   } else if (!accountEmail) {
     content = (
-      <Stack spacing={2} alignItems="center">
+      <Stack
+        spacing={2}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <CircularProgress size={28} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("auth.resetPassword.checking")}
         </Typography>
       </Stack>
@@ -94,7 +109,12 @@ export default function ResetPasswordPage({ onSuccess }: Props) {
       <Box component="form" onSubmit={handleSubmit} sx={{ textAlign: "left" }}>
         <Stack spacing={2}>
           <Typography variant="h6">{t("auth.resetPassword.heading")}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("auth.resetPassword.forAccount", { email: accountEmail })}
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}

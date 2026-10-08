@@ -175,7 +175,14 @@ function CategoryRow({
   if (editing) {
     return (
       <ListItem ref={nodeRef} style={style} disableGutters sx={{ pl: indent, py: 0.5 }}>
-        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ width: "100%" }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+            width: "100%",
+          }}
+        >
           <TextField
             size="small"
             fullWidth
@@ -245,7 +252,13 @@ function CategoryRow({
               hasDetails ? (
                 <Stack spacing={0.25} sx={{ py: 0.25 }}>
                   {metaTitle && (
-                    <Typography variant="caption" fontWeight={700} sx={{ display: "block" }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        display: "block",
+                      }}
+                    >
                       {metaTitle}
                     </Typography>
                   )}
@@ -293,9 +306,11 @@ function CategoryRow({
       {dragHandle}
       <Typography
         variant="body2"
-        fontWeight={depth === 0 ? 600 : 400}
         noWrap
-        sx={{ pr: `${actionCount * ACTION_BUTTON_PX + 8}px` }}
+        sx={{
+          fontWeight: depth === 0 ? 600 : 400,
+          pr: `${actionCount * ACTION_BUTTON_PX + 8}px`,
+        }}
       >
         {name}
       </Typography>
@@ -377,7 +392,15 @@ function InlineAddRow({
     if (trimmed) await onAdd(trimmed);
   };
   return (
-    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ pl: `${depth * INDENT_PX}px`, py: 0.5 }}>
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+        pl: `${depth * INDENT_PX}px`,
+        py: 0.5,
+      }}
+    >
       <TextField
         size="small"
         fullWidth
@@ -438,7 +461,14 @@ function AddRow({
   }
 
   return (
-    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ py: 0.5 }}>
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+        py: 0.5,
+      }}
+    >
       <TextField
         inputRef={inputRef}
         size="small"
@@ -685,7 +715,13 @@ export default function CategoryManagerModal({
                 })}
 
                 {!tree.roots.length && (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.secondary",
+                      py: 1,
+                    }}
+                  >
                     {t("models:categories.manager.noCategories")}
                   </Typography>
                 )}
