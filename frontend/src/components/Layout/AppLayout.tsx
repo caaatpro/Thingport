@@ -157,9 +157,9 @@ function AppLayoutShell({
         }}
       >
         <Sidebar isAdmin={isAdmin} onSelectCategory={onSelectCategory} bookmarksVersion={bookmarksVersion} />
-        <Box component="main" sx={{ flex: 1, p: 2, pt: 0 }}>
+        <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
           {apiUp === false && (
-            <Alert severity="error" sx={{ mb: 1.5 }}>
+            <Alert severity="error" sx={{ mx: { xs: 2, md: 4 }, mt: 2 }}>
               {t("shell.apiUnreachable")}
             </Alert>
           )}
@@ -178,7 +178,9 @@ function AppLayoutShell({
             onOpenProfile={onOpenProfile}
             onLogout={onLogout}
           />
-          <PageHeaderContext.Provider value={setPageHeader}>{children}</PageHeaderContext.Provider>
+          <Box sx={{ px: { xs: 2, md: 4 }, pt: 3, pb: 8, maxWidth: 1720, mx: "auto" }}>
+            <PageHeaderContext.Provider value={setPageHeader}>{children}</PageHeaderContext.Provider>
+          </Box>
         </Box>
       </Box>
       <ImportProgressBar />

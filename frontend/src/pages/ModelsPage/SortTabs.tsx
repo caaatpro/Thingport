@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { type PrintSortMode } from "../../api/prints";
 
 const SORT_MODES: PrintSortMode[] = ["newest", "popular", "downloads"];
@@ -14,23 +14,18 @@ type Props = {
 export default function SortTabs({ value, onChange }: Props) {
   const { t } = useTranslation("models");
   return (
-    <Stack direction="row" spacing={3}>
+    <ToggleButtonGroup
+      exclusive
+      size="small"
+      value={value}
+      aria-label={t("sort.label", { defaultValue: "Sort" })}
+      onChange={(_, mode: PrintSortMode | null) => mode && onChange(mode)}
+    >
       {SORT_MODES.map((mode) => (
-        <Typography
-          key={mode}
-          variant="body2"
-          onClick={() => onChange(mode)}
-          sx={{
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: value === mode ? 700 : 500,
-            color: value === mode ? "primary.main" : "text.secondary",
-            "&:hover": { color: "primary.main" },
-          }}
-        >
+        <ToggleButton key={mode} value={mode}>
           {t(`sort.${mode}`)}
-        </Typography>
+        </ToggleButton>
       ))}
-    </Stack>
+    </ToggleButtonGroup>
   );
 }

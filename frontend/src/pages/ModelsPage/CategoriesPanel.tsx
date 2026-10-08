@@ -100,7 +100,7 @@ export default function CategoriesPanel({
               ),
             }}
           />
-          {(isRoot || children.length > 0) && (
+          {children.length > 0 && (
             <ChevronRightIcon
               fontSize="small"
               sx={{
@@ -140,11 +140,15 @@ export default function CategoriesPanel({
       <Paper
         variant="outlined"
         sx={{
-          width: 260,
+          width: 232,
           flexShrink: 0,
-          borderRadius: "12px",
-          p: 1.5,
+          borderRadius: "14px",
+          p: 1,
           alignSelf: "flex-start",
+          position: "sticky",
+          top: 80,
+          maxHeight: "calc(100vh - 96px)",
+          overflowY: "auto",
           bgcolor: "background.paper",
           borderColor: dividerBorderColor,
         }}

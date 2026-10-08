@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import type { Theme } from "@mui/material/styles";
-import { dividerBorderColor } from "../../../theme";
+import type { SxProps, Theme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
@@ -12,19 +12,18 @@ import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
 import Paper from "@mui/material/Paper";
-import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
-import ViewInArIcon from "@mui/icons-material/ViewInAr";
-import CollectionsIcon from "@mui/icons-material/Collections";
-import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
+import SpaceDashboardOutlinedIcon from "@mui/icons-material/SpaceDashboardOutlined";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
+import CollectionsOutlinedIcon from "@mui/icons-material/CollectionsOutlined";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import DownloadIcon from "@mui/icons-material/Download";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 import {
   DndContext,
   DragOverlay,
@@ -44,55 +43,102 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Wordmark from "../../Wordmark";
+import BrandMark from "../../BrandMark";
 import { type BookmarkEntry, bookmarksApi } from "../../../api/bookmarks";
 
-const SIDEBAR_WIDTH = 240;
+const SIDEBAR_WIDTH = 248;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "thingport_sidebar_collapsed";
 
-function navRowSx(selected: boolean) {
-  const color = (theme: Theme) => (selected ? theme.thingport.selectedNavText : theme.thingport.navInactiveText);
+/** One row of the navigation. The selected row gets a tint, a bar on its left edge and bolder text. */
+function navRowSx(selected: boolean, collapsed = false): SxProps<Theme> {
   return {
-    color,
-    "& .MuiListItemIcon-root": { color },
-    ...(selected
-      ? {
-          background: (theme: Theme) => theme.thingport.selectedNavBackground,
-          "&.Mui-selected, &.Mui-selected:hover": {
-            background: (theme: Theme) => theme.thingport.selectedNavBackground,
-          },
-        }
-      : {
-          // Dark mode: brighten the label instead of tinting the background on hover.
-          "&:hover": (theme: Theme) =>
-            theme.palette.mode === "dark"
-              ? { backgroundColor: "transparent", color: "#fff", "& .MuiListItemIcon-root": { color: "#fff" } }
-              : {},
-        }),
+    position: "relative",
+    minHeight: 40,
+    mb: 0.25,
+    px: collapsed ? 0 : 1.25,
+    justifyContent: collapsed ? "center" : "flex-start",
+    borderRadius: "10px",
+    color: (theme: Theme) => (selected ? theme.thingport.selectedNavText : theme.thingport.navInactiveText),
+    fontWeight: selected ? 650 : 500,
+    "& .MuiListItemIcon-root": { minWidth: collapsed ? 0 : 34, color: "inherit" },
+    "& .MuiListItemText-primary": { fontWeight: "inherit", fontSize: "0.875rem" },
+    "&:hover": {
+      backgroundColor: (theme: Theme) =>
+        selected ? theme.thingport.selectedNavBackground : theme.palette.action.hover,
+      color: (theme: Theme) => (selected ? theme.thingport.selectedNavText : theme.palette.text.primary),
+    },
+    ...(selected && {
+      backgroundColor: (theme: Theme) => theme.thingport.selectedNavBackground,
+      "&.Mui-selected, &.Mui-selected:hover": {
+        backgroundColor: (theme: Theme) => theme.thingport.selectedNavBackground,
+      },
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        left: collapsed ? 4 : -8,
+        top: 9,
+        bottom: 9,
+        width: 3,
+        borderRadius: 3,
+        backgroundColor: (theme: Theme) => theme.thingport.selectedNavText,
+      },
+    }),
   };
 }
 
-function CollapsedNavIcon({
+function NavItem({
   icon,
   label,
   selected,
+  collapsed,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   selected: boolean;
+  collapsed: boolean;
   onClick: () => void;
 }) {
-  return (
+  const row = (
+    <ListItemButton
+      selected={selected}
+      onClick={onClick}
+      aria-current={selected ? "page" : undefined}
+      aria-label={collapsed ? label : undefined}
+      sx={navRowSx(selected, collapsed)}
+    >
+      <ListItemIcon>{icon}</ListItemIcon>
+      {!collapsed && <ListItemText primary={label} slotProps={{ primary: { noWrap: true } }} />}
+    </ListItemButton>
+  );
+  return collapsed ? (
     <Tooltip title={label} placement="right">
-      <ListItemButton
-        selected={selected}
-        onClick={onClick}
-        sx={{ borderRadius: 1, mb: 0.5, justifyContent: "center", px: 0, ...navRowSx(selected) }}
-      >
-        <ListItemIcon sx={{ minWidth: 0 }}>{icon}</ListItemIcon>
-      </ListItemButton>
+      {row}
     </Tooltip>
+  ) : (
+    row
+  );
+}
+
+function GroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography
+      variant="caption"
+      sx={{
+        display: "block",
+        px: 1.5,
+        pt: 2,
+        pb: 0.75,
+        fontWeight: 650,
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+        fontSize: "0.6875rem",
+        color: (theme) => theme.palette.text.disabled,
+      }}
+    >
+      {children}
+    </Typography>
   );
 }
 
@@ -134,31 +180,27 @@ function SortableBookmarkRow({
       onClick={onNavigate}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       sx={{
-        borderRadius: 1,
-        mb: 0.5,
+        ...navRowSx(selected),
         cursor: "grab",
         touchAction: "none",
         // The DragOverlay shows the dragged row; this one stays as a faint placeholder.
         opacity: isDragging ? 0.4 : 1,
-        ...navRowSx(selected),
+        "& .drag-handle": { opacity: 0, transition: "opacity .15s" },
+        "&:hover .drag-handle": { opacity: 1 },
       }}
     >
-      <ListItemIcon sx={{ minWidth: 30 }}>
-        <BookmarkIcon fontSize="small" />
+      <ListItemIcon>
+        <BookmarkBorderIcon fontSize="small" />
       </ListItemIcon>
-      <ListItemText
-        primary={label}
-        slotProps={{
-          primary: { variant: "body2", noWrap: true },
-        }}
-      />
-      <DragIndicatorIcon fontSize="small" sx={{ ml: "auto", flexShrink: 0, color: "text.disabled" }} />
+      <ListItemText primary={label} slotProps={{ primary: { noWrap: true } }} />
+      <DragIndicatorIcon className="drag-handle" fontSize="small" sx={{ ml: "auto", flexShrink: 0, color: "text.disabled" }} />
     </ListItemButton>
   );
 }
 
 export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }: Props) {
   const { t } = useTranslation(["app", "common"]);
+  const muiTheme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
@@ -264,10 +306,10 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
         display: "flex",
         flexDirection: "column",
         borderRight: "1px solid",
-        borderColor: dividerBorderColor,
+        borderColor: "divider",
         bgcolor: "background.paper",
         overflow: "hidden",
-        transition: (theme) => theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),
+        transition: (theme) => theme.transitions.create("width", { duration: theme.transitions.duration.shorter }),
       }}
     >
       <Stack
@@ -276,187 +318,90 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
           alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
           px: collapsed ? 1 : 2,
-          pt: "20px",
-          pb: "20px",
+          height: 64,
+          flexShrink: 0,
         }}
       >
-        {!collapsed && (
-          <Link
-            component={RouterLink}
-            to="/"
-            aria-label={t("sidebar.dashboard")}
-            sx={{ display: "flex", alignItems: "center", lineHeight: 0 }}
-          >
-            <Wordmark size="lg" />
-          </Link>
+        <Link
+          component={RouterLink}
+          to="/"
+          aria-label={t("sidebar.dashboard")}
+          sx={{ display: collapsed ? "none" : "flex", alignItems: "center", lineHeight: 0 }}
+        >
+          <Wordmark size="lg" />
+        </Link>
+        {collapsed && (
+          <Tooltip title={t("sidebar.expandSidebar")} placement="right">
+            <IconButton onClick={toggleCollapsed} aria-label={t("sidebar.expandSidebar") ?? undefined} sx={{ p: 0.75 }}>
+              <BrandMark theme={muiTheme.palette.mode} size="md" />
+            </IconButton>
+          </Tooltip>
         )}
-        <Tooltip title={collapsed ? t("sidebar.expandSidebar") : t("sidebar.collapseSidebar")}>
-          <IconButton size="small" onClick={toggleCollapsed}>
-            {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
-          </IconButton>
-        </Tooltip>
+        {!collapsed && (
+          <Tooltip title={t("sidebar.collapseSidebar")}>
+            <IconButton
+              size="small"
+              onClick={toggleCollapsed}
+              aria-label={t("sidebar.collapseSidebar") ?? undefined}
+              sx={{ color: "text.secondary" }}
+            >
+              <KeyboardDoubleArrowLeftIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
 
-      <Box component="nav" sx={{ flex: 1, overflow: "auto", px: collapsed ? 0.5 : 1 }}>
+      <Box component="nav" sx={{ flex: 1, overflow: "auto", px: collapsed ? 1 : 1.5, pb: 1 }}>
         <List disablePadding>
-          {collapsed ? (
-            <CollapsedNavIcon
-              icon={<SpaceDashboardIcon fontSize="small" />}
-              label={t("sidebar.dashboard")}
-              selected={onDashboard}
-              onClick={() => navigate("/")}
-            />
-          ) : (
-            <ListItemButton
-              selected={onDashboard}
-              onClick={() => navigate("/")}
-              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onDashboard) }}
-            >
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <SpaceDashboardIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary={t("sidebar.dashboard")}
-                slotProps={{
-                  primary: { variant: "body2" },
-                }}
-              />
-            </ListItemButton>
-          )}
+          {!collapsed && <GroupLabel>{t("sidebar.library")}</GroupLabel>}
+          <NavItem
+            icon={<SpaceDashboardOutlinedIcon fontSize="small" />}
+            label={t("sidebar.dashboard")}
+            selected={onDashboard}
+            collapsed={collapsed}
+            onClick={() => navigate("/")}
+          />
+          <NavItem
+            icon={<ViewInArOutlinedIcon fontSize="small" />}
+            label={t("sidebar.models")}
+            selected={onModels}
+            collapsed={collapsed}
+            onClick={goToModelsRoot}
+          />
+          <NavItem
+            icon={<CollectionsOutlinedIcon fontSize="small" />}
+            label={t("sidebar.collections")}
+            selected={onCollections}
+            collapsed={collapsed}
+            onClick={() => navigate("/models/collections")}
+          />
+          <NavItem
+            icon={<LocalOfferOutlinedIcon fontSize="small" />}
+            label={t("sidebar.tags")}
+            selected={onTags && location.pathname === "/models/tags"}
+            collapsed={collapsed}
+            onClick={() => navigate("/models/tags")}
+          />
 
-          {collapsed ? (
-            <CollapsedNavIcon
-              icon={<ViewInArIcon fontSize="small" />}
-              label={t("sidebar.models")}
-              selected={onModels}
-              onClick={goToModelsRoot}
-            />
-          ) : (
-            <ListItemButton
-              selected={onModels}
-              onClick={goToModelsRoot}
-              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onModels) }}
-            >
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <ViewInArIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary={t("sidebar.models")}
-                slotProps={{
-                  primary: { variant: "body2" },
-                }}
-              />
-            </ListItemButton>
-          )}
-
-          {collapsed ? (
-            <CollapsedNavIcon
-              icon={<CollectionsIcon fontSize="small" />}
-              label={t("sidebar.collections")}
-              selected={onCollections}
-              onClick={() => navigate("/models/collections")}
-            />
-          ) : (
-            <ListItemButton
-              selected={onCollections}
-              onClick={() => navigate("/models/collections")}
-              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onCollections) }}
-            >
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <CollectionsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary={t("sidebar.collections")}
-                slotProps={{
-                  primary: { variant: "body2" },
-                }}
-              />
-            </ListItemButton>
-          )}
-
-          {collapsed ? (
-            <CollapsedNavIcon
-              icon={<LocalOfferIcon fontSize="small" />}
-              label={t("sidebar.tags")}
-              selected={onTags && location.pathname === "/models/tags"}
-              onClick={() => navigate("/models/tags")}
-            />
-          ) : (
-            <ListItemButton
-              selected={onTags && location.pathname === "/models/tags"}
-              onClick={() => navigate("/models/tags")}
-              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onTags && location.pathname === "/models/tags") }}
-            >
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <LocalOfferIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary={t("sidebar.tags")}
-                slotProps={{
-                  primary: { variant: "body2" },
-                }}
-              />
-            </ListItemButton>
-          )}
-
-          {collapsed ? (
-            <CollapsedNavIcon
-              icon={<DownloadIcon fontSize="small" />}
-              label={t("sidebar.downloads")}
-              selected={onDownload}
-              onClick={() => navigate("/downloads")}
-            />
-          ) : (
-            <ListItemButton
-              selected={onDownload}
-              onClick={() => navigate("/downloads")}
-              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onDownload) }}
-            >
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <DownloadIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary={t("sidebar.downloads")}
-                slotProps={{
-                  primary: { variant: "body2" },
-                }}
-              />
-            </ListItemButton>
-          )}
-
-          {/* Bookmarked tags + collections, interleaved in the user's own manual order -- only
-              once any exist, so an empty section never shows just a bare divider with nothing
-              under it. The "Bookmarks" label is a plain heading (nothing to click), so it's
-              skipped entirely while collapsed rather than rendered as dead space -- unlike every
-              row above, the collapsed rail has no way to show it at all. Dragging is only wired
-              up while expanded too: the collapsed rail is icon-only, with no room for a
-              meaningful drag target. */}
+          {/* Bookmarked tags and collections in the user's own order. Dragging only works while the
+              sidebar is expanded: the collapsed rail is icon-only, with no room for a drop target. */}
           {bookmarks.length > 0 && (
             <>
-              <Divider sx={{ my: 1 }} />
-              {!collapsed && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 700,
-                    display: "block",
-                    px: 1.5,
-                    mb: 0.5,
-                    color: (theme) => theme.thingport.navInactiveText,
-                  }}
-                >
-                  {t("sidebar.bookmarks")}
-                </Typography>
+              {collapsed ? (
+                <Box sx={{ my: 1, mx: 1.5, borderTop: "1px solid", borderColor: "divider" }} />
+              ) : (
+                <GroupLabel>{t("sidebar.bookmarks")}</GroupLabel>
               )}
               {collapsed ? (
                 bookmarks.map((entry) => {
                   const { href, label } = bookmarkTarget(entry);
                   return (
-                    <CollapsedNavIcon
+                    <NavItem
                       key={entry.id}
-                      icon={<BookmarkIcon fontSize="small" />}
+                      icon={<BookmarkBorderIcon fontSize="small" />}
                       label={label}
                       selected={location.pathname === href}
+                      collapsed
                       onClick={() => navigate(href)}
                     />
                   );
@@ -486,10 +431,10 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
                   <DragOverlay>
                     {draggingBookmark && (
                       <Paper
-                        elevation={6}
+                        elevation={8}
                         sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.75, cursor: "grabbing" }}
                       >
-                        <BookmarkIcon fontSize="small" />
+                        <BookmarkBorderIcon fontSize="small" />
                         <Typography variant="body2" noWrap>
                           {bookmarkTarget(draggingBookmark).label}
                         </Typography>
@@ -500,37 +445,46 @@ export default function Sidebar({ isAdmin, onSelectCategory, bookmarksVersion }:
               )}
             </>
           )}
-
-          {isAdmin && (
-            <>
-              <Divider sx={{ my: 1 }} />
-              {collapsed ? (
-                <CollapsedNavIcon
-                  icon={<AdminPanelSettingsIcon fontSize="small" />}
-                  label={t("sidebar.administration")}
-                  selected={onAdmin}
-                  onClick={() => navigate("/admin")}
-                />
-              ) : (
-                <ListItemButton
-                  selected={onAdmin}
-                  onClick={() => navigate("/admin")}
-                  sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onAdmin) }}
-                >
-                  <ListItemIcon sx={{ minWidth: 30 }}>
-                    <AdminPanelSettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={t("sidebar.administration")}
-                    slotProps={{
-                      primary: { variant: "body2" },
-                    }}
-                  />
-                </ListItemButton>
-              )}
-            </>
-          )}
         </List>
+      </Box>
+
+      <Box
+        sx={{
+          px: collapsed ? 1 : 1.5,
+          py: 1.25,
+          borderTop: "1px solid",
+          borderColor: "divider",
+          flexShrink: 0,
+          backgroundColor: (theme) => alpha(theme.palette.text.primary, 0.015),
+        }}
+      >
+        <NavItem
+          icon={<DownloadOutlinedIcon fontSize="small" />}
+          label={t("sidebar.downloads")}
+          selected={onDownload}
+          collapsed={collapsed}
+          onClick={() => navigate("/downloads")}
+        />
+        {isAdmin && (
+          <NavItem
+            icon={<AdminPanelSettingsOutlinedIcon fontSize="small" />}
+            label={t("sidebar.administration")}
+            selected={onAdmin}
+            collapsed={collapsed}
+            onClick={() => navigate("/admin")}
+          />
+        )}
+        {collapsed && (
+          <Tooltip title={t("sidebar.expandSidebar")} placement="right">
+            <IconButton
+              onClick={toggleCollapsed}
+              aria-label={t("sidebar.expandSidebar") ?? undefined}
+              sx={{ width: "100%", color: "text.secondary", mt: 0.5 }}
+            >
+              <KeyboardDoubleArrowRightIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
     </Box>
   );

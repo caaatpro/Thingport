@@ -26,6 +26,7 @@ import { printsApi } from "../../../api/prints";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 
 const MIN_QUERY_LENGTH = 2;
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
 const DEBOUNCE_MS = 250;
 
 type Props = {
@@ -38,11 +39,14 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const anchorRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The row Enter would open; moved with the arrow keys.
+  const [activeIndex, setActiveIndex] = useState(0);
   // Tracked with ResizeObserver so the dropdown matches the fluid search box's width.
   const [anchorWidth, setAnchorWidth] = useState<number>();
   const debouncedQuery = useDebouncedValue(query.trim(), DEBOUNCE_MS);
@@ -56,6 +60,25 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Ctrl/Cmd+K, or "/" outside a text field, jumps to the search box from anywhere.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const { key, metaKey, ctrlKey, altKey, target } = event;
+      const typing =
+        target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      const combo = (metaKey || ctrlKey) && key.toLowerCase() === "k";
+      if (combo || (key === "/" && !typing && !metaKey && !ctrlKey && !altKey)) {
+        event.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => setActiveIndex(0), [result]);
 
   // Clear the query on route change, but not on same-page changes like search params.
   useEffect(() => {
@@ -108,6 +131,34 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
   const dropdownOpen = focused && trimmedQuery.length >= MIN_QUERY_LENGTH;
   const hasResults = Boolean(result && (result.models.length || result.collections.length || result.tags.length));
 
+  // Every result in display order, so the arrow keys can walk across the three sections.
+  const flatPaths: string[] = result
+    ? [
+        ...result.models.map((p) => `/models/${p.id}`),
+        ...result.collections.map((c) => `/models/collections/${c.id}`),
+        ...result.tags.map((tg) => `/models/tags/${encodeURIComponent(tg.tag)}`),
+      ]
+    : [];
+  const collectionsStart = result?.models.length ?? 0;
+  const tagsStart = collectionsStart + (result?.collections.length ?? 0);
+
+  const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const { key } = event;
+    if (key === "Escape") {
+      event.currentTarget.blur();
+      closeDropdown();
+    } else if (key === "ArrowDown" && flatPaths.length) {
+      event.preventDefault();
+      setActiveIndex((i) => (i + 1) % flatPaths.length);
+    } else if (key === "ArrowUp" && flatPaths.length) {
+      event.preventDefault();
+      setActiveIndex((i) => (i - 1 + flatPaths.length) % flatPaths.length);
+    } else if (key === "Enter" && dropdownOpen && flatPaths[activeIndex]) {
+      event.preventDefault();
+      goTo(flatPaths[activeIndex]);
+    }
+  };
+
   return (
     <Box ref={anchorRef} sx={{ position: "relative", width: "100%" }}>
       <Paper
@@ -115,33 +166,58 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: 0.5,
-          px: 1.25,
-          py: 0.25,
-          borderRadius: 999,
-          bgcolor: (theme) => theme.thingport.pageBackground,
+          gap: 0.75,
+          px: 1.5,
+          height: 40,
+          borderRadius: "12px",
+          bgcolor: "background.paper",
+          borderColor: focused ? "primary.main" : "divider",
+          boxShadow: (theme) => (focused ? `0 0 0 3px ${theme.palette.action.focus}` : "none"),
+          transition: "border-color .15s, box-shadow .15s",
         }}
       >
-        <SearchIcon fontSize="small" sx={{ color: "text.disabled" }} />
+        <SearchIcon fontSize="small" sx={{ color: focused ? "primary.main" : "text.disabled" }} />
         <InputBase
           fullWidth
           size="small"
+          inputRef={inputRef}
           placeholder={t("app:search.placeholder") ?? undefined}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              (e.target as HTMLInputElement).blur();
-              closeDropdown();
-            }
+          onKeyDown={onInputKeyDown}
+          slotProps={{
+            input: { "aria-label": t("app:search.placeholder") ?? undefined, role: "combobox", "aria-expanded": dropdownOpen },
           }}
           sx={{ fontSize: 14 }}
         />
-        {query && (
+        {query ? (
           <IconButton size="small" onClick={() => setQuery("")} aria-label={t("app:search.clear") ?? undefined}>
             <CloseIcon fontSize="inherit" />
           </IconButton>
+        ) : (
+          !focused && (
+            <Box
+              component="kbd"
+              aria-hidden="true"
+              sx={{
+                flexShrink: 0,
+                px: 0.75,
+                py: 0.125,
+                fontFamily: "inherit",
+                fontSize: 11,
+                fontWeight: 600,
+                lineHeight: 1.6,
+                color: "text.secondary",
+                backgroundColor: (theme) => theme.thingport.surfaceMuted,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "6px",
+              }}
+            >
+              {IS_MAC ? "⌘K" : "Ctrl K"}
+            </Box>
+          )
         )}
       </Paper>
 
@@ -201,7 +277,12 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                 </Typography>
                 <List disablePadding>
                   {result.models.map((print) => (
-                    <ListItemButton key={print.id} onClick={() => goTo(`/models/${print.id}`)}>
+                    <ListItemButton
+                      key={print.id}
+                      selected={activeIndex === result.models.indexOf(print)}
+                      onMouseEnter={() => setActiveIndex(result.models.indexOf(print))}
+                      onClick={() => goTo(`/models/${print.id}`)}
+                    >
                       <ListItemAvatar sx={{ minWidth: 44 }}>
                         <Avatar
                           variant="rounded"
@@ -241,7 +322,12 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                 </Typography>
                 <List disablePadding>
                   {result.collections.map((collection) => (
-                    <ListItemButton key={collection.id} onClick={() => goTo(`/models/collections/${collection.id}`)}>
+                    <ListItemButton
+                      key={collection.id}
+                      selected={activeIndex === collectionsStart + result.collections.indexOf(collection)}
+                      onMouseEnter={() => setActiveIndex(collectionsStart + result.collections.indexOf(collection))}
+                      onClick={() => goTo(`/models/collections/${collection.id}`)}
+                    >
                       <ListItemAvatar sx={{ minWidth: 44 }}>
                         <Avatar variant="rounded" sx={{ width: 36, height: 36, bgcolor: "action.hover" }}>
                           <CollectionsIcon fontSize="small" sx={{ color: "text.disabled" }} />
@@ -278,6 +364,8 @@ export default function GlobalSearch({ onUnauthorized }: Props) {
                   {result.tags.map((tagResult) => (
                     <ListItemButton
                       key={tagResult.tag}
+                      selected={activeIndex === tagsStart + result.tags.indexOf(tagResult)}
+                      onMouseEnter={() => setActiveIndex(tagsStart + result.tags.indexOf(tagResult))}
                       onClick={() => goTo(`/models/tags/${encodeURIComponent(tagResult.tag)}`)}
                     >
                       <ListItemAvatar sx={{ minWidth: 44 }}>

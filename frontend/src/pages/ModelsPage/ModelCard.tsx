@@ -104,14 +104,13 @@ export default function ModelCard({
         position: "relative",
         cursor: "pointer",
         overflow: "hidden",
-        borderRadius: "12px",
-        borderColor: "transparent",
-        bgcolor: muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[100],
-        transition: "background-color .15s ease, box-shadow .15s ease, transform .15s ease",
+        borderRadius: "14px",
+        bgcolor: "background.paper",
+        boxShadow: muiTheme.thingport.shadowCard,
+        transition: "box-shadow .15s ease, transform .15s ease, border-color .15s ease",
         "&:hover": {
-          bgcolor: "background.paper",
-          boxShadow: 6,
-          borderColor: "divider",
+          boxShadow: muiTheme.thingport.shadowHover,
+          borderColor: muiTheme.thingport.borderStrong,
           transform: "translateY(-2px)",
         },
         "&:hover .model-card-actions": { opacity: 1 },
@@ -119,38 +118,48 @@ export default function ModelCard({
     >
       {/* zIndex 0 makes this its own stacking context, so the slideshow's layered slides stay
           under the provider badge and hover actions rendered after it. */}
-      <Box sx={{ position: "relative", zIndex: 0, width: "100%", aspectRatio: "4 / 3" }}>
+      <Box
+        sx={{
+          position: "relative",
+          zIndex: 0,
+          width: "100%",
+          aspectRatio: "4 / 3",
+          bgcolor: muiTheme.thingport.surfaceMuted,
+        }}
+      >
         {renderPreviewContent(item, "card", theme, t, previewMode)}
         {hovered && slideshowImages.length > 0 && (
           <HoverSlideshow images={slideshowImages} alt={item.title || item.name} />
         )}
       </Box>
 
-      <Tooltip
-        title={
-          item.source_provider
-            ? t("models:card.importedFrom", { provider: providerInfo.label })
-            : t("models:card.uploadedDirectly")
-        }
-      >
-        <Box
-          sx={{
-            position: "absolute",
-            top: 8,
-            left: 8,
-            px: 1,
-            py: 0.375,
-            borderRadius: 1,
-            fontSize: 11,
-            fontWeight: 600,
-            lineHeight: 1.4,
-            color: providerInfo.textColor ?? "#fff",
-            bgcolor: providerInfo.color,
-          }}
+      {item.source_provider && (
+        <Tooltip
+          title={
+            item.source_provider
+              ? t("models:card.importedFrom", { provider: providerInfo.label })
+              : t("models:card.uploadedDirectly")
+          }
         >
-          {providerInfo.label}
-        </Box>
-      </Tooltip>
+          <Box
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              px: 1,
+              py: 0.375,
+              borderRadius: 1,
+              fontSize: 11,
+              fontWeight: 600,
+              lineHeight: 1.4,
+              color: providerInfo.textColor ?? "#fff",
+              bgcolor: providerInfo.color,
+            }}
+          >
+            {providerInfo.label}
+          </Box>
+        </Tooltip>
+      )}
 
       <Stack
         className="model-card-actions"
@@ -244,7 +253,7 @@ export default function ModelCard({
           return (
             <Box sx={{ mt: 0.25 }}>
               {line1.length > 0 && (
-                <Typography variant="caption" sx={{ color: "#9aa0a6", display: "block" }}>
+                <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
                   {line1.join(" · ")}
                 </Typography>
               )}
@@ -253,7 +262,7 @@ export default function ModelCard({
                 spacing={0.75}
                 sx={{
                   alignItems: "center",
-                  color: "#9aa0a6",
+                  color: "text.secondary",
                   mt: 0.25,
                   minWidth: 0,
                 }}
@@ -339,8 +348,10 @@ export default function ModelCard({
               sx={{
                 alignItems: "center",
                 minWidth: 0,
-                color: "#858585",
-                ...(author || showViewerAsAuthor ? { cursor: "pointer", "&:hover": { color: "#00b800" } } : undefined),
+                color: "text.secondary",
+                ...(author || showViewerAsAuthor
+                  ? { cursor: "pointer", "&:hover": { color: "primary.main" } }
+                  : undefined),
               }}
             >
               <Avatar
@@ -354,7 +365,7 @@ export default function ModelCard({
               </Typography>
             </Stack>
           </AuthorHoverCard>
-          <Stack direction="row" spacing={1.5} sx={{ color: "#858585", flexShrink: 0 }}>
+          <Stack direction="row" spacing={1.5} sx={{ color: "text.secondary", flexShrink: 0 }}>
             <Stack
               direction="row"
               spacing={0.4}

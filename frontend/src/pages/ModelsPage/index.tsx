@@ -5,6 +5,8 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Skeleton from "@mui/material/Skeleton";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import { UnauthorizedError } from "../../api/client";
@@ -35,6 +37,8 @@ type Props = {
   previewMode: PreviewMode;
   viewer?: AuthUser | null;
 };
+
+const CARD_GRID_COLUMNS = "repeat(auto-fill, minmax(236px, 1fr))";
 
 export default function ModelsPage({
   categoryId,
@@ -276,24 +280,19 @@ export default function ModelsPage({
   return (
     <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-        <Stack direction="row" spacing={3}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={scope}
+          aria-label={t("scope.label", { defaultValue: "Show" })}
+          onChange={(_, next: typeof scope | null) => next && setScope(next)}
+        >
           {(["mine", "shared", "all"] as const).map((s) => (
-            <Typography
-              key={s}
-              variant="body2"
-              onClick={() => setScope(s)}
-              sx={{
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: scope === s ? 700 : 500,
-                color: scope === s ? "primary.main" : "text.secondary",
-                "&:hover": { color: "primary.main" },
-              }}
-            >
+            <ToggleButton key={s} value={s}>
               {t(`scope.${s}`)}
-            </Typography>
+            </ToggleButton>
           ))}
-        </Stack>
+        </ToggleButtonGroup>
         <SortTabs value={sortMode} onChange={setSortMode} />
       </Box>
       <Stack
@@ -325,19 +324,14 @@ export default function ModelsPage({
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
-                columnGap: "20px",
-                rowGap: "20px",
-                "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-                "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-                "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-                "@media (max-width: 860px)": { gridTemplateColumns: "repeat(1, 1fr)" },
+                gridTemplateColumns: CARD_GRID_COLUMNS,
+                gap: "20px",
               }}
             >
               {Array.from({ length: 10 }).map((_, i) => (
                 <Box key={i}>
                   <Box sx={{ width: "100%", aspectRatio: "4 / 3" }}>
-                    <Skeleton variant="rounded" width="100%" height="100%" sx={{ borderRadius: "12px" }} />
+                    <Skeleton variant="rounded" width="100%" height="100%" sx={{ borderRadius: "14px" }} />
                   </Box>
                   <Skeleton variant="text" sx={{ mt: 1, width: "70%" }} />
                   <Skeleton variant="text" sx={{ width: "40%" }} />
@@ -349,14 +343,8 @@ export default function ModelsPage({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(5, 1fr)",
-                  columnGap: "20px",
-                  rowGap: "20px",
-                  "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(5, 1fr)" },
-                  "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-                  "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-                  "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-                  "@media (max-width: 860px)": { gridTemplateColumns: "repeat(1, 1fr)" },
+                  gridTemplateColumns: CARD_GRID_COLUMNS,
+                  gap: "20px",
                 }}
               >
                 {items.map((item) => (

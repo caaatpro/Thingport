@@ -81,7 +81,8 @@
       "collections": "Collections",
       "tags": "Tags",
       "downloads": "Downloads",
-      "bookmarks": "Bookmarks"
+      "bookmarks": "Bookmarks",
+      "library": "Library"
     },
     "uploadBar": {
       "uploading": "Uploading…",
