@@ -65,9 +65,9 @@ const importRequestSchema = z.object({
   // what trips MakerWorld's CAPTCHA.
   resolved_download_url: z.string().nullable().optional(),
   resolved_instance_id: z.string().nullable().optional(),
-  makerworld_design: z.record(z.unknown()).nullable().optional(),
+  makerworld_design: z.record(z.string(), z.unknown()).nullable().optional(),
   // Cults3D: title/description/image the extension read off the page.
-  page_meta: z.record(z.unknown()).nullable().optional(),
+  page_meta: z.record(z.string(), z.unknown()).nullable().optional(),
   resolved_files: z
     .array(
       z.object({

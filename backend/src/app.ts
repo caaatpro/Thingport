@@ -37,6 +37,12 @@ export function createApp(): Express {
   );
 
   app.use(express.json());
+  // Express 5 leaves req.body undefined when a request carries no body; handlers (and schemas whose
+  // fields all have defaults) expect the empty object Express 4 gave them.
+  app.use((req, _res, next) => {
+    req.body ??= {};
+    next();
+  });
 
   // The frontend's nginx proxies /api/* here unmodified.
   app.use("/api", healthRoutes);
