@@ -9,20 +9,6 @@ Collect, organize, preview, and manage your 3D printing models<br>
 from the places where you discover them.
 </p>
 
-<p>
-  <a href="https://thingport.net/"><b>Website</b></a> ·
-  <a href="https://thingport.net/docs/">Docs</a> ·
-  <a href="https://thingport.net/features/">Features</a> ·
-  <a href="https://thingport.net/blog/">Blog</a>
-</p>
-
-<p>
-  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/frontend-image.yml/badge.svg" alt="Frontend">
-  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/backend-image.yml/badge.svg" alt="Backend">
-  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/bridge-release.yml/badge.svg" alt="Slicer Bridge">
-  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/extension-release.yml/badge.svg" alt="Thingport Grab">
-</p>
-
 </div>
 
 ## About
@@ -262,13 +248,6 @@ This builds the images locally rather than pulling from GHCR.
 Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch,
 commit and pull request workflow, and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for how to run
 Thingport locally with hot reload.
-
-## Support
-
-If Thingport is useful to you, consider supporting its development:
-
-- [GitHub Sponsors](https://github.com/sponsors/TautvydasDerzinskas)
-- [Buy Me a Coffee](https://buymeacoffee.com/TautvydasDerzinskas)
 
 ## License
 

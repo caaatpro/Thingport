@@ -22,11 +22,7 @@ COPY . .
 RUN npx prisma generate && npm run build
 
 FROM node:24-alpine AS runtime
-# Set by build-image.yml to the commit that triggered this image's build -- exposed via
-# GET /settings/version-check so the admin settings page can tell whether a newer commit
-# touching backend/ has landed on main since this image was published. Left "unknown" for a
-# manual/local `docker build` with no --build-arg, which the update checker treats as
-# "can't check" rather than as outdated.
+# Set by build-image.yml to the commit that triggered this build; shown by GET /health so a deploy can be verified.
 ARG GIT_SHA=unknown
 ENV GIT_SHA=$GIT_SHA
 RUN apk add --no-cache openssl su-exec

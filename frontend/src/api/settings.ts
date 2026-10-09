@@ -51,23 +51,7 @@ export type DatabaseCredentialsInput = {
   password: string;
 };
 
-export type VersionCheck = {
-  backend_sha: string | null;
-  latest_backend_sha: string | null;
-  latest_frontend_sha: string | null;
-};
-
-// Inlined by Vite from the GIT_SHA build arg; null in dev, which the update checker treats as
-// "can't check".
-export const FRONTEND_GIT_SHA: string | null = (import.meta.env.VITE_GIT_SHA as string | undefined) || null;
-
 export const settingsApi = {
-  getVersionCheck: async (): Promise<VersionCheck> => {
-    const res = await fetch(`${apiBase()}/settings/version-check`, { headers: authHeaders() });
-    assertOk(res, "Failed to check for updates");
-    return res.json();
-  },
-
   getStorage: async (): Promise<StorageSettings> => {
     const res = await fetch(`${apiBase()}/settings/storage`, { headers: authHeaders() });
     assertOk(res, "Failed to load storage settings");

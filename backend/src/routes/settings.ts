@@ -35,7 +35,6 @@ import { verifyThingiverseAccessToken } from "../services/thingiverseApi";
 import { SLICER_IDS, getUserSlicer, setUserSlicer } from "../services/slicerPreferenceService";
 import { THEME_SELECTIONS, getUserTheme, setUserTheme } from "../services/themePreferenceService";
 import { getUserAuthorPreviewEnabled, setUserAuthorPreviewEnabled } from "../services/authorPreviewPreferenceService";
-import { checkForUpdates } from "../services/versionService";
 import { dropPreviewsAffectedBySimplification } from "../services/modelPreviewCache";
 
 const router = Router();
@@ -51,16 +50,6 @@ function storageSettingsOut(template: string, moved = 0, skipped = 0) {
     skipped,
   };
 }
-
-// Compares the latest backend/ and frontend/ commits on main against this build's commit. The
-// frontend compares its own baked-in commit against latest_frontend_sha.
-router.get(
-  "/settings/version-check",
-  requireAdmin,
-  asyncHandler(async (_req, res) => {
-    res.json(await checkForUpdates());
-  }),
-);
 
 router.get(
   "/settings/storage",

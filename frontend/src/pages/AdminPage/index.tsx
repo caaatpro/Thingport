@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
@@ -14,15 +13,12 @@ import PeopleIcon from "@mui/icons-material/People";
 import HistoryIcon from "@mui/icons-material/History";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CableIcon from "@mui/icons-material/Cable";
-import PublicIcon from "@mui/icons-material/Public";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import SyncIcon from "@mui/icons-material/Sync";
-import UpdateCheckSection from "./UpdateCheckSection";
 import { adminApi, type AdminOverview } from "../../api/admin";
 import { UnauthorizedError } from "../../api/client";
 import { useToast } from "../../components/ToastProvider";
 import { formatFileSize } from "../../utils/fileSize";
-import { THINGPORT_WEBSITE_URL } from "../../constants/website";
 
 type Section = {
   path: string;
@@ -240,8 +236,6 @@ export default function AdminPage({ onUnauthorized }: Props) {
         </Stack>
       )}
 
-      <UpdateCheckSection onUnauthorized={onUnauthorized} />
-
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
         {SECTIONS.map((section) => (
           <Paper
@@ -300,32 +294,6 @@ export default function AdminPage({ onUnauthorized }: Props) {
           </Paper>
         ))}
       </Box>
-
-      <Stack
-        direction="row"
-        spacing={3}
-        useFlexGap
-        sx={{
-          alignItems: "center",
-          flexWrap: "wrap",
-          px: 0.5,
-          color: "text.secondary",
-        }}
-      >
-        <Stack
-          direction="row"
-          spacing={1}
-          title={t("adminSettings.website.hint")}
-          sx={{
-            alignItems: "center",
-          }}
-        >
-          <PublicIcon fontSize="small" />
-          <Link href={THINGPORT_WEBSITE_URL} target="_blank" rel="noopener" variant="body2" underline="hover">
-            {t("adminSettings.website.link")}
-          </Link>
-        </Stack>
-      </Stack>
     </Stack>
   );
 }
