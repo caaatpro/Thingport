@@ -20,20 +20,22 @@ These are the contract with the frontend, the browser extension, deployed databa
 src/
   server.ts            boot: serve, recover jobs, start the processing queue
   app.ts               createApp(): middleware, mounts every module's routers under /api
-  config.ts            the only place that reads process.env
+  config.ts            typed settings from the environment
   db.ts                the Prisma client (and the admin database switch)
   http/                the web layer shared by every module
     route.ts           createRouter(): typed routes with access + zod body/query + return-the-JSON handlers
+    auth.ts            requireAuth / requireSession / requireAdmin (session and API-token checks)
     errors.ts          HttpError and badRequest / unauthorized / forbidden / notFound / conflict
     errorHandler.ts    the one place errors become { detail, code? }
-    requestLogger.ts, validate.ts (parse), upload.ts (multer)
-  lib/                 framework-free helpers (logger, files, zip, urls, concurrency, tags …)
+    cors.ts, rateLimit.ts, requestLogger.ts, upload.ts (multer), validate.ts (parse)
+  lib/                 framework-free helpers: logger, files, zip reader/writer, url, tags, concurrency,
+                       worker bootstrap, access roles
   modules/<name>/      one folder per feature area; the unit of ownership
-    routes.ts          the module's routers (thin: auth, validation, call a service)
-    service.ts …       business logic, no Express types in here
+    routes.ts          the module's routers (thin: access, validation, call a service)
+    *.ts               services and helpers, no Express types
     schemas.ts         zod schemas for its requests
     dto.ts             DB row → API JSON mappers (snake_case, as the API always was)
-    index.ts           the module's public surface: the ONLY file other modules may import from
+    index.ts           the module's public surface: the ONLY file other modules import from
     *.test.ts          tests live next to the code
   generated/           Prisma client (git-ignored)
 ```
@@ -53,7 +55,8 @@ admin`; default `user`). Validate with the `body`/`query` options (zod); return 
 - **Module boundaries.** Import another module only through its `index.ts`. Never reach into its files. Keep a module's
   exports small and named for what they do. A cycle between modules means the boundary is wrong: move the shared
   piece down into `lib/` or the module that owns it.
-- **Config.** Read environment variables only in `config.ts`; everything else imports typed values from it.
+- **Config.** `config.ts` is the home for environment settings; add new ones there and import the typed value
+  rather than reading the environment inside a module.
 - **Logging.** Use `logger` from `lib/logger` (levels via `LOG_LEVEL`), never `console.*`.
 - **Authorisation lives next to the data access.** Use the helpers in the prints/library access code
   (`printReadWhere`, `printWriteWhere`, `requireCollectionRole`, …) rather than writing ad-hoc `userId` filters.
