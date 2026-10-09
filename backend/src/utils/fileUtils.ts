@@ -1,6 +1,7 @@
 import path from "node:path";
 import mimeTypes from "mime-types";
 import { IMPORT_ALLOWED_EXTS } from "../config";
+import { HttpError } from "../http/errors";
 
 // The whole C0 and C1 range: C1 is what a mis-decoded header leaves behind, and downstream systems
 // (e.g. OneDrive backups) reject some of those characters.
@@ -35,16 +36,7 @@ export function parseContentDisposition(cd: string | null | undefined): string |
   return plainMatch ? decodeLatin1AsUtf8(plainMatch[1]) : null;
 }
 
-export class HttpError extends Error {
-  status: number;
-  // For the rare case the frontend must branch on why a request failed, e.g. EMAIL_NOT_VERIFIED.
-  code?: string;
-  constructor(status: number, message: string, code?: string) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
+export { HttpError };
 
 export function buildImportFilename(url: string, headers: Headers, override?: string | null): string {
   let name: string;
