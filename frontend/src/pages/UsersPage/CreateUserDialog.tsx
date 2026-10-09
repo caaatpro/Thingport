@@ -1,187 +1,142 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
-import MenuItem from "@mui/material/MenuItem";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { adminApi } from "../../api/admin";
-import { UnauthorizedError } from "../../api/client";
-import { copyText } from "../../utils/copyText";
-
-type Props = {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-  onUnauthorized?: () => void;
-};
+import { useId, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { adminApi } from "@/api/admin";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, Modal, Select } from "@/ui";
+import { CopyField } from "./UserDialogs";
 
 type Created = { email: string; generatedPassword: string | null };
 
-/** Creates the account directly -- the way to add people on an instance without outgoing email. */
-export default function CreateUserDialog({ open, onClose, onCreated, onUnauthorized }: Props) {
-  const { t } = useTranslation(["app", "common"]);
-  const [email, setEmail] = React.useState("");
-  const [name, setName] = React.useState("");
-  const [role, setRole] = React.useState<"ADMIN" | "MEMBER">("MEMBER");
-  const [password, setPassword] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [created, setCreated] = React.useState<Created | null>(null);
-  const [copied, setCopied] = React.useState(false);
+const ROLES = [
+  { value: "MEMBER", label: "Member" },
+  { value: "ADMIN", label: "Admin" },
+];
 
-  React.useEffect(() => {
-    if (!open) return;
-    setEmail("");
-    setName("");
-    setRole("MEMBER");
-    setPassword("");
-    setError(null);
-    setCreated(null);
-    setCopied(false);
-  }, [open]);
+/** Creates the account directly: the way to add people on an instance without outgoing email. */
+export default function CreateUserDialog({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  return open ? <CreateForm onClose={onClose} onCreated={onCreated} /> : null;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (saving) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await adminApi.createUser({
+function CreateForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const formId = useId();
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("MEMBER");
+  const [password, setPassword] = useState("");
+  const [created, setCreated] = useState<Created | null>(null);
+
+  const shortPassword = password.length > 0 && password.length < 8;
+  const create = useMutation({
+    mutationFn: () =>
+      adminApi.createUser({
         email: email.trim(),
         display_name: name.trim(),
-        role,
+        role: role === "ADMIN" ? "ADMIN" : "MEMBER",
         ...(password ? { password } : {}),
-      });
+      }),
+    onSuccess: (res) => {
       setCreated({ email: res.email, generatedPassword: res.generated_password });
       onCreated();
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setError(err instanceof Error ? err.message : t("adminSettings.users.create.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
-  const copyPassword = async () => {
-    if (!created?.generatedPassword) return;
-    setCopied(await copyText(created.generatedPassword));
-  };
+  if (created) {
+    return (
+      <Modal
+        open
+        onOpenChange={(next) => !next && onClose()}
+        title="User created"
+        size="sm"
+        hideClose
+        footer={
+          <Button variant="primary" onClick={onClose}>
+            Close
+          </Button>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted">
+            {created.generatedPassword
+              ? `Give this password to ${created.email}. It is shown only once; they can change it in their profile.`
+              : `The account is ready. ${created.email} can sign in with the password you set.`}
+          </p>
+          {created.generatedPassword ? (
+            <CopyField value={created.generatedPassword} label="Generated password" />
+          ) : null}
+        </div>
+      </Modal>
+    );
+  }
 
+  const canSubmit = Boolean(email.trim() && name.trim()) && !shortPassword;
   return (
-    <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="xs">
-      {created ? (
+    <Modal
+      open
+      onOpenChange={(next) => !next && onClose()}
+      title="Add a user"
+      description="The account is created right away and no email is sent. Leave the password empty to generate one."
+      size="sm"
+      locked={create.isPending}
+      footer={
         <>
-          <DialogTitle>{t("adminSettings.users.create.doneTitle")}</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2}>
-              <DialogContentText>
-                {created.generatedPassword
-                  ? t("adminSettings.users.create.generatedHint", { email: created.email })
-                  : t("adminSettings.users.create.noPasswordHint", { email: created.email })}
-              </DialogContentText>
-              {created.generatedPassword && (
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    value={created.generatedPassword}
-                    size="small"
-                    fullWidth
-                    onFocus={(e) => e.target.select()}
-                    slotProps={{
-                      input: { readOnly: true, sx: { fontFamily: "monospace" } },
-                    }}
-                  />
-                  <Button
-                    variant="outlined"
-                    startIcon={<ContentCopyIcon fontSize="small" />}
-                    onClick={() => void copyPassword()}
-                    sx={{ flexShrink: 0 }}
-                  >
-                    {copied ? t("adminSettings.users.create.copied") : t("adminSettings.users.create.copy")}
-                  </Button>
-                </Stack>
-              )}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button variant="contained" onClick={onClose}>
-              {t("adminSettings.users.create.close")}
-            </Button>
-          </DialogActions>
+          <Button onClick={onClose} disabled={create.isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} variant="primary" loading={create.isPending} disabled={!canSubmit}>
+            Create user
+          </Button>
         </>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <DialogTitle>{t("adminSettings.users.create.title")}</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ pt: 0.5 }}>
-              <DialogContentText>{t("adminSettings.users.create.description")}</DialogContentText>
-              {error && <Alert severity="error">{error}</Alert>}
-              <TextField
-                type="email"
-                label={t("adminSettings.users.create.emailLabel")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                size="small"
-                fullWidth
-                disabled={saving}
-              />
-              <TextField
-                label={t("adminSettings.users.create.nameLabel")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                size="small"
-                fullWidth
-                disabled={saving}
-              />
-              <TextField
-                select
-                label={t("adminSettings.users.create.roleLabel")}
-                value={role}
-                onChange={(e) => setRole(e.target.value as "ADMIN" | "MEMBER")}
-                size="small"
-                fullWidth
-                disabled={saving}
-              >
-                <MenuItem value="MEMBER">{t("adminSettings.users.roleMember")}</MenuItem>
-                <MenuItem value="ADMIN">{t("adminSettings.users.roleAdmin")}</MenuItem>
-              </TextField>
-              <TextField
-                label={t("adminSettings.users.create.passwordLabel")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                size="small"
-                fullWidth
-                disabled={saving}
-                autoComplete="off"
-                error={password.length > 0 && password.length < 8}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={onClose} disabled={saving}>
-              {t("common:cancel")}
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={saving || !email.trim() || !name.trim() || (password.length > 0 && password.length < 8)}
-            >
-              {saving ? t("adminSettings.users.create.creating") : t("adminSettings.users.create.submit")}
-            </Button>
-          </DialogActions>
-        </form>
-      )}
-    </Dialog>
+      }
+    >
+      <form
+        id={formId}
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSubmit && !create.isPending) create.mutate();
+        }}
+      >
+        {create.error ? <Alert tone="danger">{errorMessage(create.error, "Failed to create the user")}</Alert> : null}
+        <Field label="Email" required>
+          {(p) => (
+            <Input
+              {...p}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={create.isPending}
+            />
+          )}
+        </Field>
+        <Field label="Name" required>
+          {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} disabled={create.isPending} />}
+        </Field>
+        <Field label="Role">
+          {(p) => <Select id={p.id} value={role} onChange={setRole} options={ROLES} disabled={create.isPending} />}
+        </Field>
+        <Field
+          label="Password (optional, at least 8 characters)"
+          error={shortPassword ? "Use at least 8 characters, or leave it empty." : undefined}
+        >
+          {(p) => (
+            <Input
+              {...p}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="off"
+              disabled={create.isPending}
+            />
+          )}
+        </Field>
+      </form>
+    </Modal>
   );
 }

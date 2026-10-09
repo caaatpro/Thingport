@@ -1,19 +1,16 @@
-import Divider from "@mui/material/Divider";
-import Stack from "@mui/material/Stack";
-import type { PreviewMode } from "../../api/settings";
+import { PageHeader } from "@/ui";
 import PreviewsSection from "./PreviewsSection";
 import SimplifySection from "./SimplifySection";
 
-type Props = {
-  onUnauthorized?: () => void;
-  onPreviewModeChanged?: (mode: PreviewMode) => void;
-};
-
-export default function RenderingPage({ onUnauthorized, onPreviewModeChanged }: Props) {
+/** How 3D previews are produced for this instance. */
+export default function RenderingPage() {
   return (
-    <Stack spacing={4} divider={<Divider />}>
-      <PreviewsSection onUnauthorized={onUnauthorized} onSaved={onPreviewModeChanged} />
-      <SimplifySection onUnauthorized={onUnauthorized} />
-    </Stack>
+    <div className="mx-auto max-w-4xl">
+      <PageHeader title="Rendering" subtitle="How 3D previews are generated." backTo="/admin" />
+      <div className="space-y-4">
+        <PreviewsSection />
+        <SimplifySection />
+      </div>
+    </div>
   );
 }

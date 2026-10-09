@@ -1,98 +1,65 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import MarkEmailReadIcon from "@mui/icons-material/MarkEmailRead";
-import { authApi } from "../../api/auth";
+import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { MailCheck } from "lucide-react";
+import { authApi } from "@/api/auth";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input } from "@/ui";
 
-type Props = {
-  initialEmail: string;
-  onBack: () => void;
-};
+type Props = { initialEmail: string; onBack: () => void };
 
 /** The backend replies the same whether or not the email has an account, so "sent" is all we can say. */
 export default function ForgotPasswordPanel({ initialEmail, onBack }: Props) {
-  const { t } = useTranslation("app");
-  const [email, setEmail] = React.useState(initialEmail);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [sentTo, setSentTo] = React.useState<string | null>(null);
+  const [email, setEmail] = useState(initialEmail);
+  const send = useMutation({ mutationFn: (address: string) => authApi.forgotPassword(address) });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      await authApi.forgotPassword(email.trim());
-      setSentTo(email.trim());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("auth.forgotPassword.failed"));
-    } finally {
-      setLoading(false);
-    }
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    send.mutate(email.trim());
   };
 
-  if (sentTo) {
+  if (send.isSuccess) {
     return (
-      <Stack
-        spacing={2}
-        sx={{
-          alignItems: "center",
-          textAlign: "center",
-          py: 1,
-        }}
-      >
-        <MarkEmailReadIcon sx={{ fontSize: 40, color: "primary.main" }} />
-        <Typography variant="h6">{t("auth.forgotPassword.sentHeading")}</Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-          }}
-        >
-          {t("auth.forgotPassword.sentBody", { email: sentTo })}
-        </Typography>
-        <Button variant="outlined" onClick={onBack}>
-          {t("auth.forgotPassword.backToSignIn")}
-        </Button>
-      </Stack>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <MailCheck className="size-10 text-accent" strokeWidth={1.5} aria-hidden />
+        <h2 className="text-lg font-semibold text-fg">Check your email</h2>
+        <p className="text-sm text-muted">
+          If an account uses <strong className="font-medium text-fg">{send.variables}</strong>, we’ve sent it a link to
+          reset the password. The link expires in 1 hour.
+        </p>
+        <Button onClick={onBack}>Back to sign in</Button>
+      </div>
     );
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Stack spacing={2}>
-        <Typography variant="h6">{t("auth.forgotPassword.heading")}</Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-          }}
-        >
-          {t("auth.forgotPassword.body")}
-        </Typography>
-        {error && <Alert severity="error">{error}</Alert>}
-        <TextField
-          type="email"
-          label={t("auth.forgotPassword.emailLabel")}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="username"
-          required
-          fullWidth
-          size="small"
-        />
-        <Button type="submit" variant="contained" disabled={loading} fullWidth size="large">
-          {loading ? t("auth.forgotPassword.submitting") : t("auth.forgotPassword.submit")}
-        </Button>
-        <Button onClick={onBack} disabled={loading}>
-          {t("auth.forgotPassword.backToSignIn")}
-        </Button>
-      </Stack>
-    </Box>
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-lg font-semibold text-fg">Reset your password</h2>
+        <p className="mt-1 text-sm text-muted">
+          Enter your account’s email and we’ll send you a link to choose a new password.
+        </p>
+      </div>
+      {send.error ? (
+        <Alert tone="danger">{errorMessage(send.error, "Couldn’t send the email. Try again.")}</Alert>
+      ) : null}
+      <Field label="Email">
+        {(control) => (
+          <Input
+            {...control}
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="username"
+            required
+          />
+        )}
+      </Field>
+      <Button type="submit" variant="primary" size="lg" loading={send.isPending}>
+        {send.isPending ? "Sending…" : "Send reset link"}
+      </Button>
+      <Button variant="ghost" onClick={onBack} disabled={send.isPending}>
+        Back to sign in
+      </Button>
+    </form>
   );
 }

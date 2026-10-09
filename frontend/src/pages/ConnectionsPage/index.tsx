@@ -1,32 +1,32 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import SmtpTab from "./SmtpTab";
+import { useState } from "react";
+import { PageHeader, Segmented } from "@/ui";
 import DatabaseTab from "./DatabaseTab";
+import SmtpTab from "./SmtpTab";
 
-type Props = {
-  onUnauthorized?: () => void;
-};
+type Tab = "smtp" | "database";
 
-type TabKey = "smtp" | "database";
-
-export default function ConnectionsPage({ onUnauthorized }: Props) {
-  const { t } = useTranslation("app");
-  const [tab, setTab] = React.useState<TabKey>("smtp");
-
+/** Credentials this instance uses to reach other systems: outgoing email and its database. */
+export default function ConnectionsPage() {
+  const [tab, setTab] = useState<Tab>("smtp");
   return (
-    <Stack spacing={3}>
-      <Tabs
-        value={tab}
-        onChange={(_e, value) => setTab(value)}
-        sx={{ borderBottom: "1px solid", borderColor: "divider" }}
-      >
-        <Tab value="smtp" label={t("adminSettings.smtp.tabLabel")} />
-        <Tab value="database" label={t("adminSettings.database.tabLabel")} />
-      </Tabs>
-      {tab === "smtp" ? <SmtpTab onUnauthorized={onUnauthorized} /> : <DatabaseTab onUnauthorized={onUnauthorized} />}
-    </Stack>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title="Connections"
+        subtitle="Email delivery and the database connection."
+        backTo="/admin"
+        actions={
+          <Segmented
+            label="Connection"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "smtp", label: "SMTP" },
+              { value: "database", label: "Database" },
+            ]}
+          />
+        }
+      />
+      {tab === "smtp" ? <SmtpTab /> : <DatabaseTab />}
+    </div>
   );
 }

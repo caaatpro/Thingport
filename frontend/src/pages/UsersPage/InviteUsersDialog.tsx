@@ -1,87 +1,71 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import { adminApi } from "../../api/admin";
-
-type Props = {
-  open: boolean;
-  onClose: () => void;
-};
+import { useId, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { adminApi } from "@/api/admin";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, Modal } from "@/ui";
 
 /** Stays open after sending, so several people can be invited in a row. */
-export default function InviteUsersDialog({ open, onClose }: Props) {
-  const { t } = useTranslation("app");
-  const [email, setEmail] = React.useState("");
-  const [sending, setSending] = React.useState(false);
-  const [sent, setSent] = React.useState<{ email: string; days: number } | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+export default function InviteUsersDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return open ? <InviteForm onClose={onClose} /> : null;
+}
 
-  React.useEffect(() => {
-    if (!open) return;
-    setEmail("");
-    setSent(null);
-    setError(null);
-  }, [open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || sending) return;
-    setSending(true);
-    setError(null);
-    setSent(null);
-    try {
-      const res = await adminApi.inviteUser(email.trim());
-      setSent({ email: res.email, days: res.expires_in_days });
-      setEmail("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("adminSettings.registrations.invite.failed"));
-    } finally {
-      setSending(false);
-    }
-  };
-
+function InviteForm({ onClose }: { onClose: () => void }) {
+  const formId = useId();
+  const [email, setEmail] = useState("");
+  const invite = useMutation({
+    mutationFn: (address: string) => adminApi.inviteUser(address),
+    onSuccess: () => setEmail(""),
+  });
+  const sent = invite.data;
   return (
-    <Dialog open={open} onClose={sending ? undefined : onClose} fullWidth maxWidth="xs">
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>{t("adminSettings.registrations.invite.title")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2}>
-            <DialogContentText>{t("adminSettings.registrations.invite.description")}</DialogContentText>
-            {sent && (
-              <Alert severity="success">
-                {t("adminSettings.registrations.invite.sent", { email: sent.email, count: sent.days })}
-              </Alert>
-            )}
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField
+    <Modal
+      open
+      onOpenChange={(next) => !next && onClose()}
+      title="Invite a user"
+      description="They'll get an email with a link to create their account. Only this address can use it."
+      size="sm"
+      locked={invite.isPending}
+      hideClose
+      footer={
+        <>
+          <Button onClick={onClose} disabled={invite.isPending}>
+            Close
+          </Button>
+          <Button type="submit" form={formId} variant="primary" loading={invite.isPending} disabled={!email.trim()}>
+            Send invitation
+          </Button>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (email.trim() && !invite.isPending) invite.mutate(email.trim());
+        }}
+      >
+        {sent && !invite.isPending && !invite.isError ? (
+          <Alert tone="success">
+            Invitation sent to {sent.email}. The link works for {sent.expires_in_days}{" "}
+            {sent.expires_in_days === 1 ? "day" : "days"}.
+          </Alert>
+        ) : null}
+        {invite.error ? (
+          <Alert tone="danger">{errorMessage(invite.error, "Failed to send the invitation")}</Alert>
+        ) : null}
+        <Field label="Email address" required>
+          {(p) => (
+            <Input
+              {...p}
               type="email"
-              label={t("adminSettings.registrations.invite.emailLabel")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              fullWidth
-              size="small"
-              disabled={sending}
+              disabled={invite.isPending}
             />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={sending}>
-            {t("adminSettings.registrations.invite.close")}
-          </Button>
-          <Button type="submit" variant="contained" disabled={sending || !email.trim()}>
-            {sending ? t("adminSettings.registrations.invite.sending") : t("adminSettings.registrations.invite.send")}
-          </Button>
-        </DialogActions>
+          )}
+        </Field>
       </form>
-    </Dialog>
+    </Modal>
   );
 }

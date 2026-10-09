@@ -1,127 +1,57 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select, { type SelectChangeEvent } from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import CircularProgress from "@mui/material/CircularProgress";
-import { SLICER_OPTIONS } from "../../constants/settingsOptions";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi } from "../../api/settings";
-import { setCachedSlicerPreference } from "../../hooks/useSlicerPreference";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { settingsApi } from "@/api/settings";
+import { errorMessage } from "@/app/queryClient";
+import { SLICER_OPTIONS } from "@/constants/settingsOptions";
+import { setCachedSlicerPreference } from "@/hooks/useSlicerPreference";
+import { Alert, Field, Select, Spinner, type SelectOption } from "@/ui";
+import { Section } from "./Section";
 
-type Props = {
-  onUnauthorized?: () => void;
-};
+const OPTIONS: SelectOption[] = SLICER_OPTIONS.map((o) => ({ value: o.id, label: o.label }));
 
-export default function SlicerPicker({ onUnauthorized }: Props) {
-  const { t } = useTranslation(["app", "common"]);
-  const [value, setValue] = React.useState("");
-  const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let active = true;
-    settingsApi
-      .getSlicer()
-      .then((res) => {
-        if (!active) return;
-        setValue(res.slicer ?? "");
-      })
-      .catch((err) => {
-        if (active && err instanceof UnauthorizedError) onUnauthorized?.();
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [onUnauthorized]);
-
-  const handleChange = async (e: SelectChangeEvent) => {
-    const next = e.target.value;
-    const previous = value;
-    setValue(next);
-    setSaving(true);
-    setStatus(null);
-    try {
-      const res = await settingsApi.updateSlicer(next || null);
-      setValue(res.slicer ?? "");
+/** The slicer a model's "Open in Slicer" action launches. Saves as soon as it changes. */
+export function SlicerPicker() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ["settings", "slicer"], queryFn: () => settingsApi.getSlicer() });
+  const save = useMutation({
+    mutationFn: (slicer: string) => settingsApi.updateSlicer(slicer || null),
+    onSuccess: (res) => {
+      queryClient.setQueryData(["settings", "slicer"], res);
       setCachedSlicerPreference(res.slicer ?? null);
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setValue(previous);
-      setStatus(err instanceof Error ? err.message : t("profile.slicer.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
   return (
-    <Box>
-      <Typography
-        variant="subtitle1"
-        sx={{
-          fontWeight: 600,
-          color: (muiTheme) => muiTheme.thingport.headingText,
-        }}
-      >
-        {t("profile.slicer.heading")}
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-          mb: 1.5,
-        }}
-      >
-        {t("profile.slicer.description")}
-      </Typography>
-      <Paper
-        variant="outlined"
-        sx={{ p: 2.5, borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider") }}
-      >
-        <Stack
-          direction="row"
-          spacing={1.5}
-          useFlexGap
-          sx={{
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <FormControl size="small" disabled={loading || saving} sx={{ minWidth: 220 }}>
-            <InputLabel id="profile-slicer-select-label">{t("profile.slicer.label")}</InputLabel>
+    <Section
+      title="Slicer"
+      description={
+        "Your preferred slicer, used by a model's \"Open in Slicer\" action to launch it directly via that slicer's own link (e.g. bambustudio://)."
+      }
+    >
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="Slicer" className="w-60">
+          {(p) => (
             <Select
-              labelId="profile-slicer-select-label"
-              label={t("profile.slicer.label")}
-              value={value}
-              onChange={handleChange}
-            >
-              {SLICER_OPTIONS.map((opt) => (
-                <MenuItem key={opt.id} value={opt.id}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {saving && <CircularProgress size={16} />}
-        </Stack>
-        {status && (
-          <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
-            {status}
-          </Typography>
-        )}
-      </Paper>
-    </Box>
+              {...p}
+              value={save.isPending ? (save.variables ?? "") : (query.data?.slicer ?? "")}
+              options={OPTIONS}
+              placeholder={query.isPending ? "Loading…" : "Choose a slicer"}
+              disabled={query.isPending || save.isPending}
+              onChange={(next) => save.mutate(next)}
+            />
+          )}
+        </Field>
+        {save.isPending ? <Spinner className="mb-2 size-4" label="Saving" /> : null}
+      </div>
+      {query.isError ? (
+        <Alert tone="danger" className="mt-3">
+          {errorMessage(query.error, "Couldn't load your slicer.")}
+        </Alert>
+      ) : null}
+      {save.isError ? (
+        <Alert tone="danger" className="mt-3">
+          {errorMessage(save.error, "Couldn't save. Try again.")}
+        </Alert>
+      ) : null}
+    </Section>
   );
 }

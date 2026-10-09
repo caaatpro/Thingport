@@ -4,7 +4,6 @@ import * as THREE from "three";
 import occtWasmUrl from "occt-import-js/dist/occt-import-js.wasm?url";
 import occtWorkerUrl from "occt-import-js/dist/occt-import-js-worker.js?url";
 import type { ResolvedTheme } from "../constants/settingsOptions";
-import { buildTheme } from "../theme";
 import { buildBambuModelGroup, parseBambuThreeMF, type Parsed3MFData, type PlateSummary } from "./bambuThreeMf";
 
 export type ModelPalette = {
@@ -15,13 +14,19 @@ export type ModelPalette = {
   roughness: number;
 };
 
-// paletteForTheme reads theme.ts directly since snapshot generation runs outside React.
+// paletteForTheme is plain data, since snapshot generation runs outside React.
 function toFloat32(data: ArrayLike<number>): Float32Array {
   return Float32Array.from(data);
 }
 
+// The base tint of untextured models and its glow, per theme.
+const MODEL_COLORS: Record<ResolvedTheme, { modelColor: string; modelEmissive: string }> = {
+  light: { modelColor: "#cbd5e1", modelEmissive: "#94a3b8" },
+  dark: { modelColor: "#e2e8f0", modelEmissive: "#475569" },
+};
+
 export function paletteForTheme(theme: ResolvedTheme): ModelPalette {
-  const { modelColor, modelEmissive } = buildTheme(theme).thingport;
+  const { modelColor, modelEmissive } = MODEL_COLORS[theme];
   return {
     color: new THREE.Color(modelColor),
     emissive: new THREE.Color(modelEmissive),

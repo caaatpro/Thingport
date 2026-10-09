@@ -1,410 +1,199 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
-import type { Theme } from "@mui/material/styles";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import Link from "@mui/material/Link";
-import ButtonBase from "@mui/material/ButtonBase";
-import FolderIcon from "@mui/icons-material/Folder";
-import StorageIcon from "@mui/icons-material/Storage";
-import LaunchIcon from "@mui/icons-material/Launch";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
-import DownloadIcon from "@mui/icons-material/Download";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import PrintIcon from "@mui/icons-material/Print";
-import type { Print } from "../../api/prints";
-import type { AuthUser } from "../../api/auth";
-import { importProviderInfo } from "../../constants/importProviders";
-import { useGravatarUrl } from "../../hooks/useGravatarUrl";
-import { dividerBorderColor } from "../../theme";
-import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
-import { useDownloadPrint } from "./useDownloadPrint";
-import { useOpenInSlicer } from "./useOpenInSlicer";
-import SlicerFileMenu from "./SlicerFileMenu";
-import NormalizedOpenButton from "./NormalizedOpenButton";
-import { useNormalizedOpen } from "./useNormalizedOpen";
-import RollingNumber from "../../components/RollingNumber";
-import { formatFileSize } from "../../utils/fileSize";
-import AuthorHoverCard from "../../components/AuthorHoverCard";
-import DownloadPickerDialog from "./DownloadPickerDialog";
+import { Link } from "react-router-dom";
+import { ChevronDown, Download, ExternalLink, Eye, Folder, HardDrive, Printer, Rocket } from "lucide-react";
+import type { Print } from "@/api/prints";
+import { useAuth } from "@/app/auth";
+import { importProviderInfo } from "@/constants/importProviders";
+import {
+  AuthorHoverCard,
+  DownloadPickerDialog,
+  NormalizedOpenButton,
+  RollingNumber,
+  SlicerFileDialog,
+  useDownloadPrint,
+  useNormalizedOpen,
+  useOpenInSlicer,
+} from "@/features/prints";
+import { authorDisplay } from "@/features/prints/authorDisplay";
+import { Avatar, Button, Card, Tip } from "@/ui";
+import { formatFileSize } from "@/utils/fileSize";
+import { useGravatarUrl } from "@/hooks/useGravatarUrl";
+import { preparedSummary } from "./preparedInfo";
 
 /** The link as shown: no scheme, no "www.". */
-function shortUrl(url: string): string {
-  return url.replace(/^https?:\/\/(www\.)?/, "");
+export const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, "");
+
+function Block({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs text-muted">{label}</p>
+      {children}
+    </div>
+  );
 }
 
-type Props = {
-  print: Print;
-  onSelectCategory: (id: string) => void;
-  onUnauthorized?: () => void;
-  onUpdated?: (print: Print) => void;
-  /** Shown as the author of a direct upload, which has none. */
-  viewer?: AuthUser | null;
-};
+/** The detail page's sticky summary card: who, where from, how big, and the ways to get the files. */
+export function ModelSidePanel({ print }: { print: Print }) {
+  const { user: viewer } = useAuth();
+  const viewerAvatar = useGravatarUrl(viewer?.email, 56);
+  const download = useDownloadPrint(print);
+  const { slicerOption, targets, normalizedTargets } = useOpenInSlicer(print);
+  const normalized = useNormalizedOpen(print.id, download.recordUse);
+  const [slicerPickerOpen, setSlicerPickerOpen] = useState(false);
 
-/** The detail page's sticky summary card. */
-export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized, onUpdated, viewer }: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const viewerAvatarUrl = useGravatarUrl(viewer?.email, 56);
-  const {
-    pickerOpen,
-    setPickerOpen,
-    downloading,
-    handleDownload,
-    downloadPlate,
-    downloadAllZip,
-    sortedPlates,
-    recordUse,
-  } = useDownloadPrint(print, onUnauthorized, onUpdated);
+  const author = authorDisplay(print, viewer);
+  const avatarUrl = author.avatarUrl || (author.showViewerAsAuthor ? viewerAvatar : undefined);
+  const provider = importProviderInfo(print.source_provider);
+  const sourceUrl = provider && print.source_url ? print.source_url : null;
+  const date = new Date(print.created_at).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const prepared = preparedSummary(print.prepared_print);
 
-  const { slicerOption, targets: slicerTargets, normalizedTargets } = useOpenInSlicer(print);
-  const [slicerMenuAnchor, setSlicerMenuAnchor] = useState<HTMLElement | null>(null);
-  const [normalizedMenuAnchor, setNormalizedMenuAnchor] = useState<HTMLElement | null>(null);
-  const normalized = useNormalizedOpen(print.id, recordUse, onUnauthorized);
-
-  const importedDate = print.source_provider
-    ? new Date(print.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
-    : null;
-
-  const showViewerAsAuthor =
-    !print.author?.name && !print.author?.handle && !print.creator && !print.source_provider && Boolean(viewer);
-
-  const authorLink = print.author
-    ? `/authors/${print.author.id}`
-    : showViewerAsAuthor
-      ? `/authors/${SELF_AUTHOR_ID}`
-      : null;
-  const authorSx = {
-    alignItems: "center",
-    width: "fit-content",
-    color: (muiTheme: Theme) => muiTheme.thingport.headingText,
-  } as const;
-  const sourceInfo = importProviderInfo(print.source_provider);
-  const sourceLink =
-    sourceInfo && print.source_url ? { href: print.source_url, label: shortUrl(print.source_url) } : null;
-  const authorName =
-    print.author?.name || print.author?.handle || print.creator || (showViewerAsAuthor ? viewer!.display_name : null);
-  const authorAvatarUrl = print.author?.avatar_url || (showViewerAsAuthor ? viewerAvatarUrl : undefined);
+  const authorBody = (
+    <>
+      <Avatar src={avatarUrl} name={author.name} size={28} />
+      <span className="text-sm">{author.name || "Unknown author"}</span>
+    </>
+  );
 
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2.5,
-        borderRadius: "12px",
-        borderColor: dividerBorderColor,
-        position: { xs: "static", md: "sticky" },
-        // Stick just below the sticky TopBar, which can wrap taller.
-        top: "var(--topbar-height, 80px)",
-      }}
-    >
-      <Stack spacing={2}>
-        <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-              display: "block",
-              mb: 0.5,
-            }}
-          >
-            {t("models:detail.title")}
-          </Typography>
-          {/* Full title, wrapped -- unlike the page header, this box never truncates it. */}
-          <Typography
-            variant="body2"
-            sx={{ color: (muiTheme) => muiTheme.thingport.headingText, overflowWrap: "anywhere" }}
-          >
-            {print.title || print.name}
-          </Typography>
-        </Box>
+    <Card padding="lg" className="md:sticky md:top-20">
+      <div className="flex flex-col gap-4">
+        <Block label="Title">
+          <p className="text-sm break-words text-fg">{print.title || print.name}</p>
+        </Block>
 
-        <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-              display: "block",
-              mb: 0.5,
-            }}
-          >
-            {t("models:detail.author")}
-          </Typography>
-          <AuthorHoverCard
-            authorId={print.author ? print.author.id : SELF_AUTHOR_ID}
-            viewer={viewer}
-            disabled={!print.author && !showViewerAsAuthor}
-          >
-            {authorLink ? (
-              <Stack
-                component={RouterLink}
-                to={authorLink}
-                direction="row"
-                spacing={1}
-                sx={{ ...authorSx, textDecoration: "none", "&:hover": { color: "primary.main" } }}
-              >
-                <Avatar
-                  src={authorAvatarUrl || undefined}
-                  sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}
-                >
-                  {(authorName || "?").slice(0, 1).toUpperCase()}
-                </Avatar>
-                <Typography variant="body2" sx={{ color: "inherit" }}>
-                  {authorName || t("models:card.unknownAuthor")}
-                </Typography>
-              </Stack>
+        <Block label="Author">
+          <AuthorHoverCard authorId={author.authorId} disabled={!author.hoverEnabled}>
+            {author.link ? (
+              <Link to={author.link} className="flex w-fit items-center gap-2 text-fg hover:text-accent-text">
+                {authorBody}
+              </Link>
             ) : (
-              <Stack direction="row" spacing={1} sx={authorSx}>
-                <Avatar
-                  src={authorAvatarUrl || undefined}
-                  sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}
-                >
-                  {(authorName || "?").slice(0, 1).toUpperCase()}
-                </Avatar>
-                <Typography variant="body2" sx={{ color: "inherit" }}>
-                  {authorName || t("models:card.unknownAuthor")}
-                </Typography>
-              </Stack>
+              <span className="flex w-fit items-center gap-2 text-fg">{authorBody}</span>
             )}
           </AuthorHoverCard>
-        </Box>
+        </Block>
 
-        {sourceLink && (
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: "block",
-                mb: 0.5,
-              }}
-            >
-              {t("models:detail.source")}
-            </Typography>
-            <Link
-              href={sourceLink.href}
+        {sourceUrl ? (
+          <Block label="Source">
+            <a
+              href={sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              variant="body2"
-              underline="hover"
-              sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, overflowWrap: "anywhere" }}
+              className="inline-flex items-center gap-1 text-sm break-all text-accent-text hover:underline"
             >
-              {sourceLink.label}
-              <LaunchIcon sx={{ fontSize: 14 }} />
-            </Link>
-          </Box>
-        )}
+              {shortUrl(sourceUrl)}
+              <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+            </a>
+          </Block>
+        ) : null}
 
-        {print.category_id && print.category_name && (
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: "block",
-                mb: 0.5,
-              }}
-            >
-              {t("models:detail.category")}
-            </Typography>
-            <ButtonBase
-              component={RouterLink}
+        {print.category_id && print.category_name ? (
+          <Block label="Category">
+            <Link
               to={`/models?category=${print.category_id}`}
-              onClick={() => onSelectCategory(print.category_id!)}
-              sx={{
-                borderRadius: 1,
-                px: 0.5,
-                py: 0.25,
-                mx: -0.5,
-                gap: 0.75,
-                color: (muiTheme) => muiTheme.thingport.headingText,
-                "&:hover": { color: "primary.main" },
-              }}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg hover:text-accent-text"
             >
-              <FolderIcon fontSize="small" />
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                }}
-              >
-                {print.category_name}
-              </Typography>
-            </ButtonBase>
-          </Box>
-        )}
+              <Folder className="size-4" aria-hidden />
+              {print.category_name}
+            </Link>
+          </Block>
+        ) : null}
 
-        {typeof print.total_size === "number" && (
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: "block",
-                mb: 0.5,
-              }}
-            >
-              {t("models:detail.size")}
-            </Typography>
-            <Stack
-              direction="row"
-              spacing={0.75}
-              title={t("models:detail.sizeHint")}
-              sx={{
-                alignItems: "center",
-                width: "fit-content",
-                color: (muiTheme) => muiTheme.thingport.headingText,
-              }}
-            >
-              <StorageIcon fontSize="small" />
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                }}
-              >
+        {typeof print.total_size === "number" ? (
+          <Block label="Size">
+            <Tip content="Total size of all this model's files in storage">
+              <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
+                <HardDrive className="size-4" aria-hidden />
                 {formatFileSize(print.total_size)}
-              </Typography>
-            </Stack>
-          </Box>
-        )}
+              </p>
+            </Tip>
+          </Block>
+        ) : null}
 
-        {slicerOption && slicerTargets.length > 0 && (
-          <Button
-            {...(slicerTargets.length === 1
-              ? { component: "a" as const, href: slicerTargets[0].href, onClick: recordUse }
-              : {
-                  onClick: (e: React.MouseEvent<HTMLElement>) => setSlicerMenuAnchor(e.currentTarget),
-                  endIcon: <ArrowDropDownIcon />,
-                })}
-            startIcon={<LaunchIcon fontSize="small" />}
-            fullWidth
-            sx={{
-              bgcolor: "background.paper",
-              color: "primary.main",
-              border: "1.5px solid",
-              borderColor: "primary.main",
-              "&:hover": { bgcolor: "action.hover", borderColor: "primary.dark" },
-            }}
-          >
-            {t("models:detail.openInSlicer", { slicer: slicerOption.label })}
-          </Button>
-        )}
-        {slicerOption && slicerTargets.length > 1 && (
-          <SlicerFileMenu
-            anchorEl={slicerMenuAnchor}
-            onClose={() => setSlicerMenuAnchor(null)}
-            slicerLabel={slicerOption.label}
-            targets={slicerTargets}
-            onOpen={recordUse}
-            matchAnchorWidth
-          />
-        )}
-        {slicerOption && normalizedTargets.length > 0 && (
+        {slicerOption && targets.length > 0 ? (
+          targets.length === 1 ? (
+            <Button asChild className="w-full border-accent text-accent-text">
+              <a href={targets[0]?.href} onClick={download.recordUse}>
+                <Rocket className="size-4" aria-hidden />
+                {`Open in ${slicerOption.label}`}
+              </a>
+            </Button>
+          ) : (
+            <>
+              <Button
+                className="w-full border-accent text-accent-text"
+                icon={<Rocket className="size-4" aria-hidden />}
+                onClick={() => setSlicerPickerOpen(true)}
+              >
+                {`Open in ${slicerOption.label}`}
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+              <SlicerFileDialog
+                open={slicerPickerOpen}
+                onOpenChange={setSlicerPickerOpen}
+                slicerLabel={slicerOption.label}
+                targets={targets}
+                onOpen={download.recordUse}
+              />
+            </>
+          )
+        ) : null}
+        {slicerOption && normalizedTargets.length > 0 ? (
           <NormalizedOpenButton
             targets={normalizedTargets}
             slicerLabel={slicerOption.label}
             stateOf={normalized.stateOf}
             open={normalized.open}
-            onPick={setNormalizedMenuAnchor}
+            onOpened={download.recordUse}
           />
-        )}
-        {slicerOption && normalizedTargets.length > 1 && (
-          <SlicerFileMenu
-            anchorEl={normalizedMenuAnchor}
-            onClose={() => setNormalizedMenuAnchor(null)}
-            slicerLabel={slicerOption.label}
-            title={t("models:detail.openNormalizedInSlicer", { slicer: slicerOption.label })}
-            targets={normalizedTargets}
-            onOpen={recordUse}
-            normalized={normalized}
-            matchAnchorWidth
-          />
-        )}
+        ) : null}
+        {slicerOption && prepared ? <p className="-mt-2 text-xs text-muted">{`Prepared print: ${prepared}`}</p> : null}
 
         <Button
-          onClick={handleDownload}
-          disabled={downloading}
-          startIcon={<DownloadIcon fontSize="small" />}
-          fullWidth
-          sx={{
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
-            "&:hover": { bgcolor: "primary.dark" },
-          }}
+          variant="primary"
+          className="w-full"
+          onClick={download.handleDownload}
+          loading={download.downloading}
+          icon={<Download className="size-4" aria-hidden />}
         >
-          {t("models:detail.downloadModelFiles")}
+          Download model files
         </Button>
 
-        <Stack direction="row" spacing={1.5}>
-          <Stack
-            direction="row"
-            spacing={0.75}
-            sx={{
-              alignItems: "center",
-              justifyContent: "center",
-              flex: 1,
-              py: 1,
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
-            }}
+        <div className="flex gap-3">
+          <div
+            title="Views"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-border py-2 text-sm font-semibold text-fg"
           >
-            <VisibilityIcon fontSize="small" sx={{ color: "text.secondary" }} />
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 600,
-              }}
-            >
-              {print.view_count}
-            </Typography>
-          </Stack>
-          <Stack
-            direction="row"
-            spacing={0.75}
-            sx={{
-              alignItems: "center",
-              justifyContent: "center",
-              flex: 1,
-              py: 1,
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
-            }}
+            <Eye className="size-4 text-muted" aria-hidden />
+            <span className="sr-only">Views: </span>
+            {print.view_count}
+          </div>
+          <div
+            title="Prints"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-border py-2 text-sm font-semibold text-fg"
           >
-            <PrintIcon fontSize="small" sx={{ color: "text.secondary" }} />
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 600,
-              }}
-            >
-              <RollingNumber value={print.print_count} />
-            </Typography>
-          </Stack>
-        </Stack>
+            <Printer className="size-4 text-muted" aria-hidden />
+            <span className="sr-only">Prints: </span>
+            <RollingNumber value={print.print_count} />
+          </div>
+        </div>
 
-        {importedDate && (
-          <Typography variant="caption" sx={{ textAlign: "right", fontSize: 12, color: "text.secondary" }}>
-            {t("models:detail.imported", { date: importedDate })}
-          </Typography>
-        )}
-      </Stack>
+        <p className="text-right text-xs text-muted">{print.source_provider ? `Imported ${date}` : `Added ${date}`}</p>
+      </div>
 
       <DownloadPickerDialog
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        downloading={downloading}
-        sortedPlates={sortedPlates}
-        downloadAllZip={downloadAllZip}
-        downloadPlate={downloadPlate}
+        open={download.pickerOpen}
+        onOpenChange={download.setPickerOpen}
+        downloading={download.downloading}
+        sortedPlates={download.sortedPlates}
+        downloadAllZip={download.downloadAllZip}
+        downloadPlate={download.downloadPlate}
       />
-    </Paper>
+    </Card>
   );
 }

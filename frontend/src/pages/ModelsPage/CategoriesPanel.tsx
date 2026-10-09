@@ -1,236 +1,209 @@
 import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import type { Theme } from "@mui/material/styles";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
-import Collapse from "@mui/material/Collapse";
-import CircularProgress from "@mui/material/CircularProgress";
-import SettingsIcon from "@mui/icons-material/Settings";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import type { Category, CategoryMetaInput } from "../../api/categories";
-import { dividerBorderColor } from "../../theme";
-import { ancestorPath, buildCategoryTree } from "../../utils/categoryTree";
-import CategoryManagerModal from "./CategoryManagerModal";
+import { ChevronRight, Settings2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import type { Category } from "@/api/categories";
+import { ancestorPath, buildCategoryTree, flattenCategoryTree, type CategoryTree } from "@/utils/categoryTree";
+import { Alert, Button, IconButton, Select, Skeleton, cn, type SelectOption } from "@/ui";
+import { CategoryManager } from "./CategoryManager";
+import { categoryHref } from "./libraryParams";
+import { useWideScreen } from "./useWideScreen";
+import type { CategoryActions } from "./useCategoryActions";
 
 type Props = {
   categories: Category[];
   loading: boolean;
+  error: boolean;
+  onRetry: () => void;
   selectedId: string | null;
+  /** The current URL params, so each link keeps sort, scope and anything else. */
+  search: URLSearchParams;
+  /** Used by the dropdown on small screens; the tree itself is plain links. */
   onSelect: (id: string | null) => void;
-  onCreate: (name: string, parentId: string | null) => Promise<void>;
-  onRename: (id: string, name: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-  onReorder: (categoryIds: string[]) => Promise<void>;
-  onMove: (id: string, parentId: string | null, position: number) => Promise<void>;
-  onUpdateMeta: (id: string, meta: CategoryMetaInput) => Promise<void>;
+  actions: CategoryActions;
 };
 
-function rowSx(active: boolean) {
-  return {
-    borderRadius: 1.5,
-    mb: 0.25,
-    background: (theme: Theme) => (active ? theme.thingport.selectedNavBackground : "transparent"),
-    ...(active
-      ? { "&:hover": { background: (theme: Theme) => theme.thingport.selectedNavBackground } }
-      : {
-          // Dark mode: brighten the label instead of tinting the background on hover.
-          "&:hover": (theme: Theme) =>
-            theme.palette.mode === "dark"
-              ? { backgroundColor: "transparent", "& .MuiListItemText-primary, & .MuiSvgIcon-root": { color: "#fff" } }
-              : { bgcolor: "action.hover" },
-        }),
-  };
-}
-function rowTextSx(active: boolean, extra?: object) {
-  return {
-    noWrap: true,
-    variant: "body2" as const,
-    sx: {
-      color: (theme: Theme) => (active ? theme.thingport.selectedNavText : theme.thingport.navInactiveText),
-      ...extra,
-    },
-  };
+const rowClass = (active: boolean) =>
+  cn(
+    "flex min-h-9 min-w-0 flex-1 items-center rounded-control px-2.5 py-1.5 text-sm transition-colors",
+    active ? "bg-accent-soft font-semibold text-accent-text" : "text-muted hover:bg-surface-2 hover:text-fg",
+  );
+
+type NodeProps = {
+  category: Category;
+  depth: number;
+  tree: CategoryTree;
+  selectedId: string | null;
+  search: URLSearchParams;
+  isOpen: (id: string) => boolean;
+  toggle: (id: string) => void;
+};
+
+function CategoryNode({ category, depth, tree, selectedId, search, isOpen, toggle }: NodeProps) {
+  const children = tree.childrenByParent[category.id] ?? [];
+  const open = isOpen(category.id);
+  const active = selectedId === category.id;
+  const name = category.name || "Untitled";
+  return (
+    <li>
+      <div className="flex items-center" style={{ paddingLeft: depth * 12 }}>
+        <Link
+          to={categoryHref(search, category.id)}
+          aria-current={active ? "page" : undefined}
+          className={cn(rowClass(active), depth === 0 && "font-medium")}
+        >
+          <span className="truncate">{name}</span>
+        </Link>
+        {children.length ? (
+          <IconButton
+            label={`${open ? "Collapse" : "Expand"} ${name}`}
+            size="sm"
+            noTip
+            aria-expanded={open}
+            onClick={() => toggle(category.id)}
+          >
+            <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} aria-hidden />
+          </IconButton>
+        ) : (
+          <span className="size-8 shrink-0" aria-hidden />
+        )}
+      </div>
+      {open && children.length ? (
+        <ul>
+          {children.map((child) => (
+            <CategoryNode
+              key={child.id}
+              category={child}
+              depth={depth + 1}
+              tree={tree}
+              selectedId={selectedId}
+              search={search}
+              isOpen={isOpen}
+              toggle={toggle}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
 }
 
-/** Any depth; a category selects the models at every level beneath it. Only the selected path is open. */
-export default function CategoriesPanel({
-  categories,
-  loading,
-  selectedId,
-  onSelect,
-  onCreate,
-  onRename,
-  onDelete,
-  onReorder,
-  onMove,
-  onUpdateMeta,
-}: Props) {
-  const { t } = useTranslation(["models", "common"]);
+/** The category tree: a side column on wide screens, a dropdown on narrow ones. Any depth; a category includes everything beneath it. */
+export function CategoriesPanel({ categories, loading, error, onRetry, selectedId, search, onSelect, actions }: Props) {
+  const wide = useWideScreen();
   const [managerOpen, setManagerOpen] = useState(false);
-
-  const untitledLabel = t("models:categories.untitled");
-
   const tree = useMemo(() => buildCategoryTree(categories), [categories]);
-  // The selected category and its ancestors are open, so a selection from the URL is always visible.
-  const openIds = useMemo(
+
+  // The selected category's ancestors are open so a selection from the URL is always visible; chevrons override.
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const pathIds = useMemo(
     () => new Set(selectedId && tree.byId.has(selectedId) ? ancestorPath(tree, selectedId) : []),
     [tree, selectedId],
   );
+  const isOpen = (id: string) => toggled[id] ?? pathIds.has(id);
+  const toggle = (id: string) => setToggled((prev) => ({ ...prev, [id]: !isOpen(id) }));
 
-  const renderCategory = (category: Category, depth: number) => {
-    const children = tree.childrenByParent[category.id] ?? [];
-    const isRoot = depth === 0;
-    const isOpen = openIds.has(category.id);
-    const isSelected = selectedId === category.id;
-    return (
-      <Stack key={category.id}>
-        <ListItemButton onClick={() => onSelect(category.id)} sx={{ pl: 1 + depth * 2, ...rowSx(isSelected) }}>
-          <ListItemText
-            primary={category.name || untitledLabel}
-            slotProps={{
-              primary: rowTextSx(
-                isSelected,
-                isRoot ? { fontWeight: 600 } : isSelected ? { fontWeight: 700 } : undefined,
-              ),
-            }}
-          />
-          {children.length > 0 && (
-            <ChevronRightIcon
-              fontSize="small"
-              sx={{
-                ml: 0.5,
-                flexShrink: 0,
-                transform: isOpen ? "rotate(90deg)" : "none",
-                transition: "transform 0.15s",
-                color: (theme) => (isSelected ? theme.thingport.selectedNavText : theme.thingport.navInactiveText),
-              }}
-            />
-          )}
-        </ListItemButton>
-        <Collapse in={isOpen} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {children.map((child) => renderCategory(child, depth + 1))}
-            {isRoot && !children.length && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                  pl: 4,
-                  display: "block",
-                  py: 0.5,
-                }}
-              >
-                {t("models:categories.noSubcategories")}
-              </Typography>
-            )}
-          </List>
-        </Collapse>
-      </Stack>
+  const manage = (
+    <IconButton label="Manage categories" size="sm" onClick={() => setManagerOpen(true)}>
+      <Settings2 className="size-4" aria-hidden />
+    </IconButton>
+  );
+
+  const options = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "All" },
+      ...flattenCategoryTree(tree).map(({ category, depth }) => ({
+        value: category.id,
+        label: category.name || "Untitled",
+        indent: depth,
+      })),
+    ],
+    [tree],
+  );
+
+  let body;
+  if (loading) {
+    body = (
+      <div aria-busy="true" aria-label="Loading categories" className="flex flex-col gap-1.5 p-1">
+        <Skeleton className="h-8 w-full" />
+        <Skeleton className="h-8 w-5/6" />
+        <Skeleton className="h-8 w-2/3" />
+      </div>
     );
-  };
+  } else if (error) {
+    body = (
+      <Alert
+        tone="danger"
+        action={
+          <Button size="sm" onClick={onRetry}>
+            Retry
+          </Button>
+        }
+      >
+        Couldn't load categories.
+      </Alert>
+    );
+  } else {
+    body = (
+      <ul>
+        <li className="flex items-center">
+          <Link
+            to={categoryHref(search, null)}
+            aria-current={selectedId === null ? "page" : undefined}
+            className={cn(rowClass(selectedId === null), "font-medium")}
+          >
+            All
+          </Link>
+          <span className="size-8 shrink-0" aria-hidden />
+        </li>
+        {tree.roots.map((root) => (
+          <CategoryNode
+            key={root.id}
+            category={root}
+            depth={0}
+            tree={tree}
+            selectedId={selectedId}
+            search={search}
+            isOpen={isOpen}
+            toggle={toggle}
+          />
+        ))}
+        {tree.roots.length ? null : <li className="px-2.5 py-2 text-sm text-muted">No categories yet</li>}
+      </ul>
+    );
+  }
 
   return (
     <>
-      <Paper
-        variant="outlined"
-        sx={{
-          width: 232,
-          flexShrink: 0,
-          borderRadius: "14px",
-          p: 1,
-          alignSelf: "flex-start",
-          position: "sticky",
-          top: 80,
-          maxHeight: "calc(100vh - 96px)",
-          overflowY: "auto",
-          bgcolor: "background.paper",
-          borderColor: dividerBorderColor,
-        }}
-      >
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 0.5,
-            pb: 1,
-          }}
+      {wide ? (
+        <nav
+          aria-label="Categories"
+          className="sticky top-20 max-h-[calc(100vh-6rem)] w-60 shrink-0 self-start overflow-y-auto rounded-card border border-border bg-surface p-2"
         >
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 700,
-            }}
-          >
-            {t("models:categories.title")}
-          </Typography>
-          <Tooltip title={t("models:categories.manageTooltip") ?? ""}>
-            <IconButton
-              size="small"
-              onClick={() => setManagerOpen(true)}
-              aria-label={t("models:categories.manageTooltip") ?? undefined}
-            >
-              <SettingsIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-
-        <List disablePadding>
-          <ListItemButton onClick={() => onSelect(null)} sx={rowSx(selectedId === null)}>
-            <ListItemText
-              primary={t("models:categories.all")}
-              slotProps={{
-                primary: rowTextSx(selectedId === null, { fontWeight: 600 }),
-              }}
+          <div className="flex items-center justify-between pb-1 pl-2.5">
+            <h2 className="text-sm font-semibold text-fg">Categories</h2>
+            {manage}
+          </div>
+          {body}
+        </nav>
+      ) : (
+        <nav aria-label="Categories" className="mb-4 flex items-center gap-2">
+          {loading || error ? (
+            <div className="flex-1">{body}</div>
+          ) : (
+            <Select
+              aria-label="Category"
+              value={selectedId ?? ""}
+              onChange={(value) => onSelect(value || null)}
+              options={options}
+              className="flex-1"
             />
-          </ListItemButton>
-
-          {loading && (
-            <Stack
-              sx={{
-                alignItems: "center",
-                py: 2,
-              }}
-            >
-              <CircularProgress size={18} />
-            </Stack>
           )}
-
-          {!loading && tree.roots.map((root) => renderCategory(root, 0))}
-
-          {!loading && !tree.roots.length && (
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                px: 1,
-                py: 1,
-              }}
-            >
-              {t("models:categories.empty")}
-            </Typography>
-          )}
-        </List>
-      </Paper>
-
-      {managerOpen && (
-        <CategoryManagerModal
-          categories={categories}
-          onClose={() => setManagerOpen(false)}
-          onCreate={onCreate}
-          onRename={onRename}
-          onDelete={onDelete}
-          onReorder={onReorder}
-          onMove={onMove}
-          onUpdateMeta={onUpdateMeta}
-        />
+          {manage}
+        </nav>
       )}
+      {managerOpen ? (
+        <CategoryManager categories={categories} actions={actions} onClose={() => setManagerOpen(false)} />
+      ) : null}
     </>
   );
 }

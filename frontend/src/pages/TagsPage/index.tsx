@@ -1,177 +1,130 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, Tags } from "lucide-react";
 import { Link } from "react-router-dom";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
-import Chip from "@mui/material/Chip";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
-import { UnauthorizedError } from "../../api/client";
-import { type TagSortMode, type TagSummary, tagsApi } from "../../api/tags";
-import { dividerBorderColor } from "../../theme";
-import TagSortTabs from "./TagSortTabs";
+import { tagsApi, type TagSortMode, type TagSummary } from "@/api/tags";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Checkbox, EmptyState, Input, PageHeader, Segmented, Skeleton, useToast } from "@/ui";
+import { filterTags } from "./filterTags";
+import { TagChip } from "./TagChip";
 
-type Props = {
-  onUnauthorized?: () => void;
-  onBookmarksChanged?: () => void;
-};
+const SORT_OPTIONS = [
+  { value: "popular", label: "Popular" },
+  { value: "name", label: "Name" },
+] as const;
 
-/** Every tag as a chip with a bookmark toggle (the chip's deleteIcon slot). Rarely-used tags
- *  (under 2 models) are hidden by default. */
-export default function TagsPage({ onUnauthorized, onBookmarksChanged }: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const [tags, setTags] = useState<TagSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sortMode, setSortMode] = useState<TagSortMode>("popular");
-  const [pendingTag, setPendingTag] = useState<string | null>(null);
-  const [hideRarelyUsed, setHideRarelyUsed] = useState(true);
-  const visibleTags = hideRarelyUsed ? tags.filter((tag) => tag.count >= 2) : tags;
+export default function TagsPage() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [sort, setSort] = useState<TagSortMode>("popular");
+  const [filter, setFilter] = useState("");
+  const [hideRare, setHideRare] = useState(true);
 
-  const handleError = (err: unknown, message?: string) => {
-    if (err instanceof UnauthorizedError) {
-      onUnauthorized?.();
-      return true;
-    }
-    console.error(err);
-    if (message) alert(message);
-    return false;
-  };
+  const query = useQuery({ queryKey: ["tags", "summary", sort], queryFn: () => tagsApi.listSummary(sort) });
+  const tags = query.data;
+  const visible = useMemo(() => (tags ? filterTags(tags, filter, hideRare) : []), [tags, filter, hideRare]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const result = await tagsApi.listSummary(sortMode);
-        if (!cancelled) setTags(result);
-      } catch (err) {
-        if (!cancelled) handleError(err, t("models:errors.loadFailed"));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortMode]);
-
-  const toggleBookmark = async (tag: TagSummary) => {
-    if (pendingTag) return;
-    setPendingTag(tag.name);
-    const nextBookmarked = !tag.bookmarked;
-    setTags((prev) => prev.map((t2) => (t2.name === tag.name ? { ...t2, bookmarked: nextBookmarked } : t2)));
-    try {
-      await (nextBookmarked ? tagsApi.bookmark(tag.name) : tagsApi.unbookmark(tag.name));
-      onBookmarksChanged?.();
-    } catch (err) {
-      setTags((prev) => prev.map((t2) => (t2.name === tag.name ? { ...t2, bookmarked: tag.bookmarked } : t2)));
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      console.error(err);
-      alert(t("models:tags.bookmarkFailed"));
-    } finally {
-      setPendingTag(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Stack
-        sx={{
-          alignItems: "center",
-          py: 8,
-        }}
-      >
-        <CircularProgress size={22} />
-      </Stack>
-    );
-  }
+  const toggle = useMutation({
+    mutationFn: (tag: TagSummary) => (tag.bookmarked ? tagsApi.unbookmark(tag.name) : tagsApi.bookmark(tag.name)),
+    onSuccess: (_, tag) => {
+      queryClient.setQueriesData<TagSummary[]>({ queryKey: ["tags", "summary"] }, (list) =>
+        list?.map((t) => (t.name === tag.name ? { ...t, bookmarked: !tag.bookmarked } : t)),
+      );
+    },
+    onError: (err) => toast.error(errorMessage(err, "Couldn't update the bookmark. Try again.")),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      void queryClient.invalidateQueries({ queryKey: ["tags"] });
+    },
+  });
+  const pendingName = toggle.isPending ? toggle.variables.name : null;
 
   return (
-    <Stack spacing={2}>
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <FormControlLabel
-          control={
-            <Switch size="small" checked={hideRarelyUsed} onChange={(e) => setHideRarelyUsed(e.target.checked)} />
-          }
-          label={
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {t("models:tags.hideRarelyUsed")}
-            </Typography>
-          }
+    <>
+      <PageHeader title="Tags" />
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="relative w-full max-w-xs">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            aria-label="Filter tags"
+            placeholder="Filter tags…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Checkbox label="Hide tags used once" checked={hideRare} onCheckedChange={setHideRare} />
+        <Segmented
+          label="Sort tags"
+          value={sort}
+          onChange={setSort}
+          options={[...SORT_OPTIONS]}
+          className="sm:ml-auto"
         />
-        <TagSortTabs value={sortMode} onChange={setSortMode} />
-      </Stack>
+      </div>
 
-      {visibleTags.length ? (
-        <Stack
-          direction="row"
-          useFlexGap
-          spacing={1}
-          sx={{
-            flexWrap: "wrap",
-          }}
+      {query.isError ? (
+        <Alert
+          tone="danger"
+          action={
+            <Button size="sm" onClick={() => void query.refetch()}>
+              Retry
+            </Button>
+          }
         >
-          {visibleTags.map((tag) => (
-            <Chip
-              key={tag.name}
-              size="small"
-              clickable
-              variant="outlined"
-              component={Link}
-              to={`/models/tags/${encodeURIComponent(tag.name)}`}
-              label={`${tag.name} (${tag.count})`}
-              deleteIcon={
-                tag.bookmarked ? <BookmarkIcon fontSize="inherit" /> : <BookmarkBorderIcon fontSize="inherit" />
-              }
-              onDelete={() => void toggleBookmark(tag)}
-              aria-label={
-                tag.bookmarked
-                  ? (t("models:tags.unbookmarkTag") ?? undefined)
-                  : (t("models:tags.bookmarkTag") ?? undefined)
-              }
-              sx={{
-                p: 1,
-                color: (theme) => theme.thingport.navInactiveText,
-                bgcolor: "background.paper",
-                borderColor: dividerBorderColor,
-                "& .MuiChip-deleteIcon": {
-                  color: tag.bookmarked ? "primary.main" : "inherit",
-                  "&:hover": { color: tag.bookmarked ? "primary.main" : "inherit" },
-                },
-              }}
-            />
+          {errorMessage(query.error, "Couldn't load tags.")}
+        </Alert>
+      ) : !tags ? (
+        <div className="flex flex-wrap gap-2" aria-busy="true">
+          {Array.from({ length: 18 }, (_, i) => (
+            <Skeleton key={`s${i}`} className="h-8 w-24 rounded-full" />
           ))}
-        </Stack>
+        </div>
+      ) : visible.length > 0 ? (
+        <ul className="flex flex-wrap gap-2">
+          {visible.map((tag) => (
+            <li key={tag.name}>
+              <TagChip tag={tag} busy={pendingName === tag.name} onToggleBookmark={() => toggle.mutate(tag)} />
+            </li>
+          ))}
+        </ul>
       ) : (
-        <Stack
-          spacing={1}
-          sx={{
-            alignItems: "center",
-            py: 8,
-            color: "text.secondary",
-          }}
+        <EmptyState
+          icon={<Tags />}
+          title={tags.length === 0 ? "No tags yet" : "No tags match"}
+          action={
+            tags.length > 0 && (filter || hideRare) ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setFilter("");
+                  setHideRare(false);
+                }}
+              >
+                Show all tags
+              </Button>
+            ) : undefined
+          }
         >
-          <Typography variant="body2">{tags.length ? t("models:tags.allHidden") : t("models:tags.empty")}</Typography>
-        </Stack>
+          {tags.length === 0 ? (
+            <>
+              Add tags to a model and they will show up here.{" "}
+              <Link to="/models" className="text-accent-text underline-offset-4 hover:underline">
+                Browse models
+              </Link>
+            </>
+          ) : (
+            "Try a different filter, or show tags used only once."
+          )}
+        </EmptyState>
       )}
-    </Stack>
+      <p className="sr-only" aria-live="polite">
+        {tags ? `${visible.length} tags` : ""}
+      </p>
+    </>
   );
 }

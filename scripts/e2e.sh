@@ -10,11 +10,6 @@ export E2E_PORT="${E2E_PORT:-18090}"
 export E2E_BASE_URL="http://localhost:${E2E_PORT}"
 PROJECT=thingport-e2e
 COMPOSE="docker compose -p $PROJECT -f docker-compose.yml -f docker-compose.e2e.yml"
-FRONTEND_DIR=frontend
-if [ "${E2E_NEXT:-0}" = "1" ]; then
-  COMPOSE="$COMPOSE -f docker-compose.next.yml"
-  FRONTEND_DIR=frontend-next
-fi
 
 cleanup() {
   if [ "${E2E_KEEP:-0}" != "1" ]; then $COMPOSE down -v --remove-orphans > /dev/null 2>&1 || true; fi
@@ -38,5 +33,5 @@ until curl -fsS "$E2E_BASE_URL/api/health" > /dev/null 2>&1; do
   sleep 2
 done
 
-cd "$FRONTEND_DIR"
+cd frontend
 exec npx playwright test "$@"

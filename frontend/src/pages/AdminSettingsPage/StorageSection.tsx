@@ -1,273 +1,150 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Checkbox from "@mui/material/Checkbox";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Tooltip from "@mui/material/Tooltip";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi } from "../../api/settings";
-import SectionHeader from "../../components/SectionHeader";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { adminApi } from "@/api/admin";
+import { settingsApi } from "@/api/settings";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Checkbox, Field, Input, Tip, useToast } from "@/ui";
+import { formatFileSize } from "@/utils/fileSize";
+import { AdminSection, LoadError } from "../AdminPage/parts";
+import { addToken, renderExamples } from "./helpers";
 
-type Props = {
-  onUnauthorized?: () => void;
+const TOKEN_HELP: Record<string, string> = {
+  category: "The model's category, with parent categories as parent folders",
+  collection:
+    'The collection the model is in. Models in no collection go to "Uncollected", models in several go to "Multiple collections"',
+  tags: 'The model\'s tags, joined with " + "',
+  creator: "The author shown on the model page; a user's own uploads use their display name",
+  model: "The model's name",
+  filename: "The file's name (required, in the last folder)",
+  id: "The model's permanent ID",
+  plate: "The file's position in the model, starting at 1",
 };
-
-// Two plates of one print, showing that siblings share the {model} directory.
-const PLATE_PREVIEW_VALUES: Record<string, string>[] = [
-  {
-    category: "Props/Workshop",
-    collection: "Tabletop",
-    tags: "Print in place + Useful",
-    creator: "Example creator",
-    model: "Cable clip",
-    filename: "Cable clip.3mf",
-    id: "a1b2c3d4",
-    plate: "1",
-  },
-  {
-    category: "Props/Workshop",
-    collection: "Tabletop",
-    tags: "Print in place + Useful",
-    creator: "Example creator",
-    model: "Cable clip",
-    filename: "Cable clip-2.3mf",
-    id: "a1b2c3d4",
-    plate: "2",
-  },
-];
 
 const DEFAULT_TEMPLATE = "{category}/{model}/{filename}";
 
-export default function StorageSection({ onUnauthorized }: Props) {
-  const { t } = useTranslation("app");
-  const [storageTemplate, setStorageTemplate] = React.useState(DEFAULT_TEMPLATE);
-  const [storageInitial, setStorageInitial] = React.useState(DEFAULT_TEMPLATE);
-  const [storageTokens, setStorageTokens] = React.useState<string[]>([]);
-  const [storagePlatePaths, setStoragePlatePaths] = React.useState<string[]>([]);
-  const [storageApplyExisting, setStorageApplyExisting] = React.useState(false);
-  const [storageLoading, setStorageLoading] = React.useState(false);
-  const [storageSaving, setStorageSaving] = React.useState(false);
-  const [storageStatus, setStorageStatus] = React.useState<string | null>(null);
+export default function StorageSection() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const query = useQuery({ queryKey: ["settings", "storage"], queryFn: () => settingsApi.getStorage() });
+  const usage = useQuery({ queryKey: ["admin", "storage"], queryFn: () => adminApi.getStorageUsage() });
+  // null = untouched: the field shows the saved template.
+  const [draft, setDraft] = useState<string | null>(null);
+  const [applyExisting, setApplyExisting] = useState(false);
 
-  React.useEffect(() => {
-    let active = true;
-    setStorageLoading(true);
-    setStorageStatus(null);
-    void (async () => {
-      try {
-        const data = await settingsApi.getStorage();
-        if (!active) return;
-        setStorageTemplate(data.template);
-        setStorageInitial(data.template);
-        setStorageTokens(data.allowed_tokens || []);
-        setStoragePlatePaths(data.plate_paths || []);
-      } catch (err) {
-        if (err instanceof UnauthorizedError) onUnauthorized?.();
-        else setStorageStatus(t("adminSettings.storage.failed"));
-      } finally {
-        if (active) setStorageLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [onUnauthorized, t]);
+  const saved = query.data?.template ?? DEFAULT_TEMPLATE;
+  const template = draft ?? saved;
+  const dirty = template.trim() !== saved;
+  const examples = renderExamples(template);
+  const shown = examples.length ? examples : (query.data?.plate_paths ?? []);
 
-  const saveStorageSettings = async () => {
-    setStorageSaving(true);
-    setStorageStatus(null);
-    try {
-      const data = await settingsApi.updateStorage({
-        template: storageTemplate,
-        apply_existing: storageApplyExisting,
-      });
-      setStorageTemplate(data.template);
-      setStorageInitial(data.template);
-      setStorageTokens(data.allowed_tokens || []);
-      setStoragePlatePaths(data.plate_paths || []);
-      setStorageApplyExisting(false);
-      setStorageStatus(
-        storageApplyExisting
-          ? t("adminSettings.storage.savedApplied", {
-              moved: data.moved,
-              skippedSuffix: data.skipped ? t("adminSettings.storage.skippedSuffix", { skipped: data.skipped }) : "",
-            })
-          : t("adminSettings.storage.savedNoApply"),
+  const save = useMutation({
+    mutationFn: () => settingsApi.updateStorage({ template, apply_existing: applyExisting }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["settings", "storage"], data);
+      toast.success(
+        applyExisting
+          ? `Saved. Moved ${data.moved} file(s)${data.skipped ? `; skipped ${data.skipped}` : ""}.`
+          : "Storage structure saved for new and updated models.",
       );
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-      } else {
-        setStorageStatus(err instanceof Error ? err.message : t("adminSettings.storage.failed"));
-      }
-    } finally {
-      setStorageSaving(false);
-    }
-  };
-
-  const isDirty = storageTemplate.trim() !== storageInitial;
-  const templateTrimmed = storageTemplate.trim();
-  const draftSamples = templateTrimmed
-    ? PLATE_PREVIEW_VALUES.map((values) =>
-        Object.entries(values).reduce(
-          (value, [token, replacement]) => value.split(`{${token}}`).join(replacement),
-          templateTrimmed,
-        ),
-      )
-    : [];
-  const examplePaths = draftSamples.length ? draftSamples : storagePlatePaths;
+      setDraft(null);
+      setApplyExisting(false);
+      // Moved files change paths shown on model pages.
+      if (applyExisting) void queryClient.invalidateQueries({ queryKey: ["prints"] });
+    },
+  });
 
   return (
-    <Stack spacing={3}>
-      <SectionHeader title={t("adminSettings.storage.heading")} subtitle={t("adminSettings.storage.subtitle")} />
-
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Stack spacing={2}>
-          <Box>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 600,
-              }}
-            >
-              {t("adminSettings.storage.templateHeading")}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {t("adminSettings.storage.templateDesc")}
-            </Typography>
-          </Box>
-          <TextField
-            size="small"
-            label={t("adminSettings.storage.templateLabel")}
-            value={storageTemplate}
-            onChange={(e) => {
-              setStorageTemplate(e.target.value);
-              setStorageStatus(null);
-            }}
-            placeholder={t("adminSettings.storage.templatePlaceholder") ?? undefined}
-            disabled={storageLoading || storageSaving}
-            slotProps={{
-              input: { sx: { fontFamily: "monospace" } },
-            }}
-          />
-          <Stack
-            direction="row"
-            spacing={1}
-            useFlexGap
-            sx={{
-              flexWrap: "wrap",
-            }}
-          >
-            {storageTokens.map((token) => (
-              <Tooltip key={token} title={t(`adminSettings.storage.tokens.${token}`, { defaultValue: "" })}>
+    <AdminSection
+      title="Storage structure"
+      description="Choose how managed model files are organized on disk. The model name is unique inside its Thingport category. Renaming a model also renames its file while preserving the extension."
+    >
+      {query.isError ? (
+        <LoadError
+          error={query.error}
+          title="Couldn't load the storage settings."
+          onRetry={() => void query.refetch()}
+        />
+      ) : (
+        <form
+          className="flex max-w-2xl flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if ((dirty || applyExisting) && !save.isPending) save.mutate();
+          }}
+        >
+          {usage.data ? (
+            <p className="text-sm text-muted">
+              {formatFileSize(usage.data.model_bytes) || "0 B"} used by {usage.data.model_count}{" "}
+              {usage.data.model_count === 1 ? "model" : "models"}.
+            </p>
+          ) : null}
+          <Field label="Path template">
+            {(p) => (
+              <Input
+                {...p}
+                className="font-mono"
+                value={template}
+                placeholder={DEFAULT_TEMPLATE}
+                disabled={query.isPending || save.isPending}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+            )}
+          </Field>
+          <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
+            <legend className="sr-only">Insert a placeholder</legend>
+            {(query.data?.allowed_tokens ?? []).map((token) => (
+              <Tip key={token} content={TOKEN_HELP[token] ?? token}>
                 <Button
-                  size="small"
-                  variant="outlined"
-                  sx={{ fontFamily: "monospace", textTransform: "none" }}
-                  onClick={() =>
-                    setStorageTemplate((value) => {
-                      const tokenText = `{${token}}`;
-                      if (token === "filename" && value.includes(tokenText)) return value;
-                      const filenameSuffix = "/{filename}";
-                      if (value.endsWith(filenameSuffix)) {
-                        return `${value.slice(0, -filenameSuffix.length)}/${tokenText}${filenameSuffix}`;
-                      }
-                      return `${value}${value.endsWith("/") || !value ? "" : "/"}${tokenText}`;
-                    })
-                  }
+                  size="sm"
+                  className="font-mono"
+                  onClick={() => setDraft(addToken(template, token))}
+                  disabled={save.isPending}
                 >
                   {`{${token}}`}
                 </Button>
-              </Tooltip>
+              </Tip>
             ))}
-          </Stack>
-          <Paper variant="outlined" sx={{ p: 1.5, borderStyle: "dashed" }}>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              {t("adminSettings.storage.examplePathsHeading")}
-            </Typography>
-            {examplePaths.length ? (
-              <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                {examplePaths.map((path) => (
-                  <Typography key={path} variant="caption" sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
-                    {path}
-                  </Typography>
+          </fieldset>
+          <div className="rounded-control border border-dashed border-border-strong p-3">
+            <p className="text-xs font-medium tracking-wide text-muted uppercase">
+              Example paths (two plates of one print)
+            </p>
+            {shown.length ? (
+              <ul className="mt-1.5 space-y-0.5 font-mono text-xs break-all text-fg">
+                {shown.map((path) => (
+                  <li key={path}>{path}</li>
                 ))}
-              </Stack>
+              </ul>
             ) : (
-              <Typography variant="caption" sx={{ fontFamily: "monospace", display: "block", mt: 0.5 }}>
-                {t("adminSettings.storage.examplePathsEmpty")}
-              </Typography>
+              <p className="mt-1.5 font-mono text-xs text-muted">Enter a template to preview its path</p>
             )}
-          </Paper>
-          <FormControlLabel
-            sx={{ alignItems: "flex-start", m: 0 }}
-            control={
-              <Checkbox
-                sx={{ mt: -0.5 }}
-                checked={storageApplyExisting}
-                onChange={(e) => setStorageApplyExisting(e.target.checked)}
-                disabled={storageLoading || storageSaving}
-              />
-            }
-            label={
-              <Box>
-                <Typography variant="body2">{t("adminSettings.storage.reorganizeLabel")}</Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
-                  }}
-                >
-                  {t("adminSettings.storage.reorganizeHint")}
-                </Typography>
-              </Box>
-            }
-          />
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
+          </div>
+          <div className="flex flex-col gap-1">
+            <Checkbox
+              checked={applyExisting}
+              onCheckedChange={setApplyExisting}
+              disabled={save.isPending}
+              label="Reorganize existing managed files now"
+            />
+            <p className="pl-[26px] text-xs text-muted">
+              Links to models keep working, since they use the model&apos;s ID rather than its file path.
+            </p>
+          </div>
+          {save.error ? (
+            <Alert tone="danger">{errorMessage(save.error, "Failed to save storage settings.")}</Alert>
+          ) : null}
+          <div>
             <Button
-              variant="contained"
-              disabled={storageLoading || storageSaving || (!isDirty && !storageApplyExisting)}
-              onClick={saveStorageSettings}
+              type="submit"
+              variant="primary"
+              loading={save.isPending}
+              disabled={query.isPending || (!dirty && !applyExisting)}
             >
-              {storageSaving ? t("adminSettings.storage.saving") : t("adminSettings.storage.save")}
+              Save storage structure
             </Button>
-            {storageStatus && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                }}
-              >
-                {storageStatus}
-              </Typography>
-            )}
-          </Stack>
-        </Stack>
-      </Paper>
-    </Stack>
+          </div>
+        </form>
+      )}
+    </AdminSection>
   );
 }

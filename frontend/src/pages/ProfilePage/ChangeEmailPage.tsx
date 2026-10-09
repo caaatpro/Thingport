@@ -1,108 +1,78 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import SectionHeader from "../../components/SectionHeader";
-import { authApi, type AuthUser } from "../../api/auth";
-import { UnauthorizedError } from "../../api/client";
+import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { authApi } from "@/api/auth";
+import { useAuth } from "@/app/auth";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, PageHeader } from "@/ui";
 
-type Props = {
-  user: AuthUser | null;
-  onUserUpdated: (user: AuthUser) => void;
-  onUnauthorized?: () => void;
-};
+export default function ChangeEmailPage() {
+  const { user, updateUser } = useAuth();
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [password, setPassword] = useState("");
 
-export default function ChangeEmailPage({ user, onUserUpdated, onUnauthorized }: Props) {
-  const { t } = useTranslation("app");
-  const navigate = useNavigate();
-  const [email, setEmail] = React.useState(user?.email ?? "");
-  const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setStatus(null);
-    setLoading(true);
-    try {
-      const result = await authApi.updateProfile({
-        current_password: password,
-        email: email.trim(),
-      });
-      onUserUpdated(result.user);
+  const save = useMutation({
+    mutationFn: () => authApi.updateProfile({ current_password: password, email: email.trim() }),
+    onSuccess: ({ user: updated }) => {
+      updateUser(updated);
       setPassword("");
-      setStatus(
-        result.user.pending_email
-          ? t("profile.pendingEmail", { email: result.user.pending_email })
-          : t("profile.emailUpdated"),
-      );
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setError(err instanceof Error ? err.message : t("profile.genericError"));
-    } finally {
-      setLoading(false);
-    }
+    },
+  });
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    save.mutate();
   };
 
+  const updated = save.data?.user;
   return (
-    <Stack spacing={3} sx={{ maxWidth: 420 }}>
-      <SectionHeader
-        title={t("profile.changeEmailTitle")}
-        subtitle={t("profile.changeEmailSubtitle")}
-        onBack={() => navigate("/profile")}
-        backLabel={t("profile.backToProfile")}
+    <div className="max-w-md">
+      <PageHeader
+        title="Change email"
+        subtitle="Update the email address used to sign in."
+        backTo="/profile"
+        backLabel="Back to Profile"
       />
-
-      {user?.pending_email && (
-        <Alert severity="info">{t("profile.pendingEmailNotice", { email: user.pending_email })}</Alert>
-      )}
-      {status && (
-        <Alert severity="success" onClose={() => setStatus(null)}>
-          {status}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Box component="form" onSubmit={handleSubmit}>
-        <Stack spacing={2}>
-          <TextField
-            type="email"
-            label={t("profile.newEmailLabel")}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-            fullWidth
-            size="small"
-          />
-          <TextField
-            type="password"
-            label={t("profile.currentPasswordLabel")}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-            fullWidth
-            size="small"
-          />
-          <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? t("profile.saving") : t("profile.saveEmail")}
-          </Button>
-        </Stack>
-      </Box>
-    </Stack>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        {user?.pending_email && !updated ? (
+          <Alert tone="info">
+            A confirmation link was sent to {user.pending_email}. Click it to finish changing your email. Submit this
+            form again to resend.
+          </Alert>
+        ) : null}
+        {updated ? (
+          <Alert tone="success">
+            {updated.pending_email ? `Pending confirmation for ${updated.pending_email}` : "Email updated."}
+          </Alert>
+        ) : null}
+        {save.isError ? <Alert tone="danger">{errorMessage(save.error)}</Alert> : null}
+        <Field label="New email" required>
+          {(p) => (
+            <Input
+              {...p}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Current password" required>
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
+        </Field>
+        <Button type="submit" variant="primary" loading={save.isPending}>
+          Save email
+        </Button>
+      </form>
+    </div>
   );
 }

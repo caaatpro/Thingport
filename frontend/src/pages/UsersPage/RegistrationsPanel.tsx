@@ -1,144 +1,72 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import Typography from "@mui/material/Typography";
-import PersonAddIcon from "@mui/icons-material/PersonAddAlt1";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi } from "../../api/settings";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { UserPlus } from "lucide-react";
+import { settingsApi } from "@/api/settings";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Card, Switch, useToast } from "@/ui";
 import InviteUsersDialog from "./InviteUsersDialog";
 
-type Props = {
-  onUnauthorized?: () => void;
-};
-
 /** Closed registrations still admit the first account and invitees. Inviting needs SMTP. */
-export default function RegistrationsPanel({ onUnauthorized }: Props) {
-  const { t } = useTranslation("app");
-  const [allow, setAllow] = React.useState(true);
-  const [smtpConfigured, setSmtpConfigured] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [inviteOpen, setInviteOpen] = React.useState(false);
+export default function RegistrationsPanel() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [inviteOpen, setInviteOpen] = useState(false);
 
-  React.useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const [registrations, smtp] = await Promise.all([settingsApi.getRegistrations(), settingsApi.getSmtp()]);
-        if (!active) return;
-        setAllow(registrations.allow_registrations);
-        setSmtpConfigured(smtp.configured);
-      } catch (err) {
-        if (err instanceof UnauthorizedError) onUnauthorized?.();
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [onUnauthorized]);
+  const registrations = useQuery({
+    queryKey: ["settings", "registrations"],
+    queryFn: () => settingsApi.getRegistrations(),
+  });
+  const smtp = useQuery({ queryKey: ["settings", "smtp"], queryFn: () => settingsApi.getSmtp() });
 
-  const handleChange = async (next: boolean) => {
-    const previous = allow;
-    setAllow(next);
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await settingsApi.updateRegistrations(next);
-      setAllow(res.allow_registrations);
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setAllow(previous);
-      setError(err instanceof Error ? err.message : t("adminSettings.registrations.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const update = useMutation({
+    mutationFn: (next: boolean) => settingsApi.updateRegistrations(next),
+    onSuccess: (res) => queryClient.setQueryData(["settings", "registrations"], res),
+    onError: (err) => toast.error(errorMessage(err, "Failed to update registration settings")),
+  });
 
-  const canInvite = !allow && smtpConfigured;
+  const allow = update.isPending ? Boolean(update.variables) : (registrations.data?.allow_registrations ?? true);
+  const canInvite = !allow && Boolean(smtp.data?.configured);
+  const id = "allow-registrations";
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5 }}>
-      <Stack spacing={1.5}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          sx={{
-            alignItems: { sm: "center" },
-            justifyContent: "space-between",
-          }}
-        >
-          <Stack spacing={0.5}>
-            <Stack
-              direction="row"
-              spacing={1.5}
-              sx={{
-                alignItems: "center",
-              }}
-            >
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={allow}
-                    disabled={loading || saving}
-                    onChange={(e) => void handleChange(e.target.checked)}
-                  />
-                }
-                label={t("adminSettings.registrations.allowLabel")}
-              />
-              {saving && <CircularProgress size={16} />}
-            </Stack>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {allow ? t("adminSettings.registrations.openHelp") : t("adminSettings.registrations.closedHelp")}
-            </Typography>
-          </Stack>
-
-          {canInvite && (
-            <Stack
-              spacing={0.5}
-              sx={{
-                alignItems: { xs: "flex-start", sm: "flex-end" },
-                flexShrink: 0,
-              }}
-            >
-              <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setInviteOpen(true)}>
-                {t("adminSettings.registrations.inviteButton")}
-              </Button>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                }}
-              >
-                {t("adminSettings.registrations.inviteHelp")}
-              </Typography>
-            </Stack>
-          )}
-        </Stack>
-
-        {error && (
-          <Alert severity="error" onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-      </Stack>
+    <Card padding="md">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <Switch
+            id={id}
+            checked={allow}
+            disabled={registrations.isPending || update.isPending}
+            onCheckedChange={(v) => update.mutate(v)}
+            className="mt-0.5"
+          />
+          <div className="min-w-0">
+            <label htmlFor={id} className="text-sm font-medium text-fg">
+              Allow new registrations
+            </label>
+            <p className="text-sm text-muted">
+              {allow
+                ? "Anyone who can reach this instance can create an account from the sign-in page."
+                : "The sign-in page has no Register option, and new accounts can only be created from an invitation."}
+            </p>
+          </div>
+        </div>
+        {canInvite ? (
+          <div className="flex flex-col items-start gap-1 sm:items-end">
+            <Button icon={<UserPlus className="size-4" />} onClick={() => setInviteOpen(true)}>
+              Invite users
+            </Button>
+            <p className="text-xs text-muted">
+              Sends a registration link by email. It works for one address, once, for 7 days.
+            </p>
+          </div>
+        ) : null}
+      </div>
+      {registrations.isError ? (
+        <Alert tone="warning" className="mt-3">
+          Couldn&apos;t load the registration setting.
+        </Alert>
+      ) : null}
       <InviteUsersDialog open={inviteOpen} onClose={() => setInviteOpen(false)} />
-    </Paper>
+    </Card>
   );
 }

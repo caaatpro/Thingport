@@ -1,305 +1,206 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Alert from "@mui/material/Alert";
-import Chip from "@mui/material/Chip";
-import Divider from "@mui/material/Divider";
-import CircularProgress from "@mui/material/CircularProgress";
-import { UnauthorizedError } from "../../api/client";
-import { type ApiToken, type CreatedApiToken, tokensApi } from "../../api/tokens";
-import { useConfirm } from "../../components/ConfirmProvider";
-
-type Props = { onUnauthorized?: () => void };
-
-const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : null);
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, Copy } from "lucide-react";
+import { tokensApi, type ApiToken, type CreatedApiToken } from "@/api/tokens";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Badge, Button, Field, Input, Select, Skeleton, useConfirm, useToast } from "@/ui";
+import { copyText } from "@/utils/copyText";
+import { Section } from "./Section";
 
 const EXPIRY_OPTIONS = [
-  { value: 0, key: "never" },
-  { value: 30, key: "days30" },
-  { value: 90, key: "days90" },
-  { value: 365, key: "year1" },
-] as const;
+  { value: "0", label: "Never" },
+  { value: "30", label: "In 30 days" },
+  { value: "90", label: "In 90 days" },
+  { value: "365", label: "In 1 year" },
+];
+
+const formatDate = (iso: string) => new Date(iso).toLocaleString();
+
+/** One line of metadata under a token's name. */
+export function tokenDetails(token: ApiToken): string {
+  return [
+    `Created ${formatDate(token.created_at)}`,
+    token.last_used_at ? `Last used ${formatDate(token.last_used_at)}` : "Never used",
+    token.expires_at ? `Expires ${formatDate(token.expires_at)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Shown once, right after creation: the secret can't be retrieved again. */
+function NewToken({ token, onDismiss }: { token: CreatedApiToken; onDismiss: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const copy = async () => {
+    const ok = await copyText(token.token);
+    setCopied(ok);
+    setCopyFailed(!ok);
+  };
+  return (
+    <Alert
+      tone="success"
+      action={
+        <Button size="sm" variant="ghost" onClick={onDismiss}>
+          Done
+        </Button>
+      }
+    >
+      <p className="font-medium text-fg">Token "{token.name}" created</p>
+      <p className="mt-0.5">Copy it now: for security it is shown only once and can't be retrieved later.</p>
+      <div className="mt-2 flex items-center gap-2">
+        <Input
+          readOnly
+          aria-label="New token"
+          value={token.token}
+          onFocus={(e) => e.currentTarget.select()}
+          className="font-mono text-xs"
+        />
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+          onClick={() => void copy()}
+        >
+          {copied ? "Copied" : "Copy"}
+        </Button>
+      </div>
+      {copyFailed ? (
+        <p className="mt-1 text-xs text-danger">Couldn't copy automatically. Select the token and copy it by hand.</p>
+      ) : null}
+    </Alert>
+  );
+}
 
 /** Create and revoke the tokens that tools such as the Thingport Grab extension sign in with, so they
- *  never need the account password. The secret is shown once, right after creation. */
-export default function ApiTokensSection({ onUnauthorized }: Props) {
-  const { t } = useTranslation(["app", "common"]);
-  const confirmDialog = useConfirm();
-  const [tokens, setTokens] = React.useState<ApiToken[] | null>(null);
-  const [loadedAt, setLoadedAt] = React.useState(0);
-  const [name, setName] = React.useState("");
-  const [expiry, setExpiry] = React.useState<number>(0);
-  const [creating, setCreating] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [fresh, setFresh] = React.useState<CreatedApiToken | null>(null);
-  const [copied, setCopied] = React.useState(false);
-  const secretRef = React.useRef<HTMLInputElement | null>(null);
+ *  never need the account password. */
+export function ApiTokensSection() {
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [expiry, setExpiry] = useState("0");
+  const [fresh, setFresh] = useState<CreatedApiToken | null>(null);
 
-  const fail = React.useCallback(
-    (err: unknown, fallback: string) => {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setError(err instanceof Error && err.message ? err.message : fallback);
-    },
-    [onUnauthorized],
-  );
+  const query = useQuery({ queryKey: ["settings", "tokens"], queryFn: () => tokensApi.list() });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["settings", "tokens"] });
 
-  const reload = React.useCallback(async () => {
-    try {
-      const list = await tokensApi.list();
-      setTokens(list);
-      setLoadedAt(Date.now());
-    } catch (err) {
-      fail(err, t("app:profile.apiTokens.loadFailed"));
-    }
-  }, [fail, t]);
-
-  React.useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const handleCreate = async () => {
-    setCreating(true);
-    setError(null);
-    setCopied(false);
-    try {
-      const created = await tokensApi.create(name.trim(), expiry || null);
+  const create = useMutation({
+    mutationFn: () => tokensApi.create(name.trim(), Number(expiry) || null),
+    onSuccess: (created) => {
       setFresh(created);
       setName("");
-      await reload();
-    } catch (err) {
-      fail(err, t("app:profile.apiTokens.createFailed"));
-    } finally {
-      setCreating(false);
-    }
-  };
+      void refresh();
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: (token: ApiToken) => tokensApi.revoke(token.id),
+    onSuccess: (_, token) => {
+      setFresh((current) => (current?.id === token.id ? null : current));
+      toast.success(`Revoked "${token.name}".`);
+      void refresh();
+    },
+    onError: (err) => toast.error(errorMessage(err, "Couldn't revoke the token.")),
+  });
 
   const handleRevoke = async (token: ApiToken) => {
-    const ok = await confirmDialog({
-      message: t("app:profile.apiTokens.confirmRevoke", { name: token.name }),
-      confirmLabel: t("app:profile.apiTokens.revoke"),
+    const ok = await confirm({
+      title: "Revoke token",
+      message: `Revoke "${token.name}"? Anything using it will stop working immediately.`,
+      confirmLabel: "Revoke",
       destructive: true,
     });
-    if (!ok) return;
-    setError(null);
-    try {
-      await tokensApi.revoke(token.id);
-      if (fresh?.id === token.id) setFresh(null);
-      await reload();
-    } catch (err) {
-      fail(err, t("app:profile.apiTokens.revokeFailed"));
-    }
+    if (ok) revoke.mutate(token);
   };
 
-  const copySecret = async () => {
-    const input = secretRef.current;
-    if (!fresh || !input) return;
-    try {
-      // navigator.clipboard only exists on HTTPS or localhost; fall back to selecting the text.
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(fresh.token);
-      else {
-        input.select();
-        document.execCommand("copy");
-      }
-      setCopied(true);
-    } catch {
-      input.select();
-    }
-  };
+  const tokens = query.data;
+  const now = query.dataUpdatedAt;
 
   return (
-    <Stack spacing={2} id="api-tokens">
-      <Box>
-        <Typography
-          variant="subtitle1"
-          sx={{
-            fontWeight: 600,
-            color: (muiTheme) => muiTheme.thingport.headingText,
-          }}
-        >
-          {t("app:profile.apiTokens.title")}
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-          }}
-        >
-          {t("app:profile.apiTokens.description")}
-        </Typography>
-      </Box>
+    <Section
+      id="api-tokens"
+      title="API tokens"
+      description="Tokens let tools such as the Thingport Grab browser extension use your account without your password. A token can only do what that tool needs, and you can revoke it at any time."
+    >
+      <div className="flex flex-col gap-4">
+        {fresh ? <NewToken token={fresh} onDismiss={() => setFresh(null)} /> : null}
 
-      {error && <Alert severity="error">{error}</Alert>}
-
-      {fresh && (
-        <Alert severity="success" onClose={() => setFresh(null)}>
-          <Stack spacing={1}>
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 600,
-              }}
-            >
-              {t("app:profile.apiTokens.created", { name: fresh.name })}
-            </Typography>
-            <Typography variant="body2">{t("app:profile.apiTokens.copyNow")}</Typography>
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems: "center",
-              }}
-            >
-              <TextField
-                size="small"
-                fullWidth
-                value={fresh.token}
-                inputRef={secretRef}
-                onFocus={(e) => e.target.select()}
-                slotProps={{ input: { readOnly: true, sx: { fontFamily: "monospace", fontSize: 13 } } }}
-              />
-              <Button variant="outlined" size="small" onClick={copySecret} sx={{ flexShrink: 0 }}>
-                {copied ? t("app:profile.apiTokens.copied") : t("app:profile.apiTokens.copy")}
+        {query.isError ? (
+          <Alert
+            tone="danger"
+            action={
+              <Button size="sm" onClick={() => void query.refetch()}>
+                Retry
               </Button>
-            </Stack>
-          </Stack>
-        </Alert>
-      )}
+            }
+          >
+            {errorMessage(query.error, "Couldn't load your tokens.")}
+          </Alert>
+        ) : !tokens ? (
+          <Skeleton className="h-12" />
+        ) : tokens.length === 0 ? (
+          <p className="text-sm text-muted">No tokens yet.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {tokens.map((token) => {
+              const expired = token.expires_at ? new Date(token.expires_at).getTime() <= now : false;
+              return (
+                <li key={token.id} className="flex items-center gap-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-fg">{token.name}</span>
+                      <code className="text-xs text-muted">{token.prefix}…</code>
+                      <Badge tone="outline">{token.scope}</Badge>
+                      {expired ? <Badge tone="warning">Expired</Badge> : null}
+                    </div>
+                    <p className="text-xs text-muted">{tokenDetails(token)}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="danger-ghost"
+                    aria-label={`Revoke ${token.name}`}
+                    disabled={revoke.isPending}
+                    onClick={() => void handleRevoke(token)}
+                  >
+                    Revoke
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-      {tokens === null ? (
-        <CircularProgress size={20} />
-      ) : tokens.length === 0 ? (
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.disabled",
+        <form
+          className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (name.trim()) create.mutate();
           }}
         >
-          {t("app:profile.apiTokens.none")}
-        </Typography>
-      ) : (
-        <Stack divider={<Divider flexItem />} spacing={0}>
-          {tokens.map((token) => {
-            const expired = token.expires_at ? new Date(token.expires_at).getTime() <= loadedAt : false;
-            return (
-              <Stack
-                key={token.id}
-                direction="row"
-                spacing={1.5}
-                sx={{
-                  alignItems: "center",
-                  py: 1,
-                }}
-              >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems: "center",
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      noWrap
-                      sx={{
-                        fontWeight: 600,
-                      }}
-                    >
-                      {token.name}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: "text.secondary",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {token.prefix}…
-                    </Typography>
-                    {expired && (
-                      <Chip
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        label={t("app:profile.apiTokens.expired")}
-                      />
-                    )}
-                  </Stack>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                      display: "block",
-                    }}
-                  >
-                    {[
-                      t("app:profile.apiTokens.createdAt", { date: formatDate(token.created_at) }),
-                      token.last_used_at
-                        ? t("app:profile.apiTokens.lastUsed", { date: formatDate(token.last_used_at) })
-                        : t("app:profile.apiTokens.neverUsed"),
-                      token.expires_at
-                        ? t("app:profile.apiTokens.expiresAt", { date: formatDate(token.expires_at) })
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </Typography>
-                </Box>
-                <Button size="small" color="error" onClick={() => void handleRevoke(token)}>
-                  {t("app:profile.apiTokens.revoke")}
-                </Button>
-              </Stack>
-            );
-          })}
-        </Stack>
-      )}
-
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1}
-        sx={{
-          alignItems: { sm: "flex-start" },
-        }}
-      >
-        <TextField
-          size="small"
-          label={t("app:profile.apiTokens.nameLabel")}
-          placeholder={t("app:profile.apiTokens.namePlaceholder") ?? ""}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={creating}
-          sx={{ flex: 1 }}
-          slotProps={{
-            htmlInput: { maxLength: 60 },
-          }}
-        />
-        <TextField
-          select
-          size="small"
-          label={t("app:profile.apiTokens.expiryLabel")}
-          value={expiry}
-          onChange={(e) => setExpiry(Number(e.target.value))}
-          disabled={creating}
-          sx={{ minWidth: 150 }}
-        >
-          {EXPIRY_OPTIONS.map((o) => (
-            <MenuItem key={o.value} value={o.value}>
-              {t(`app:profile.apiTokens.expiry.${o.key}`)}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button variant="contained" onClick={handleCreate} disabled={creating || !name.trim()}>
-          {t("app:profile.apiTokens.create")}
-        </Button>
-      </Stack>
-    </Stack>
+          <Field label="Token name" className="flex-1">
+            {(p) => (
+              <Input
+                {...p}
+                value={name}
+                maxLength={60}
+                placeholder="e.g. Chrome on my laptop"
+                disabled={create.isPending}
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Expires" className="sm:w-40">
+            {(p) => (
+              <Select {...p} value={expiry} options={EXPIRY_OPTIONS} disabled={create.isPending} onChange={setExpiry} />
+            )}
+          </Field>
+          <Button type="submit" variant="primary" loading={create.isPending} disabled={!name.trim()}>
+            Create token
+          </Button>
+        </form>
+        {create.isError ? (
+          <Alert tone="danger">{errorMessage(create.error, "Couldn't create the token.")}</Alert>
+        ) : null}
+      </div>
+    </Section>
   );
 }

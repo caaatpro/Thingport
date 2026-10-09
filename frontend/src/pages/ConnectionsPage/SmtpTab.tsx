@@ -1,218 +1,148 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi, type SmtpSettings } from "../../api/settings";
-
-type Props = {
-  onUnauthorized?: () => void;
-};
-
-const EMPTY: SmtpSettings = { host: null, port: 587, secure: false, user: null, from: "", configured: false };
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { settingsApi, type SmtpSettings } from "@/api/settings";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, Skeleton, Switch, useToast } from "@/ui";
+import { AdminSection, LoadError } from "../AdminPage/parts";
 
 /** Leaving Host blank turns email verification off. */
-export default function SmtpTab({ onUnauthorized }: Props) {
-  const { t } = useTranslation("app");
-  const [settings, setSettings] = React.useState<SmtpSettings>(EMPTY);
-  const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+export default function SmtpTab() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const query = useQuery({ queryKey: ["settings", "smtp"], queryFn: () => settingsApi.getSmtp() });
+  // null = untouched: the form shows the saved settings. The password is write-only and always starts empty.
+  const [draft, setDraft] = useState<SmtpSettings | null>(null);
+  const [password, setPassword] = useState("");
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      setSettings(await settingsApi.getSmtp());
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setError(t("adminSettings.smtp.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [onUnauthorized, t]);
+  const settings = draft ?? query.data;
+  const patch = (change: Partial<SmtpSettings>) => settings && setDraft({ ...settings, ...change });
 
-  React.useEffect(() => {
-    void load();
-  }, [load]);
-
-  const save = async () => {
-    setSaving(true);
-    setStatus(null);
-    setError(null);
-    try {
-      const next = await settingsApi.updateSmtp({
-        host: settings.host,
-        port: settings.port,
-        secure: settings.secure,
-        user: settings.user,
-        from: settings.from,
+  const save = useMutation({
+    mutationFn: (s: SmtpSettings) =>
+      settingsApi.updateSmtp({
+        host: s.host,
+        port: s.port,
+        secure: s.secure,
+        user: s.user,
+        from: s.from,
         ...(password.trim() ? { pass: password.trim() } : {}),
-      });
-      setSettings(next);
+      }),
+    onSuccess: (next) => {
+      queryClient.setQueryData(["settings", "smtp"], next);
+      setDraft(null);
       setPassword("");
-      setStatus(t("adminSettings.smtp.saved"));
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setError(err instanceof Error ? err.message : t("adminSettings.smtp.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+      toast.success("SMTP settings saved.");
+    },
+  });
 
-  if (loading) {
-    return (
-      <Stack
-        sx={{
-          alignItems: "center",
-          py: 4,
-        }}
-      >
-        <CircularProgress size={20} />
-      </Stack>
-    );
+  if (query.isPending) return <Skeleton className="h-96" />;
+  if (query.isError || !settings) {
+    return <LoadError error={query.error} title="Unable to load SMTP settings." onRetry={() => void query.refetch()} />;
   }
-
-  const disabled = saving;
+  const busy = save.isPending;
 
   return (
-    <Stack spacing={3}>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "text.secondary",
+    <AdminSection
+      title="SMTP"
+      description="Used to send the account-verification email on registration. Leave Host blank to turn email verification off entirely: new accounts are then verified and signed in immediately."
+    >
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!busy) save.mutate(settings);
         }}
       >
-        {t("adminSettings.smtp.helpText")}
-      </Typography>
-
-      <Alert severity={settings.configured ? "success" : "warning"}>
-        {settings.configured ? t("adminSettings.smtp.statusConfigured") : t("adminSettings.smtp.statusNotConfigured")}
-      </Alert>
-
-      <Stack
-        direction="row"
-        spacing={2}
-        useFlexGap
-        sx={{
-          flexWrap: "wrap",
-        }}
-      >
-        <TextField
-          label={t("adminSettings.smtp.hostLabel")}
-          value={settings.host ?? ""}
-          onChange={(e) => setSettings((s) => ({ ...s, host: e.target.value }))}
-          placeholder={t("adminSettings.smtp.hostPlaceholder") ?? undefined}
-          disabled={disabled}
-          sx={{ flex: "2 1 260px" }}
-        />
-        <TextField
-          type="number"
-          label={t("adminSettings.smtp.portLabel")}
-          value={settings.port}
-          onChange={(e) => setSettings((s) => ({ ...s, port: Number(e.target.value) || s.port }))}
-          disabled={disabled}
-          sx={{ flex: "1 1 120px" }}
-        />
-      </Stack>
-
-      <FormControlLabel
-        control={
-          <Switch
-            checked={settings.secure}
-            onChange={(e) => setSettings((s) => ({ ...s, secure: e.target.checked }))}
-            disabled={disabled}
-          />
-        }
-        label={
-          <Box>
-            <Typography variant="body2">{t("adminSettings.smtp.secureLabel")}</Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-              }}
-            >
-              {t("adminSettings.smtp.secureHint")}
-            </Typography>
-          </Box>
-        }
-      />
-
-      <Stack
-        direction="row"
-        spacing={2}
-        useFlexGap
-        sx={{
-          flexWrap: "wrap",
-        }}
-      >
-        <TextField
-          label={t("adminSettings.smtp.userLabel")}
-          value={settings.user ?? ""}
-          onChange={(e) => setSettings((s) => ({ ...s, user: e.target.value }))}
-          disabled={disabled}
-          autoComplete="off"
-          sx={{ flex: "1 1 220px" }}
-        />
-        <TextField
-          type="password"
-          label={t("adminSettings.smtp.passwordLabel")}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={t("adminSettings.smtp.passwordPlaceholder") ?? undefined}
-          disabled={disabled}
-          autoComplete="new-password"
-          sx={{ flex: "1 1 220px" }}
-        />
-      </Stack>
-
-      <TextField
-        label={t("adminSettings.smtp.fromLabel")}
-        value={settings.from}
-        onChange={(e) => setSettings((s) => ({ ...s, from: e.target.value }))}
-        placeholder={t("adminSettings.smtp.fromPlaceholder") ?? undefined}
-        disabled={disabled}
-        fullWidth
-      />
-
-      <Stack
-        direction="row"
-        spacing={1.5}
-        sx={{
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <Button variant="contained" onClick={save} disabled={disabled}>
-          {saving ? t("adminSettings.smtp.saving") : t("adminSettings.smtp.save")}
-        </Button>
-        {saving && <CircularProgress size={14} />}
-        {status && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            {status}
-          </Typography>
-        )}
-      </Stack>
-
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
+        <Alert tone={query.data.configured ? "success" : "warning"}>
+          {query.data.configured
+            ? "SMTP is configured: new accounts must verify their email before signing in."
+            : "SMTP is not configured: new accounts are verified and signed in immediately."}
         </Alert>
-      )}
-    </Stack>
+        <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+          <Field label="Host">
+            {(p) => (
+              <Input
+                {...p}
+                value={settings.host ?? ""}
+                placeholder="smtp.example.com"
+                disabled={busy}
+                onChange={(e) => patch({ host: e.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="Port">
+            {(p) => (
+              <Input
+                {...p}
+                type="number"
+                min={1}
+                max={65535}
+                value={settings.port}
+                disabled={busy}
+                onChange={(e) => patch({ port: Number(e.target.value) || settings.port })}
+              />
+            )}
+          </Field>
+        </div>
+        <div className="flex items-start gap-3">
+          <Switch
+            id="smtp-secure"
+            checked={settings.secure}
+            disabled={busy}
+            onCheckedChange={(secure) => patch({ secure })}
+            className="mt-0.5"
+          />
+          <div>
+            <label htmlFor="smtp-secure" className="text-sm font-medium text-fg">
+              Use implicit TLS
+            </label>
+            <p className="text-sm text-muted">Enable for port 465. Leave off for STARTTLS on port 587.</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Username">
+            {(p) => (
+              <Input
+                {...p}
+                value={settings.user ?? ""}
+                autoComplete="off"
+                disabled={busy}
+                onChange={(e) => patch({ user: e.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="Password">
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                value={password}
+                placeholder="Leave blank to keep the current password"
+                autoComplete="new-password"
+                disabled={busy}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+        <Field label="From address">
+          {(p) => (
+            <Input
+              {...p}
+              value={settings.from}
+              placeholder="Thingport <no-reply@example.com>"
+              disabled={busy}
+              onChange={(e) => patch({ from: e.target.value })}
+            />
+          )}
+        </Field>
+        {save.error ? <Alert tone="danger">{errorMessage(save.error, "Failed to save SMTP settings.")}</Alert> : null}
+        <div>
+          <Button type="submit" variant="primary" loading={busy}>
+            Save
+          </Button>
+        </div>
+      </form>
+    </AdminSection>
   );
 }

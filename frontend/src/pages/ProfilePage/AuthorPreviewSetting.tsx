@@ -1,115 +1,47 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Box from "@mui/material/Box";
-import CircularProgress from "@mui/material/CircularProgress";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import Typography from "@mui/material/Typography";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi } from "../../api/settings";
-import { setCachedAuthorPreviewEnabled } from "../../hooks/useAuthorPreviewEnabled";
+import { useId } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { settingsApi } from "@/api/settings";
+import { errorMessage } from "@/app/queryClient";
+import { setCachedAuthorPreviewEnabled } from "@/hooks/useAuthorPreviewEnabled";
+import { Alert, Spinner, Switch } from "@/ui";
+import { Section } from "./Section";
 
-type Props = {
-  onUnauthorized?: () => void;
-};
-
-export default function AuthorPreviewSetting({ onUnauthorized }: Props) {
-  const { t } = useTranslation(["app"]);
-  const [enabled, setEnabled] = React.useState(true);
-  const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let active = true;
-    settingsApi
-      .getAuthorPreview()
-      .then((res) => {
-        if (active) setEnabled(res.enabled);
-      })
-      .catch((err) => {
-        if (active && err instanceof UnauthorizedError) onUnauthorized?.();
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [onUnauthorized]);
-
-  const handleChange = async (next: boolean) => {
-    const previous = enabled;
-    setEnabled(next);
-    setSaving(true);
-    setStatus(null);
-    try {
-      const res = await settingsApi.updateAuthorPreview(next);
-      setEnabled(res.enabled);
+/** Whether hovering an author's name or avatar shows a preview card. */
+export function AuthorPreviewSetting() {
+  const id = useId();
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ["settings", "author-preview"], queryFn: () => settingsApi.getAuthorPreview() });
+  const save = useMutation({
+    mutationFn: (enabled: boolean) => settingsApi.updateAuthorPreview(enabled),
+    onSuccess: (res) => {
+      queryClient.setQueryData(["settings", "author-preview"], res);
       setCachedAuthorPreviewEnabled(res.enabled);
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setEnabled(previous);
-      setStatus(err instanceof Error ? err.message : t("profile.authorPreview.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
+  const checked = save.isPending ? (save.variables ?? true) : (query.data?.enabled ?? true);
 
   return (
-    <Box>
-      <Typography
-        variant="subtitle1"
-        sx={{
-          fontWeight: 600,
-          color: (muiTheme) => muiTheme.thingport.headingText,
-        }}
-      >
-        {t("profile.authorPreview.heading")}
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-          mb: 1.5,
-        }}
-      >
-        {t("profile.authorPreview.description")}
-      </Typography>
-      <Paper
-        variant="outlined"
-        sx={{ p: 2.5, borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider") }}
-      >
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{
-            alignItems: "center",
-          }}
-        >
-          <FormControlLabel
-            control={
-              <Switch
-                checked={enabled}
-                disabled={loading || saving}
-                onChange={(e) => void handleChange(e.target.checked)}
-              />
-            }
-            label={t("profile.authorPreview.label")}
-          />
-          {saving && <CircularProgress size={16} />}
-        </Stack>
-        {status && (
-          <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
-            {status}
-          </Typography>
-        )}
-      </Paper>
-    </Box>
+    <Section
+      title="Author preview"
+      description="Show a preview card with the author's cover, details and latest models when you hover an author's name or avatar."
+    >
+      <div className="flex items-center gap-3">
+        <Switch
+          id={id}
+          checked={checked}
+          disabled={query.isPending || save.isPending}
+          onCheckedChange={(next) => save.mutate(next)}
+        />
+        <label htmlFor={id} className="text-sm text-fg">
+          Show author preview on hover
+        </label>
+        {save.isPending ? <Spinner className="size-4" label="Saving" /> : null}
+      </div>
+      {save.isError ? (
+        <Alert tone="danger" className="mt-3">
+          {errorMessage(save.error, "Couldn't save. Try again.")}
+        </Alert>
+      ) : null}
+    </Section>
   );
 }

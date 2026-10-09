@@ -1,124 +1,123 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import type { Category, CategoryMetaInput } from "../../api/categories";
+import type { Category, CategoryMetaInput } from "@/api/categories";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, Modal, Textarea } from "@/ui";
 
 type Props = {
   category: Category;
   onClose: () => void;
-  onSave: (meta: CategoryMetaInput) => Promise<void>;
+  onSave: (meta: CategoryMetaInput) => Promise<unknown>;
 };
 
-/** Blank fields clear the metadata. Imports whose site category id matches any listed id
- *  (";"-separated) land in this category. Validation errors show inline and keep the edits. */
-export default function CategoryMetaDialog({ category, onClose, onSave }: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const untitledLabel = t("models:categories.untitled");
+const FORM_ID = "category-details-form";
+const IDS_HINT = "Separate several with “;”. Imports from that site land here if their category is any of these.";
+
+/**
+ * Title and description shown above the category, plus the site category IDs that route imports here.
+ * Blank fields clear the details. A server error shows inline and keeps the edits.
+ */
+export function CategoryMetaDialog({ category, onClose, onSave }: Props) {
   const [title, setTitle] = useState(category.meta_title ?? "");
   const [description, setDescription] = useState(category.meta_description ?? "");
-  const [makerworldCatIds, setMakerworldCatIds] = useState(category.makerworld_cat_ids);
-  const [thingiverseCatIds, setThingiverseCatIds] = useState(category.thingiverse_cat_ids);
-  const [printablesCatIds, setPrintablesCatIds] = useState(category.printables_cat_ids);
+  const [makerworld, setMakerworld] = useState(category.makerworld_cat_ids);
+  const [thingiverse, setThingiverse] = useState(category.thingiverse_cat_ids);
+  const [printables, setPrintables] = useState(category.printables_cat_ids);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSave = async () => {
+  const save = async () => {
     setSaving(true);
     setError(null);
     try {
       await onSave({
         metaTitle: title.trim() || null,
         metaDescription: description.trim() || null,
-        makerworldCatIds,
-        thingiverseCatIds,
-        printablesCatIds,
+        makerworldCatIds: makerworld,
+        thingiverseCatIds: thingiverse,
+        printablesCatIds: printables,
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("models:errors.updateCategoryMetaFailed"));
-    } finally {
+      setError(errorMessage(err, "Couldn't save the details. Try again."));
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open onClose={() => !saving && onClose()} fullWidth maxWidth="sm">
-      <DialogTitle>
-        {t("models:categories.manager.metaDialogTitle", { name: category.name || untitledLabel })}
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 0.5 }}>
-          <TextField
-            label={t("models:categories.manager.metaTitleLabel")}
-            fullWidth
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={saving}
-            // oxlint-disable-next-line jsx-a11y/no-autofocus
-            autoFocus
-          />
-          <TextField
-            label={t("models:categories.manager.metaDescriptionLabel")}
-            fullWidth
-            multiline
-            minRows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={saving}
-          />
-          <Stack direction="row" spacing={2}>
-            <TextField
-              label={t("models:categories.manager.makerworldCatIdLabel")}
-              placeholder={t("models:categories.manager.catIdsPlaceholder") ?? undefined}
-              helperText={t("models:categories.manager.catIdsHelp")}
-              fullWidth
-              value={makerworldCatIds}
-              onChange={(e) => setMakerworldCatIds(e.target.value)}
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      locked={saving}
+      title={`Details — ${category.name || "Untitled"}`}
+      size="md"
+      footer={
+        <>
+          <Button onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form={FORM_ID} loading={saving}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <form
+        id={FORM_ID}
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save();
+        }}
+      >
+        <Field label="Title">
+          {(p) => <Input {...p} value={title} onChange={(e) => setTitle(e.target.value)} disabled={saving} />}
+        </Field>
+        <Field label="Description">
+          {(p) => (
+            <Textarea
+              {...p}
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               disabled={saving}
             />
-            <TextField
-              label={t("models:categories.manager.thingiverseCatIdLabel")}
-              placeholder={t("models:categories.manager.catIdsPlaceholder") ?? undefined}
-              helperText={t("models:categories.manager.catIdsHelp")}
-              fullWidth
-              value={thingiverseCatIds}
-              onChange={(e) => setThingiverseCatIds(e.target.value)}
+          )}
+        </Field>
+        <Field label="MakerWorld category IDs" hint={IDS_HINT}>
+          {(p) => (
+            <Input
+              {...p}
+              placeholder="e.g. 800;71;1001"
+              value={makerworld}
+              onChange={(e) => setMakerworld(e.target.value)}
               disabled={saving}
             />
-            <TextField
-              label={t("models:categories.manager.printablesCatIdLabel")}
-              placeholder={t("models:categories.manager.catIdsPlaceholder") ?? undefined}
-              helperText={t("models:categories.manager.catIdsHelp")}
-              fullWidth
-              value={printablesCatIds}
-              onChange={(e) => setPrintablesCatIds(e.target.value)}
+          )}
+        </Field>
+        <Field label="Thingiverse category IDs">
+          {(p) => (
+            <Input
+              {...p}
+              placeholder="e.g. 800;71;1001"
+              value={thingiverse}
+              onChange={(e) => setThingiverse(e.target.value)}
               disabled={saving}
             />
-          </Stack>
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
-          {t("common:cancel")}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={saving}
-          startIcon={saving ? <CircularProgress size={14} /> : undefined}
-        >
-          {t("common:save")}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          )}
+        </Field>
+        <Field label="Printables category IDs">
+          {(p) => (
+            <Input
+              {...p}
+              placeholder="e.g. 800;71;1001"
+              value={printables}
+              onChange={(e) => setPrintables(e.target.value)}
+              disabled={saving}
+            />
+          )}
+        </Field>
+        {error ? <Alert tone="danger">{error}</Alert> : null}
+      </form>
+    </Modal>
   );
 }

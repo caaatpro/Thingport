@@ -1,21 +1,13 @@
-import type { Theme } from "@mui/material/styles";
-
-// `color`/`textColor` are sx palette tokens or hex brand colors; `textColor` may also be a theme
-// callback.
-export type ImportProviderInfo = { label: string; color: string; textColor?: string | ((theme: Theme) => string) };
+// Brand colours of the sites models are imported from; `textColor` defaults to white.
+export type ImportProviderInfo = { label: string; color: string; textColor?: string };
 
 export const IMPORT_PROVIDER_INFO: Record<string, ImportProviderInfo> = {
   makerworld: { label: "MakerWorld", color: "#00B800" },
   thingiverse: { label: "Thingiverse", color: "#2B78FE" },
   printables: { label: "Printables", color: "#FA6831" },
   cults3d: { label: "Cults3D", color: "#E5471B" },
-  // Direct uploads (source_provider is null). Monochrome so it doesn't compete with provider badges;
-  // dark mode uses flat white for contrast against the chip.
-  thingport: {
-    label: "Thingport",
-    color: "text.primary",
-    textColor: (theme) => (theme.palette.mode === "dark" ? "#FFFFFF" : theme.palette.background.paper),
-  },
+  // Direct uploads (source_provider is null).
+  thingport: { label: "Thingport", color: "#18181b" },
 };
 
 /** Known external providers only; null for uploads. */

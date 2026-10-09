@@ -1,287 +1,236 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Alert from "@mui/material/Alert";
-import Button from "@mui/material/Button";
-import Checkbox from "@mui/material/Checkbox";
-import CircularProgress from "@mui/material/CircularProgress";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { adminApi, type AdminUser } from "../../api/admin";
-import { UnauthorizedError } from "../../api/client";
-import { copyText } from "../../utils/copyText";
-import { formatFileSize } from "../../utils/fileSize";
+import { useId, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Copy, Check } from "lucide-react";
+import { adminApi, type AdminUser } from "@/api/admin";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Checkbox, Field, Input, Modal, Spinner } from "@/ui";
+import { copyText } from "@/utils/copyText";
+import { formatFileSize } from "@/utils/fileSize";
 
-/** Shared by the dialogs: runs `action`, reports its error inline, and hands a 401 to the app. */
-function useAction(onUnauthorized?: () => void) {
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const run = async (action: () => Promise<void>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await action();
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return { busy, error, setError, run };
-}
-
-type BaseProps = {
-  user: AdminUser | null;
+type Props = {
+  user: AdminUser;
   onClose: () => void;
-  onChanged: (message?: string) => void;
-  onUnauthorized?: () => void;
+  /** Called after a successful change, with the message to toast. */
+  onChanged: (message: string) => void;
 };
 
-export function EditUserDialog({ user, onClose, onChanged, onUnauthorized }: BaseProps) {
-  const { t } = useTranslation(["app", "common"]);
-  const [name, setName] = React.useState("");
-  const { busy, error, setError, run } = useAction(onUnauthorized);
-
-  React.useEffect(() => {
-    setName(user?.display_name ?? "");
-    setError(null);
-    // setError is stable; only a different user should reset the form
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !name.trim()) return;
-    void run(async () => {
-      await adminApi.updateUser(user.id, { display_name: name.trim() });
-      onChanged(t("adminSettings.users.saved"));
+export function EditUserDialog({ user, onClose, onChanged }: Props) {
+  const formId = useId();
+  const [name, setName] = useState(user.display_name);
+  const save = useMutation({
+    mutationFn: () => adminApi.updateUser(user.id, { display_name: name.trim() }),
+    onSuccess: () => {
+      onChanged("Saved.");
       onClose();
-    });
-  };
-
+    },
+  });
   return (
-    <Dialog open={Boolean(user)} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
-      <form onSubmit={submit}>
-        <DialogTitle>{t("adminSettings.users.edit.title")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField
-              label={t("adminSettings.users.edit.nameLabel")}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              size="small"
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={busy}>
-            {t("common:cancel")}
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title="Edit user"
+      size="sm"
+      locked={save.isPending}
+      footer={
+        <>
+          <Button onClick={onClose} disabled={save.isPending}>
+            Cancel
           </Button>
-          <Button type="submit" variant="contained" disabled={busy || !name.trim()}>
-            {t("adminSettings.users.edit.save")}
+          <Button type="submit" form={formId} variant="primary" loading={save.isPending} disabled={!name.trim()}>
+            Save
           </Button>
-        </DialogActions>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim() && !save.isPending) save.mutate();
+        }}
+      >
+        {save.error ? <Alert tone="danger">{errorMessage(save.error)}</Alert> : null}
+        <Field label="Name" required hint={user.email}>
+          {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}
+        </Field>
       </form>
-    </Dialog>
+    </Modal>
   );
 }
 
-export function ResetLinkDialog({ user, onClose, onUnauthorized }: Omit<BaseProps, "onChanged">) {
-  const { t, i18n } = useTranslation(["app", "common"]);
-  const [link, setLink] = React.useState<{ url: string; expires_at: string } | null>(null);
-  const [copied, setCopied] = React.useState(false);
-  const { busy, error, run } = useAction(onUnauthorized);
-
-  React.useEffect(() => {
-    setLink(null);
-    setCopied(false);
-    if (!user) return;
-    void run(async () => setLink(await adminApi.createResetLink(user.id)));
-    // a new link only for a newly opened dialog
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
+/** A read-only value with a copy button: reset links and generated passwords. */
+export function CopyField({
+  value,
+  label,
+  copyLabel = "Copy",
+  mono = true,
+}: {
+  value: string;
+  label: string;
+  copyLabel?: string;
+  mono?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
   return (
-    <Dialog open={Boolean(user)} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("adminSettings.users.reset.title")}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 0.5 }}>
-          <DialogContentText>
-            {t("adminSettings.users.reset.description", { name: user?.display_name ?? "" })}
-          </DialogContentText>
-          {error && <Alert severity="error">{error}</Alert>}
-          {busy && !link && (
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems: "center",
-              }}
-            >
-              <CircularProgress size={16} />
-              <span>{t("adminSettings.users.reset.creating")}</span>
-            </Stack>
-          )}
-          {link && (
-            <>
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  value={link.url}
-                  size="small"
-                  fullWidth
-                  onFocus={(e) => e.target.select()}
-                  slotProps={{
-                    input: { readOnly: true, sx: { fontFamily: "monospace", fontSize: 12 } },
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  startIcon={<ContentCopyIcon fontSize="small" />}
-                  onClick={async () => setCopied(await copyText(link.url))}
-                  sx={{ flexShrink: 0 }}
-                >
-                  {copied ? t("adminSettings.users.reset.copied") : t("adminSettings.users.reset.copy")}
-                </Button>
-              </Stack>
-              <DialogContentText variant="caption">
-                {t("adminSettings.users.reset.expires", {
-                  time: new Date(link.expires_at).toLocaleTimeString(i18n.language, {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }),
-                })}
-              </DialogContentText>
-            </>
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t("common:close")}</Button>
-      </DialogActions>
-    </Dialog>
+    <div className="flex gap-2">
+      <Input
+        readOnly
+        aria-label={label}
+        value={value}
+        onFocus={(e) => e.target.select()}
+        className={mono ? "font-mono text-xs" : undefined}
+      />
+      <Button
+        icon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+        onClick={async () => setCopied(await copyText(value))}
+      >
+        {copied ? "Copied" : copyLabel}
+      </Button>
+    </div>
   );
 }
 
-export function SignOutDialog({ user, onClose, onChanged, onUnauthorized }: BaseProps) {
-  const { t } = useTranslation(["app", "common"]);
-  const [revoke, setRevoke] = React.useState(false);
-  const { busy, error, setError, run } = useAction(onUnauthorized);
+export function ResetLinkDialog({ user, onClose }: Omit<Props, "onChanged">) {
+  // One link per opened dialog: the query is never refetched or kept.
+  const link = useQuery({
+    queryKey: ["admin", "reset-link", user.id],
+    queryFn: () => adminApi.createResetLink(user.id),
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  return (
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title="Password reset link"
+      description={`Send this link to ${user.display_name}. It can be used once and works for one hour.`}
+      footer={<Button onClick={onClose}>Close</Button>}
+      hideClose
+    >
+      <div className="flex flex-col gap-3">
+        {link.isPending ? (
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <Spinner className="size-4" /> Creating the link…
+          </p>
+        ) : null}
+        {link.error ? <Alert tone="danger">{errorMessage(link.error)}</Alert> : null}
+        {link.data ? (
+          <>
+            <CopyField value={link.data.url} label="Reset link" copyLabel="Copy link" />
+            <p className="text-xs text-muted">
+              Expires {new Date(link.data.expires_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </>
+        ) : null}
+      </div>
+    </Modal>
+  );
+}
 
-  React.useEffect(() => {
-    setRevoke(false);
-    setError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  const confirm = () => {
-    if (!user) return;
-    void run(async () => {
-      const res = await adminApi.signOutUser(user.id, revoke);
+export function SignOutDialog({ user, onClose, onChanged }: Props) {
+  const [revoke, setRevoke] = useState(false);
+  const signOut = useMutation({
+    mutationFn: () => adminApi.signOutUser(user.id, revoke),
+    onSuccess: (res) => {
       onChanged(
         res.revoked_tokens > 0
-          ? t("adminSettings.users.signOut.doneTokens", { name: user.display_name, count: res.revoked_tokens })
-          : t("adminSettings.users.signOut.done", { name: user.display_name }),
+          ? `${user.display_name} was signed out and ${res.revoked_tokens} API tokens were revoked.`
+          : `${user.display_name} was signed out.`,
       );
       onClose();
-    });
-  };
-
+    },
+  });
   return (
-    <Dialog open={Boolean(user)} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("adminSettings.users.signOut.title", { name: user?.display_name ?? "" })}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1.5}>
-          <DialogContentText>{t("adminSettings.users.signOut.message")}</DialogContentText>
-          {user && user.api_token_count > 0 && (
-            <FormControlLabel
-              control={<Checkbox checked={revoke} onChange={(e) => setRevoke(e.target.checked)} />}
-              label={t("adminSettings.users.signOut.revokeTokens", { count: user.api_token_count })}
-            />
-          )}
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={busy}>
-          {t("common:cancel")}
-        </Button>
-        <Button variant="contained" onClick={confirm} disabled={busy}>
-          {t("adminSettings.users.signOut.confirm")}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title={`Sign ${user.display_name} out everywhere?`}
+      description="Every browser session of this user ends immediately. They can sign in again."
+      size="sm"
+      locked={signOut.isPending}
+      footer={
+        <>
+          <Button onClick={onClose} disabled={signOut.isPending}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={signOut.isPending} onClick={() => signOut.mutate()}>
+            Sign out
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        {user.api_token_count > 0 ? (
+          <Checkbox
+            checked={revoke}
+            onCheckedChange={setRevoke}
+            label={`Also revoke their API tokens (${user.api_token_count})`}
+          />
+        ) : null}
+        {signOut.error ? <Alert tone="danger">{errorMessage(signOut.error)}</Alert> : null}
+      </div>
+    </Modal>
   );
 }
 
 /** Deleting an account is permanent, so the admin types its email to confirm. */
-export function DeleteUserDialog({ user, onClose, onChanged, onUnauthorized }: BaseProps) {
-  const { t } = useTranslation(["app", "common"]);
-  const [typed, setTyped] = React.useState("");
-  const { busy, error, setError, run } = useAction(onUnauthorized);
-
-  React.useEffect(() => {
-    setTyped("");
-    setError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  const matches = Boolean(user) && typed.trim().toLowerCase() === user!.email.toLowerCase();
-
-  const confirm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !matches) return;
-    void run(async () => {
-      await adminApi.deleteUser(user.id);
-      onChanged(t("adminSettings.users.deleteUser.done", { name: user.display_name }));
+export function DeleteUserDialog({ user, onClose, onChanged }: Props) {
+  const formId = useId();
+  const [typed, setTyped] = useState("");
+  const matches = typed.trim().toLowerCase() === user.email.toLowerCase();
+  const remove = useMutation({
+    mutationFn: () => adminApi.deleteUser(user.id),
+    onSuccess: () => {
+      onChanged(`${user.display_name} was deleted.`);
       onClose();
-    });
-  };
-
+    },
+  });
   return (
-    <Dialog open={Boolean(user)} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
-      <form onSubmit={confirm}>
-        <DialogTitle>{t("adminSettings.users.deleteUser.title", { name: user?.display_name ?? "" })}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2}>
-            <DialogContentText>
-              {user
-                ? t("adminSettings.users.deleteUser.message", {
-                    models: user.print_count,
-                    size: formatFileSize(user.storage_bytes) || "0 B",
-                  })
-                : ""}
-            </DialogContentText>
-            {error && <Alert severity="error">{error}</Alert>}
-            <TextField
-              label={t("adminSettings.users.deleteUser.typeToConfirm", { email: user?.email ?? "" })}
+    <Modal
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title={`Delete ${user.display_name}?`}
+      size="sm"
+      locked={remove.isPending}
+      footer={
+        <>
+          <Button onClick={onClose} disabled={remove.isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} variant="danger" loading={remove.isPending} disabled={!matches}>
+            Delete user
+          </Button>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (matches && !remove.isPending) remove.mutate();
+        }}
+      >
+        <Alert tone="warning">
+          This permanently deletes the account together with {user.print_count} models (
+          {formatFileSize(user.storage_bytes) || "0 B"}), collections and API tokens. It can&apos;t be undone.
+        </Alert>
+        {remove.error ? <Alert tone="danger">{errorMessage(remove.error)}</Alert> : null}
+        <Field label={`Type ${user.email} to confirm`}>
+          {(p) => (
+            <Input
+              {...p}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              size="small"
-              fullWidth
               autoComplete="off"
-              disabled={busy}
+              disabled={remove.isPending}
             />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={busy}>
-            {t("common:cancel")}
-          </Button>
-          <Button type="submit" variant="contained" color="error" disabled={busy || !matches}>
-            {t("adminSettings.users.deleteUser.confirm")}
-          </Button>
-        </DialogActions>
+          )}
+        </Field>
       </form>
-    </Dialog>
+    </Modal>
   );
 }

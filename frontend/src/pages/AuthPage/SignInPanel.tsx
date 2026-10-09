@@ -1,86 +1,69 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import Link from "@mui/material/Link";
-import { authApi, type AuthUser } from "../../api/auth";
-import { EmailNotVerifiedError } from "../../api/client";
+import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { authApi, type AuthResult } from "@/api/auth";
+import { EmailNotVerifiedError } from "@/api/client";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input } from "@/ui";
 import ResendVerificationButton from "./ResendVerificationButton";
 
 type Props = {
-  onSuccess: (token: string, expires_in: number, user: AuthUser) => void;
-  /** Shown only when set, i.e. when SMTP is configured. Gets whatever email was typed. */
+  onSuccess: (result: AuthResult) => void;
+  /** Shown only when set, i.e. when the instance can send email. Receives whatever email was typed. */
   onForgotPassword?: (email: string) => void;
 };
 
 export default function SignInPanel({ onSuccess, onForgotPassword }: Props) {
-  const { t } = useTranslation("app");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [needsVerification, setNeedsVerification] = React.useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const signIn = useMutation({
+    mutationFn: () => authApi.login(email, password),
+    onSuccess: (result) => onSuccess(result),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setNeedsVerification(false);
-    setLoading(true);
-    try {
-      const res = await authApi.login(email, password);
-      onSuccess(res.token, res.expires_in, res.user);
-    } catch (err) {
-      console.error(err);
-      if (err instanceof EmailNotVerifiedError) {
-        setNeedsVerification(true);
-        setError(err.message);
-      } else {
-        setError(err instanceof Error ? err.message : t("auth.signIn.failed"));
-      }
-    } finally {
-      setLoading(false);
-    }
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    signIn.mutate();
   };
 
+  const error = signIn.error;
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Stack spacing={2}>
-        {error && <Alert severity="error">{error}</Alert>}
-        {needsVerification && <ResendVerificationButton email={email} />}
-        <TextField
-          type="email"
-          label={t("auth.signIn.emailLabel")}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="username"
-          required
-          fullWidth
-          size="small"
-        />
-        <TextField
-          type="password"
-          label={t("auth.signIn.passwordLabel")}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-          fullWidth
-          size="small"
-        />
-        {onForgotPassword && (
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: "4px !important" }}>
-            <Link component="button" type="button" variant="body2" onClick={() => onForgotPassword(email.trim())}>
-              {t("auth.signIn.forgotPassword")}
-            </Link>
-          </Box>
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      {error ? <Alert tone="danger">{errorMessage(error, "Login failed")}</Alert> : null}
+      {error instanceof EmailNotVerifiedError ? <ResendVerificationButton email={email} /> : null}
+      <Field label="Email">
+        {(control) => (
+          <Input
+            {...control}
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="username"
+            required
+          />
         )}
-        <Button type="submit" variant="contained" disabled={loading} fullWidth size="large">
-          {loading ? t("auth.signIn.submitting") : t("auth.signIn.submit")}
-        </Button>
-      </Stack>
-    </Box>
+      </Field>
+      <Field label="Password">
+        {(control) => (
+          <Input
+            {...control}
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+        )}
+      </Field>
+      {onForgotPassword ? (
+        <div className="-mt-2 flex justify-end">
+          <Button variant="link" size="sm" onClick={() => onForgotPassword(email.trim())}>
+            Forgot password?
+          </Button>
+        </div>
+      ) : null}
+      <Button type="submit" variant="primary" size="lg" loading={signIn.isPending}>
+        {signIn.isPending ? "Signing in…" : "Sign in"}
+      </Button>
+    </form>
   );
 }

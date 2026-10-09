@@ -1,268 +1,150 @@
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
-import { UnauthorizedError } from "../../api/client";
-import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
-import { type Collection, collectionsApi } from "../../api/collections";
-import { type PreviewMode } from "../../api/settings";
-import { tagsApi } from "../../api/tags";
-import type { AuthUser } from "../../api/auth";
-import { type ResolvedTheme } from "../../constants/settingsOptions";
-import { usePageHeader } from "../../components/Layout/PageHeaderContext";
-import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
-import ModelCard from "../ModelsPage/ModelCard";
-import SortTabs from "../ModelsPage/SortTabs";
-import CollectionCard from "../CollectionsPage/CollectionCard";
-import TagBookmarkButton from "./TagBookmarkButton";
-import TagActionsMenu from "./TagActionsMenu";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bookmark, BookmarkCheck, Download, MoreVertical } from "lucide-react";
+import { collectionsApi } from "@/api/collections";
+import type { PrintSortMode } from "@/api/prints";
+import { tagsApi } from "@/api/tags";
+import { errorMessage } from "@/app/queryClient";
+import {
+  DownloadZipConfirmDialog,
+  ModelGrid,
+  ModelGridEmpty,
+  ModelGridSkeleton,
+  SortSegmented,
+  ViewToggle,
+  usePrintList,
+  useViewMode,
+} from "@/features/prints";
+import { Alert, Button, IconButton, Menu, MenuItem, PageHeader, Spinner, useToast } from "@/ui";
+import { CollectionCard } from "../CollectionsPage/CollectionCard";
+import { collectionsWithTag } from "../CollectionsPage/order";
+import { parseSort, withSort } from "../CollectionDetailPage/sort";
 
-const PAGE_SIZE = 24;
-
-type Props = {
-  theme: ResolvedTheme;
-  previewMode: PreviewMode;
-  onUnauthorized?: () => void;
-  onBookmarksChanged?: () => void;
-  viewer?: AuthUser | null;
-};
-
-/** Prints with this tag, preceded by collections carrying it. */
-export default function TagDetailPage({ theme, previewMode, onUnauthorized, onBookmarksChanged, viewer }: Props) {
-  const { tagName } = useParams<{ tagName: string }>();
-  const tag = tagName ? decodeURIComponent(tagName) : "";
-  const { t } = useTranslation(["models", "common"]);
-  const [items, setItems] = useState<Print[]>([]);
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [bookmarked, setBookmarked] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const sortModeParam = searchParams.get("orderBy");
-  const sortMode: PrintSortMode =
-    sortModeParam === "popular" || sortModeParam === "downloads" ? sortModeParam : "newest";
-
-  const setSortMode = (mode: PrintSortMode) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (mode === "newest") next.delete("orderBy");
-      else next.set("orderBy", mode);
-      return next;
-    });
-  };
-
-  usePageHeader({
-    title: tag ? t("models:tags.detail.title", { name: tag }) : undefined,
-    subtitle: tag ? t("models:tags.detail.subtitle") : undefined,
-    actions: tag ? (
-      <Stack
-        direction="row"
-        spacing={0.5}
-        sx={{
-          alignItems: "center",
-        }}
-      >
-        <TagBookmarkButton
-          tag={tag}
-          bookmarked={bookmarked}
-          onUnauthorized={onUnauthorized}
-          onBookmarksChanged={onBookmarksChanged}
-        />
-        <TagActionsMenu tag={tag} onUnauthorized={onUnauthorized} />
-      </Stack>
-    ) : undefined,
+function TagBookmarkButton({ tag }: { tag: string }) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const bookmarks = useQuery({ queryKey: ["tags", "bookmarked"], queryFn: () => tagsApi.listBookmarked() });
+  const bookmarked = bookmarks.data?.includes(tag) ?? false;
+  const toggle = useMutation({
+    mutationFn: () => (bookmarked ? tagsApi.unbookmark(tag) : tagsApi.bookmark(tag)),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tags"] }),
+        queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
+      ]),
+    onError: (err) => toast.error(errorMessage(err, "Couldn't update the bookmark. Try again.")),
   });
+  return (
+    <IconButton
+      label={bookmarked ? "Remove bookmark" : "Bookmark tag"}
+      variant="outline"
+      aria-pressed={bookmarked}
+      disabled={bookmarks.isPending || toggle.isPending}
+      onClick={() => toggle.mutate()}
+    >
+      {bookmarked ? (
+        <BookmarkCheck className="size-4 text-accent-text" aria-hidden />
+      ) : (
+        <Bookmark className="size-4" aria-hidden />
+      )}
+    </IconButton>
+  );
+}
 
-  const handleError = (err: unknown, message?: string) => {
-    if (err instanceof UnauthorizedError) {
-      onUnauthorized?.();
-      return true;
-    }
-    console.error(err);
-    if (message) alert(message);
-    return false;
-  };
+/** Models with this tag, preceded by collections carrying it. */
+export default function TagDetailPage() {
+  const { tagName = "" } = useParams<{ tagName: string }>();
+  // React Router has already decoded the param.
+  const tag = tagName;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sort = parseSort(searchParams.get("orderBy"));
+  const [view, setView] = useViewMode();
+  const [downloadOpen, setDownloadOpen] = useState(false);
 
-  useEffect(() => {
-    if (!tag) return;
-    let cancelled = false;
-    setLoading(true);
-    (async () => {
-      try {
-        const result = await printsApi.list({ tags: [tag], order_by: sortMode, limit: PAGE_SIZE, offset: 0 });
-        if (cancelled) return;
-        setItems(result.items);
-        setOffset(result.items.length);
-        setHasMore(result.hasMore);
-      } catch (err) {
-        if (cancelled) return;
-        handleError(err, t("models:errors.loadFailed"));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tag, sortMode]);
+  const list = usePrintList({ tag, order_by: sort, enabled: Boolean(tag) });
+  const { sentinelRef, isFetchingNextPage } = list;
+  const allCollections = useQuery({
+    queryKey: ["collections"],
+    queryFn: () => collectionsApi.list(),
+    enabled: Boolean(tag),
+  });
+  const collections = useMemo(() => collectionsWithTag(allCollections.data ?? [], tag), [allCollections.data, tag]);
 
-  useEffect(() => {
-    if (!tag) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const bookmarks = await tagsApi.listBookmarked();
-        if (!cancelled) setBookmarked(bookmarks.includes(tag));
-      } catch (err) {
-        if (!cancelled) handleError(err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tag]);
+  const setSort = (mode: PrintSortMode) => setSearchParams((prev) => withSort(prev, mode));
 
-  // Collections aren't paginated or tag-filterable server-side, so filter here.
-  useEffect(() => {
-    if (!tag) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const all = await collectionsApi.list();
-        if (cancelled) return;
-        const tagLower = tag.toLowerCase();
-        setCollections(all.filter((c) => c.tags.some((ct) => ct.toLowerCase() === tagLower)));
-      } catch (err) {
-        if (cancelled) return;
-        handleError(err, t("models:errors.loadFailed"));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tag]);
-
-  const loadMore = async () => {
-    if (loadingMore || !hasMore || !tag) return;
-    setLoadingMore(true);
-    try {
-      const result = await printsApi.list({ tags: [tag], order_by: sortMode, limit: PAGE_SIZE, offset });
-      setItems((prev) => [...prev, ...result.items]);
-      setOffset(offset + result.items.length);
-      setHasMore(result.hasMore);
-    } catch (err) {
-      handleError(err, t("models:errors.loadFailed"));
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const loadMoreSentinelRef = useInfiniteScroll(loadMore, hasMore, loading || loadingMore);
-
-  if (loading) {
-    return (
-      <Stack
-        sx={{
-          alignItems: "center",
-          py: 8,
-        }}
+  const actions = (
+    <>
+      <TagBookmarkButton tag={tag} />
+      <Menu
+        trigger={
+          <IconButton label="More" variant="outline">
+            <MoreVertical className="size-4" aria-hidden />
+          </IconButton>
+        }
       >
-        <CircularProgress size={22} />
-      </Stack>
-    );
-  }
+        <MenuItem icon={<Download />} onSelect={() => setDownloadOpen(true)}>
+          Download all as zip
+        </MenuItem>
+      </Menu>
+    </>
+  );
+
+  const nothing = !list.isLoading && list.items.length === 0 && collections.length === 0;
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <SortTabs value={sortMode} onChange={setSortMode} />
-      </Box>
-      {collections.length || items.length ? (
-        <Stack spacing={2}>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              columnGap: "20px",
-              rowGap: "20px",
-              "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(6, 1fr)" },
-              "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(5, 1fr)" },
-              "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-              "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-              "@media (max-width: 860px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-            }}
-          >
+    <>
+      <PageHeader title={tag} subtitle="Tag" backTo="/models/tags" backLabel="Back to tags" actions={actions} />
+
+      <div className="mb-5 flex flex-wrap items-center justify-end gap-2">
+        <SortSegmented value={sort} onChange={setSort} />
+        <ViewToggle value={view} onChange={setView} />
+      </div>
+
+      {collections.length > 0 ? (
+        <section aria-label="Collections with this tag" className="mb-6">
+          <ul className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(min(236px,100%),1fr))]">
             {collections.map((collection) => (
-              <CollectionCard
-                key={collection.id}
-                collection={collection}
-                theme={theme}
-                previewMode={previewMode}
-                onUpdated={(updated) => setCollections((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))}
-                onDeleted={(deletedId) => setCollections((prev) => prev.filter((c) => c.id !== deletedId))}
-                onUnauthorized={onUnauthorized}
-                onBookmarksChanged={onBookmarksChanged}
-              />
+              <li key={collection.id} className="min-w-0">
+                <CollectionCard collection={collection} />
+              </li>
             ))}
-            {items.map((item) => (
-              <ModelCard
-                key={item.id}
-                item={item}
-                theme={theme}
-                previewMode={previewMode}
-                onDeleted={(deletedId) => setItems((prev) => prev.filter((i) => i.id !== deletedId))}
-                onFavoriteChange={(updated) => setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
-                onUpdated={(updated) => setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
-                onUnauthorized={onUnauthorized}
-                viewer={viewer}
-              />
-            ))}
-          </Box>
-          {hasMore && (
-            <Stack
-              ref={loadMoreSentinelRef}
-              direction="row"
-              sx={{
-                justifyContent: "center",
-                py: 1,
-              }}
-            >
-              {loadingMore && (
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{
-                    alignItems: "center",
-                    color: "text.secondary",
-                  }}
-                >
-                  <CircularProgress size={14} />
-                  <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
-                </Stack>
-              )}
-            </Stack>
-          )}
-        </Stack>
-      ) : (
-        <Stack
-          spacing={1}
-          sx={{
-            alignItems: "center",
-            py: 8,
-            color: "text.secondary",
-          }}
+          </ul>
+        </section>
+      ) : null}
+
+      {list.isLoading ? (
+        <ModelGridSkeleton view={view} />
+      ) : list.isError ? (
+        <Alert
+          tone="danger"
+          title="Couldn't load models"
+          action={
+            <Button size="sm" onClick={() => void list.refetch()}>
+              Try again
+            </Button>
+          }
         >
-          <Typography variant="body2">{t("models:tags.detail.empty")}</Typography>
-        </Stack>
+          {errorMessage(list.error)}
+        </Alert>
+      ) : nothing ? (
+        <ModelGridEmpty title="No models with this tag yet." />
+      ) : (
+        <>
+          <ModelGrid items={list.items} view={view} />
+          <div ref={sentinelRef} className="flex justify-center py-4">
+            {isFetchingNextPage ? <Spinner label="Loading more" /> : null}
+          </div>
+        </>
       )}
-    </Stack>
+
+      <DownloadZipConfirmDialog
+        open={downloadOpen}
+        onOpenChange={setDownloadOpen}
+        filter={{ tag }}
+        filename={`${tag || "tag"}.zip`}
+        title={`Download tag "${tag}" as zip`}
+      />
+    </>
   );
 }

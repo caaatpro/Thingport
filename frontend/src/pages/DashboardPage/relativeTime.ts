@@ -1,11 +1,11 @@
-type Translate = (key: string, opts?: Record<string, unknown>) => string;
+const plural = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"} ago`;
 
-export function relativeTime(iso: string, t: Translate): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.round(diffMs / 60_000);
-  if (minutes < 1) return t("notifications.justNow");
-  if (minutes < 60) return t("notifications.minutesAgo", { count: minutes });
+/** "Just now", "5 minutes ago", "3 hours ago", "2 days ago". */
+export function relativeTime(iso: string, now: number = Date.now()): string {
+  const minutes = Math.round((now - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return plural(minutes, "minute");
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return t("notifications.hoursAgo", { count: hours });
-  return t("notifications.daysAgo", { count: Math.round(hours / 24) });
+  if (hours < 24) return plural(hours, "hour");
+  return plural(Math.round(hours / 24), "day");
 }

@@ -1,260 +1,213 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Stack from "@mui/material/Stack";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import CircularProgress from "@mui/material/CircularProgress";
-import Alert from "@mui/material/Alert";
-import Chip from "@mui/material/Chip";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import { UnauthorizedError } from "../../api/client";
-import { adminApi, type AdminUser, type LogAction, type LogEntry } from "../../api/admin";
+import { useQuery } from "@tanstack/react-query";
+import { ScrollText } from "lucide-react";
+import { adminApi, type LogAction, type LogEntry } from "@/api/admin";
+import { Badge, Button, EmptyState, Field, Input, PageHeader, Select, Skeleton, type SelectOption } from "@/ui";
+import { LoadError, TABLE, TD, TH, TR, TableScroll, useAdminUsers } from "../AdminPage/parts";
 
-type Props = {
-  onUnauthorized?: () => void;
+type Tone = "accent" | "danger" | "info" | "warning" | "neutral";
+
+const ACTIONS: Record<LogAction, { label: string; tone: Tone }> = {
+  user_logged_in: { label: "Logged in", tone: "accent" },
+  user_logged_out: { label: "Logged out", tone: "neutral" },
+  password_reset_requested: { label: "Requested a password reset", tone: "neutral" },
+  password_reset: { label: "Reset password", tone: "warning" },
+  user_invited: { label: "Invited a user", tone: "info" },
+  user_created: { label: "User created", tone: "accent" },
+  user_updated: { label: "User edited", tone: "warning" },
+  user_role_changed: { label: "Role changed", tone: "warning" },
+  user_disabled: { label: "User disabled", tone: "danger" },
+  user_enabled: { label: "User enabled", tone: "accent" },
+  user_deleted: { label: "User deleted", tone: "danger" },
+  user_signed_out: { label: "User signed out by an admin", tone: "warning" },
+  password_reset_link_created: { label: "Password reset link created", tone: "warning" },
+  processing_retried: { label: "Processing retried", tone: "info" },
+  authors_linked: { label: "Linked missing authors", tone: "accent" },
+  model_uploaded: { label: "Model uploaded", tone: "info" },
+  model_imported: { label: "Model imported", tone: "info" },
+  import_completed: { label: "Import completed", tone: "info" },
+  model_edited: { label: "Model edited", tone: "warning" },
+  model_deleted: { label: "Model deleted", tone: "danger" },
+  collection_created: { label: "Collection created", tone: "accent" },
+  collection_edited: { label: "Collection edited", tone: "warning" },
+  collection_deleted: { label: "Collection deleted", tone: "danger" },
+  collection_item_added: { label: "Added to collection", tone: "info" },
+  collection_item_removed: { label: "Removed from collection", tone: "neutral" },
 };
 
-type ActionColor = "success" | "error" | "info" | "warning" | "default";
+const PAGE_SIZE = 100;
 
-const ACTION_COLORS: Record<LogAction, ActionColor> = {
-  user_logged_in: "success",
-  user_logged_out: "default",
-  password_reset_requested: "default",
-  password_reset: "warning",
-  user_invited: "info",
-  user_created: "success",
-  user_updated: "warning",
-  user_role_changed: "warning",
-  user_disabled: "error",
-  user_enabled: "success",
-  user_deleted: "error",
-  user_signed_out: "warning",
-  password_reset_link_created: "warning",
-  processing_retried: "info",
-  authors_linked: "success",
-  model_uploaded: "info",
-  model_imported: "info",
-  import_completed: "info",
-  model_edited: "warning",
-  model_deleted: "error",
-  collection_created: "success",
-  collection_edited: "warning",
-  collection_deleted: "error",
-  collection_item_added: "info",
-  collection_item_removed: "default",
-};
-
-function isoDateOnly(d: Date): string {
+function defaultFrom(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
   return d.toISOString().slice(0, 10);
 }
 
-function defaultFromDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return isoDateOnly(d);
+function formatDetails(log: LogEntry): string {
+  const d = log.details;
+  switch (log.action) {
+    case "model_uploaded":
+    case "model_imported":
+    case "model_deleted":
+    case "collection_created":
+    case "collection_edited":
+    case "collection_deleted":
+    case "collection_item_added":
+    case "collection_item_removed":
+      return typeof d.name === "string" ? d.name : "";
+    case "user_invited":
+      return typeof d.email === "string" ? d.email : "";
+    case "authors_linked":
+      return `${typeof d.linked === "number" ? d.linked : 0} model(s) linked`;
+    case "model_edited":
+      return typeof d.field === "string" ? `Edited ${d.field}` : "";
+    case "import_completed": {
+      const provider = typeof d.provider === "string" ? d.provider : "";
+      const label = typeof d.sourceLabel === "string" && d.sourceLabel ? d.sourceLabel : provider;
+      const imported = typeof d.imported === "number" ? d.imported : 0;
+      const failed = typeof d.failed === "number" ? d.failed : 0;
+      return `${label} — ${imported} imported, ${failed} failed`;
+    }
+    default:
+      return "";
+  }
 }
 
 /** One entry per action, not per file: a batch import is a single row. */
-export default function LogsPage({ onUnauthorized }: Props) {
-  const { t, i18n } = useTranslation(["app", "common"]);
-  const [users, setUsers] = React.useState<AdminUser[]>([]);
-  const [logs, setLogs] = React.useState<LogEntry[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  // ?user=<id> lets the users table jump straight to one person's activity.
-  const [searchParams] = useSearchParams();
-  const [userId, setUserId] = React.useState(searchParams.get("user") ?? "");
-  const [from, setFrom] = React.useState(defaultFromDate());
-  const [to, setTo] = React.useState("");
+export default function LogsPage() {
+  // The filters live in the URL, so `?user=<id>` from the users table (and any filtered view) can be shared.
+  const [params, setParams] = useSearchParams();
+  const userId = params.get("user") ?? "";
+  const from = params.get("from") ?? defaultFrom();
+  const to = params.get("to") ?? "";
 
-  React.useEffect(() => {
-    adminApi
-      .listUsers()
-      .then(setUsers)
-      .catch(() => undefined);
-  }, []);
+  const setParam = (key: "user" | "from" | "to", value: string) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        // An emptied "from" is kept as an empty value so it doesn't snap back to the default week.
+        if (value || key === "from") next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
 
-  const loadLogs = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await adminApi.listLogs({
-        userId: userId || undefined,
-        from: from || undefined,
-        to: to || undefined,
-      });
-      setLogs(result);
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setError(t("adminSettings.logs.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, from, to, onUnauthorized, t]);
+  const usersQuery = useAdminUsers();
+  const userOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "All users" },
+      ...(usersQuery.data ?? []).map((u) => ({ value: u.id, label: `${u.display_name} (${u.email})` })),
+    ],
+    [usersQuery.data],
+  );
 
-  React.useEffect(() => {
-    void loadLogs();
-  }, [loadLogs]);
-
-  const formatDetails = (log: LogEntry): string => {
-    const d = log.details;
-    switch (log.action) {
-      case "model_uploaded":
-      case "model_imported":
-      case "model_deleted":
-      case "collection_created":
-      case "collection_edited":
-      case "collection_deleted":
-      case "collection_item_added":
-      case "collection_item_removed":
-        return typeof d.name === "string" ? d.name : "";
-      case "user_invited":
-        return typeof d.email === "string" ? d.email : "";
-      case "authors_linked":
-        return t("adminSettings.logs.authorsLinked", { count: typeof d.linked === "number" ? d.linked : 0 });
-      case "model_edited":
-        return typeof d.field === "string" ? t("adminSettings.logs.editedField", { field: d.field }) : "";
-      case "import_completed": {
-        const provider = typeof d.provider === "string" ? d.provider : "";
-        const label = typeof d.sourceLabel === "string" && d.sourceLabel ? d.sourceLabel : provider;
-        const imported = typeof d.imported === "number" ? d.imported : 0;
-        const failed = typeof d.failed === "number" ? d.failed : 0;
-        return t("adminSettings.logs.importSummary", { label, imported, failed });
-      }
-      default:
-        return "";
-    }
-  };
+  const logsQuery = useQuery({
+    queryKey: ["admin", "logs", { userId, from, to }],
+    queryFn: () => adminApi.listLogs({ userId: userId || undefined, from: from || undefined, to: to || undefined }),
+  });
 
   return (
-    <Stack spacing={3}>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack
-          direction="row"
-          spacing={1.5}
-          useFlexGap
-          sx={{
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <FormControl size="small" sx={{ minWidth: 220 }}>
-            <InputLabel id="logs-user-select-label">{t("adminSettings.logs.userLabel")}</InputLabel>
-            <Select
-              labelId="logs-user-select-label"
-              label={t("adminSettings.logs.userLabel")}
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            >
-              <MenuItem value="">{t("adminSettings.logs.allUsers")}</MenuItem>
-              {users.map((u) => (
-                <MenuItem key={u.id} value={u.id}>
-                  {u.display_name} ({u.email})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            size="small"
-            type="date"
-            label={t("adminSettings.logs.fromLabel")}
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            size="small"
-            type="date"
-            label={t("adminSettings.logs.toLabel")}
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-        </Stack>
-      </Paper>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader title="Logs" subtitle="Who did what, and when." backTo="/admin" />
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-end gap-3 rounded-card border border-border bg-surface p-4">
+          <Field label="User" className="w-full sm:w-72">
+            {(p) => <Select id={p.id} value={userId} onChange={(v) => setParam("user", v)} options={userOptions} />}
+          </Field>
+          <Field label="From">
+            {(p) => (
+              <Input
+                {...p}
+                type="date"
+                value={from}
+                max={to || undefined}
+                onChange={(e) => setParam("from", e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="To">
+            {(p) => (
+              <Input
+                {...p}
+                type="date"
+                value={to}
+                min={from || undefined}
+                onChange={(e) => setParam("to", e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
 
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {loading ? (
-        <Stack
-          sx={{
-            alignItems: "center",
-            py: 2,
-          }}
-        >
-          <CircularProgress size={20} />
-        </Stack>
-      ) : logs.length === 0 ? (
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-            }}
+        {logsQuery.isPending ? (
+          <div className="space-y-2" aria-hidden>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-11" />
+            ))}
+          </div>
+        ) : logsQuery.isError ? (
+          <LoadError error={logsQuery.error} title="Unable to load logs." onRetry={() => void logsQuery.refetch()} />
+        ) : logsQuery.data.length === 0 ? (
+          <EmptyState
+            icon={<ScrollText />}
+            title="No log entries for this filter."
+            className="rounded-card border border-border bg-surface"
           >
-            {t("adminSettings.logs.empty")}
-          </Typography>
-        </Paper>
-      ) : (
-        <Paper variant="outlined">
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t("adminSettings.logs.columnDate")}</TableCell>
-                  <TableCell>{t("adminSettings.logs.columnUser")}</TableCell>
-                  <TableCell>{t("adminSettings.logs.columnAction")}</TableCell>
-                  <TableCell>{t("adminSettings.logs.columnDetails")}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id} hover>
-                    <TableCell>{new Date(log.created_at).toLocaleString(i18n.language)}</TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2">{log.user_display_name}</Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "text.secondary",
-                          }}
-                        >
-                          {log.user_email}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={t(`adminSettings.logs.action.${log.action}`)}
-                        size="small"
-                        color={ACTION_COLORS[log.action] ?? "default"}
-                      />
-                    </TableCell>
-                    <TableCell>{formatDetails(log)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-    </Stack>
+            Widen the date range or pick another user.
+          </EmptyState>
+        ) : (
+          // Keyed by the filter so a new search starts at the first page again.
+          <LogTable key={`${userId}|${from}|${to}`} logs={logsQuery.data} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LogTable({ logs }: { logs: LogEntry[] }) {
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const rows = logs.slice(0, shown);
+  return (
+    <>
+      <TableScroll>
+        <table className={TABLE}>
+          <thead>
+            <tr>
+              <th className={TH}>Date</th>
+              <th className={TH}>User</th>
+              <th className={TH}>Action</th>
+              <th className={TH}>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((log) => {
+              const action = ACTIONS[log.action] ?? { label: log.action, tone: "neutral" as const };
+              return (
+                <tr key={log.id} className={TR}>
+                  <td className={`${TD} whitespace-nowrap tabular-nums text-muted`}>
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td className={TD}>
+                    <div className="font-medium text-fg">{log.user_display_name}</div>
+                    <div className="text-xs text-muted">{log.user_email}</div>
+                  </td>
+                  <td className={TD}>
+                    <Badge tone={action.tone}>{action.label}</Badge>
+                  </td>
+                  <td className={`${TD} text-muted`}>{formatDetails(log)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </TableScroll>
+      <div className="flex items-center justify-between gap-3 text-sm text-muted">
+        <span>
+          Showing {rows.length} of {logs.length}
+        </span>
+        {rows.length < logs.length ? <Button onClick={() => setShown((n) => n + PAGE_SIZE)}>Show more</Button> : null}
+      </div>
+    </>
   );
 }

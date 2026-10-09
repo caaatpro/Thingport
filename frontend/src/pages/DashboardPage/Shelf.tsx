@@ -1,106 +1,61 @@
-import type { MouseEvent, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import ViewInArIcon from "@mui/icons-material/ViewInAr";
-import { printsApi } from "../../api/prints";
-import type { DashboardModel } from "../../api/dashboard";
+import type { ReactNode } from "react";
+import { Box } from "lucide-react";
+import { Link } from "react-router-dom";
+import { printsApi } from "@/api/prints";
+import type { DashboardModel } from "@/api/dashboard";
 
 type Props = {
   icon: ReactNode;
   title: string;
   models: DashboardModel[];
-  /** Shown instead of the shelf when there is nothing to list. */
+  /** Shown instead of the tiles when there is nothing to list. Without it an empty shelf is hidden. */
   emptyText?: string;
   /** Optional second line under each name, e.g. "3 days ago". */
   caption?: (model: DashboardModel) => string;
 };
 
-/** A row of thumbnail tiles; each opens its model. */
-export default function Shelf({ icon, title, models, emptyText, caption }: Props) {
-  const navigate = useNavigate();
+/** A row of thumbnail tiles; each is a real link to its model. */
+export function Shelf({ icon, title, models, emptyText, caption }: Props) {
   if (models.length === 0 && !emptyText) return null;
-
   return (
-    <Box component="section">
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5, color: "primary.main" }}>
-        {icon}
-        <Typography variant="h6" component="h2" sx={{ color: (theme) => theme.thingport.headingText }}>
-          {title}
-        </Typography>
-      </Box>
+    <section>
+      <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight text-fg">
+        <span className="text-accent-text [&>svg]:size-5">{icon}</span>
+        {title}
+      </h2>
       {models.length === 0 ? (
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          {emptyText}
-        </Typography>
+        <p className="text-sm text-muted">{emptyText}</p>
       ) : (
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))",
-            gap: 2,
-          }}
-        >
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-4">
           {models.map((model) => (
-            <Box
-              key={model.id}
-              component="a"
-              href={`/models/${model.id}`}
-              onClick={(event: MouseEvent) => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-                event.preventDefault();
-                navigate(`/models/${model.id}`);
-              }}
-              sx={{
-                display: "block",
-                textDecoration: "none",
-                color: "inherit",
-                borderRadius: "14px",
-                overflow: "hidden",
-                border: 1,
-                borderColor: "divider",
-                bgcolor: "background.paper",
-                boxShadow: (theme) => theme.thingport.shadowCard,
-                transition: "box-shadow .15s ease, transform .15s ease",
-                "&:hover": { boxShadow: (theme) => theme.thingport.shadowHover, transform: "translateY(-2px)" },
-              }}
-            >
-              <Box
-                sx={{
-                  aspectRatio: "4 / 3",
-                  bgcolor: (theme) => theme.thingport.surfaceMuted,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "text.disabled",
-                }}
+            <li key={model.id}>
+              <Link
+                to={`/models/${model.id}`}
+                className="block overflow-hidden rounded-card border border-border bg-surface shadow-card transition-[box-shadow,transform,border-color] hover:-translate-y-0.5 hover:border-border-strong hover:shadow-hover"
               >
-                {model.thumb_url ? (
-                  <Box
-                    component="img"
-                    src={printsApi.fileUrl(model.thumb_url)}
-                    alt=""
-                    loading="lazy"
-                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <ViewInArIcon />
-                )}
-              </Box>
-              <Box sx={{ px: 1.5, py: 1 }}>
-                <Typography variant="body2" noWrap sx={{ fontWeight: 600 }} title={model.name}>
-                  {model.name}
-                </Typography>
-                {caption && (
-                  <Typography variant="caption" noWrap sx={{ color: "text.secondary", display: "block" }}>
-                    {caption(model)}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
+                <div className="flex aspect-[4/3] items-center justify-center bg-surface-2 text-subtle">
+                  {model.thumb_url ? (
+                    <img
+                      src={printsApi.fileUrl(model.thumb_url)}
+                      alt=""
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <Box className="size-8" aria-hidden />
+                  )}
+                </div>
+                <div className="px-3 py-2">
+                  <p className="truncate text-sm font-semibold text-fg" title={model.name}>
+                    {model.name}
+                  </p>
+                  {caption ? <p className="truncate text-xs text-muted">{caption(model)}</p> : null}
+                </div>
+              </Link>
+            </li>
           ))}
-        </Box>
+        </ul>
       )}
-    </Box>
+    </section>
   );
 }

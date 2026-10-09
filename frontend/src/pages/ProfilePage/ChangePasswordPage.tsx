@@ -1,122 +1,85 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import SectionHeader from "../../components/SectionHeader";
-import { authApi } from "../../api/auth";
-import { UnauthorizedError } from "../../api/client";
+import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { authApi } from "@/api/auth";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, PageHeader } from "@/ui";
+import { passwordProblem } from "./passwordRules";
 
-const MIN_PASSWORD_LENGTH = 8;
+export default function ChangePasswordPage() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
 
-type Props = {
-  onUnauthorized?: () => void;
-};
+  const save = useMutation({
+    mutationFn: () => authApi.updateProfile({ current_password: current, new_password: next }),
+    onSuccess: () => {
+      setCurrent("");
+      setNext("");
+      setConfirmation("");
+    },
+  });
 
-export default function ChangePasswordPage({ onUnauthorized }: Props) {
-  const { t } = useTranslation("app");
-  const navigate = useNavigate();
-  const [currentPassword, setCurrentPassword] = React.useState("");
-  const [newPassword, setNewPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setStatus(null);
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setError(t("auth.register.passwordTooShort"));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError(t("auth.register.passwordMismatch"));
-      return;
-    }
-    setLoading(true);
-    try {
-      await authApi.updateProfile({
-        current_password: currentPassword,
-        new_password: newPassword,
-      });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setStatus(t("profile.passwordUpdated"));
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setError(err instanceof Error ? err.message : t("profile.genericError"));
-    } finally {
-      setLoading(false);
-    }
+    save.reset();
+    const found = passwordProblem(next, confirmation);
+    setProblem(found);
+    if (!found) save.mutate();
   };
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 420 }}>
-      <SectionHeader
-        title={t("profile.changePasswordTitle")}
-        subtitle={t("profile.changePasswordSubtitle")}
-        onBack={() => navigate("/profile")}
-        backLabel={t("profile.backToProfile")}
+    <div className="max-w-md">
+      <PageHeader
+        title="Change password"
+        subtitle="Update your account password."
+        backTo="/profile"
+        backLabel="Back to Profile"
       />
-
-      {status && (
-        <Alert severity="success" onClose={() => setStatus(null)}>
-          {status}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Box component="form" onSubmit={handleSubmit}>
-        <Stack spacing={2}>
-          <TextField
-            type="password"
-            label={t("profile.currentPasswordLabel")}
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-            fullWidth
-            size="small"
-          />
-          <TextField
-            type="password"
-            label={t("profile.newPasswordLabel")}
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            autoComplete="new-password"
-            helperText={t("auth.register.passwordHelp")}
-            required
-            fullWidth
-            size="small"
-          />
-          <TextField
-            type="password"
-            label={t("profile.confirmNewPasswordLabel")}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-            required
-            fullWidth
-            size="small"
-          />
-          <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? t("profile.saving") : t("profile.savePassword")}
-          </Button>
-        </Stack>
-      </Box>
-    </Stack>
+      <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+        {save.isSuccess ? <Alert tone="success">Password updated.</Alert> : null}
+        {problem ? <Alert tone="danger">{problem}</Alert> : null}
+        {save.isError ? <Alert tone="danger">{errorMessage(save.error)}</Alert> : null}
+        <Field label="Current password" required>
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="New password" hint="At least 8 characters" required>
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Confirm new password" required>
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+            />
+          )}
+        </Field>
+        <Button type="submit" variant="primary" loading={save.isPending} disabled={!current}>
+          Save password
+        </Button>
+      </form>
+    </div>
   );
 }

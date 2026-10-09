@@ -1,14 +1,13 @@
-import React from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "@fontsource-variable/inter";
-import "./index.css";
-import "./i18n";
-import App from "./App";
+import "./styles.css";
+import { Providers } from "@/app/providers";
+import AppRoutes from "./routes";
 
-const el = document.getElementById("root");
-if (!el) throw new Error("#root not found");
-createRoot(el).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <Providers>
+      <AppRoutes />
+    </Providers>
+  </StrictMode>,
 );

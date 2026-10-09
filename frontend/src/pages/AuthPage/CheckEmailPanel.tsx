@@ -1,36 +1,16 @@
-import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import MarkEmailReadIcon from "@mui/icons-material/MarkEmailRead";
+import { MailCheck } from "lucide-react";
 import ResendVerificationButton from "./ResendVerificationButton";
 
-type Props = {
-  email: string;
-};
-
-export default function CheckEmailPanel({ email }: Props) {
-  const { t } = useTranslation("app");
-
+export default function CheckEmailPanel({ email }: { email: string }) {
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        alignItems: "center",
-        textAlign: "center",
-        py: 1,
-      }}
-    >
-      <MarkEmailReadIcon sx={{ fontSize: 40, color: "primary.main" }} />
-      <Typography variant="h6">{t("auth.checkEmail.heading")}</Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-        }}
-      >
-        {t("auth.checkEmail.body", { email })}
-      </Typography>
+    <div className="flex flex-col items-center gap-3 text-center">
+      <MailCheck className="size-10 text-accent" strokeWidth={1.5} aria-hidden />
+      <h2 className="text-lg font-semibold text-fg">Check your email</h2>
+      <p className="text-sm text-muted">
+        We sent a confirmation link to <strong className="font-medium text-fg">{email}</strong>. Click it to finish
+        creating your account.
+      </p>
       <ResendVerificationButton email={email} />
-    </Stack>
+    </div>
   );
 }

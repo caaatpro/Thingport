@@ -1,442 +1,155 @@
-import { hasRole } from "../../utils/access";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import ButtonBase from "@mui/material/ButtonBase";
-import IconButton from "@mui/material/IconButton";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import ViewInArIcon from "@mui/icons-material/ViewInAr";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { UnauthorizedError } from "../../api/client";
-import { type Print, printsApi } from "../../api/prints";
-import type { AuthUser } from "../../api/auth";
-import { type ResolvedTheme } from "../../constants/settingsOptions";
-import { dividerBorderColor } from "../../theme";
-import { MODEL_EXTS } from "../../constants/fileTypes";
-import { extOf } from "../../utils/fileExtensions";
-import { renderPreviewContent } from "../../components/media/renderPreviewContent";
-import { ModelSnapshot } from "../../components/media/ModelViewer/ModelSnapshot";
-import { usePageHeader } from "../../components/Layout/PageHeaderContext";
-import { useSmartBack } from "../../components/Layout/NavigationHistoryContext";
-import Model3DPreviewModal from "./Model3DPreviewModal";
-import ModelActionsMenu from "./ModelActionsMenu";
-import FavoriteButton from "./FavoriteButton";
-import ModelSidePanel from "./ModelSidePanel";
-import ModelFilesPanel from "./ModelFilesPanel";
+import { useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Pencil, Share2 } from "lucide-react";
+import { printsApi } from "@/api/prints";
+import { errorMessage } from "@/app/queryClient";
+import { FavoriteButton, ModelActionsMenu, TagBadge, VisibilityBadge } from "@/features/prints";
+import { Alert, Button, Card, PageHeader, Skeleton } from "@/ui";
+import { hasRole } from "@/utils/access";
+import EditModelModal from "./EditModelModal";
+import { ModelFilesPanel } from "./ModelFilesPanel";
+import { ModelGallery } from "./ModelGallery";
+import { ModelSidePanel } from "./ModelSidePanel";
 
-type Props = {
-  theme: ResolvedTheme;
-  onSelectCategory: (id: string) => void;
-  onUnauthorized?: () => void;
-  viewer?: AuthUser | null;
-};
+function DetailSkeleton() {
+  return (
+    <div aria-busy="true" className="grid grid-cols-1 items-start gap-6 md:grid-cols-[2fr_1fr]">
+      <div className="flex min-w-0 flex-col gap-6">
+        <Skeleton className="aspect-[16/10] w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+      <Skeleton className="h-96 w-full" />
+    </div>
+  );
+}
 
-export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorized, viewer }: Props) {
-  const { printId } = useParams<{ printId: string }>();
-  const { t } = useTranslation(["models", "common", "library"]);
-  const [print, setPrint] = useState<Print | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [previewOpen, setPreviewOpen] = useState(false);
+/** `/models/:printId`. `?edit=<id>` opens the edit dialog, so editing is a link and survives a reload. */
+export default function ModelDetailPage() {
+  const { printId = "" } = useParams<{ printId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
 
-  // Returns wherever the user came from; useSmartBack skips same-route history entries.
-  const goBack = useSmartBack();
-
-  usePageHeader({
-    title: print ? print.title || print.name : undefined,
-    subtitle: print ? t("models:detail.subtitle") : undefined,
+  // The API counts a view on every GET, so don't refetch on window focus (the query client already doesn't).
+  const query = useQuery({
+    queryKey: ["print", printId],
+    queryFn: () => printsApi.get(printId),
+    enabled: Boolean(printId),
   });
+  const print = query.data;
 
-  useEffect(() => {
-    if (!printId) return;
-    let cancelled = false;
-    setLoading(true);
-    setNotFound(false);
-    (async () => {
-      try {
-        const data = await printsApi.get(printId);
-        if (cancelled) return;
-        setPrint(data);
-        setActiveImageIndex(0);
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof UnauthorizedError) {
-          onUnauthorized?.();
-          return;
-        }
-        console.error(err);
-        setNotFound(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [printId, onUnauthorized]);
-
-  if (loading) {
+  if (query.isPending) {
     return (
-      <Stack
-        sx={{
-          alignItems: "center",
-          py: 8,
-        }}
-      >
-        <CircularProgress size={22} />
-      </Stack>
+      <div className="mx-auto w-full max-w-[1390px]">
+        <PageHeader title="Model" backTo="/models" />
+        <DetailSkeleton />
+      </div>
+    );
+  }
+  if (query.isError || !print) {
+    return (
+      <div className="mx-auto w-full max-w-[1390px]">
+        <PageHeader title="Model" backTo="/models" />
+        <Alert
+          tone="danger"
+          title="Couldn't load this model"
+          action={
+            <Button size="sm" onClick={() => void query.refetch()}>
+              Try again
+            </Button>
+          }
+        >
+          {errorMessage(query.error, "It may have been deleted, or you may not have access.")}
+        </Alert>
+      </div>
     );
   }
 
-  if (notFound || !print) {
-    return (
-      <Stack
-        spacing={1}
-        sx={{
-          alignItems: "center",
-          py: 8,
-          color: "text.secondary",
-        }}
-      >
-        <Typography variant="body2">{t("models:errors.notFound")}</Typography>
-      </Stack>
-    );
-  }
-
-  const images = print.preview_images.toSorted((a, b) => a.position - b.position);
-  const hasImages = images.length > 0;
-  const activeImage = images[activeImageIndex] || images[0];
-  const firstPlate = print.plates[0];
-  const canPreview3d = Boolean(firstPlate) && MODEL_EXTS.has(extOf(firstPlate?.filename || ""));
-  // With no preview image yet, show the live 3D view and generate a snapshot in the background.
-  const needsGeneratedPreview = !hasImages && Boolean(firstPlate) && MODEL_EXTS.has(extOf(firstPlate?.filename || ""));
-
-  const goPrevImage = () => setActiveImageIndex((i) => (i - 1 + images.length) % images.length);
-  const goNextImage = () => setActiveImageIndex((i) => (i + 1) % images.length);
-
+  const title = print.title || print.name;
   const isOwner = print.is_owner !== false;
+  const canEdit = hasRole(print.access_role, "edit");
+  const editing = searchParams.get("edit") === print.id && canEdit;
+  const closeEdit = () =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("edit");
+        return next;
+      },
+      { replace: true },
+    );
 
   return (
-    <Box sx={{ maxWidth: "1390px", mx: "auto" }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "flex-end", mb: 2 }}>
-        <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
-        {hasRole(print.access_role, "edit") && (
-          <Button
-            variant="outlined"
-            color="inherit"
-            size="small"
-            startIcon={<EditOutlinedIcon />}
-            component={Link}
-            to={`/models/${print.id}?edit=${print.id}`}
-          >
-            {t("common:edit")}
-          </Button>
-        )}
-        {isOwner && (
-          <Button
-            variant="outlined"
-            color="inherit"
-            size="small"
-            startIcon={<ShareOutlinedIcon />}
-            onClick={() => setShareOpen(true)}
-          >
-            {t("models:share.menu")}
-          </Button>
-        )}
-        <ModelActionsMenu
-          print={print}
-          onUnauthorized={onUnauthorized}
-          onDeleted={goBack}
-          onUpdated={setPrint}
-          viewer={viewer}
-          shareOpen={shareOpen}
-          onShareOpenChange={setShareOpen}
-        />
-      </Stack>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
-          gap: "24px",
-          alignItems: "start",
-        }}
-      >
-        {/* minWidth: 0 -- without it, a grid item defaults to min-width: auto, so a preview image
-            with huge intrinsic pixel dimensions could still force this column wider than its "2fr"
-            share (and skew the whole two-column layout) even though the image itself is capped
-            below. */}
-        <Box sx={{ minWidth: 0 }}>
-          <Box
-            sx={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "16 / 10",
-              borderRadius: "14px",
-              overflow: "hidden",
-              bgcolor: "background.paper",
-              border: 1,
-              borderColor: "divider",
-            }}
-          >
-            {hasImages ? (
-              <>
-                {/* A blurred, edge-to-edge crop of the same image behind the sharp contained one --
-                    the common "photo viewer" backdrop that fills the letterboxed bars around any
-                    image whose aspect ratio doesn't match this box's 16:10, instead of showing flat
-                    background color. scale(1.15) pushes the blur's own soft edge outside the box
-                    so no unblurred fringe peeks in. */}
-                <Box
-                  component="img"
-                  src={printsApi.fileUrl(activeImage.url)}
-                  alt=""
-                  aria-hidden="true"
-                  sx={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    maxWidth: "100%",
-                    objectFit: "cover",
-                    filter: "blur(30px)",
-                    transform: "scale(1.15)",
-                  }}
-                />
-                <Box
-                  component="img"
-                  src={printsApi.fileUrl(activeImage.url)}
-                  alt={print.title || print.name}
-                  sx={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    maxWidth: "100%",
-                    objectFit: "contain",
-                  }}
-                />
-              </>
-            ) : (
-              firstPlate && renderPreviewContent(print, "modal", theme, t, "automatic", firstPlate)
-            )}
-
-            {images.length > 1 && (
-              <>
-                <IconButton
-                  onClick={goPrevImage}
-                  aria-label={t("models:detail.previousImage") ?? undefined}
-                  sx={{
-                    position: "absolute",
-                    left: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    bgcolor: "rgba(0, 0, 0, 0.45)",
-                    color: "#fff",
-                    "&:hover": { bgcolor: "rgba(0, 0, 0, 0.65)" },
-                  }}
-                >
-                  <ChevronLeftIcon />
-                </IconButton>
-                <IconButton
-                  onClick={goNextImage}
-                  aria-label={t("models:detail.nextImage") ?? undefined}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    bgcolor: "rgba(0, 0, 0, 0.45)",
-                    color: "#fff",
-                    "&:hover": { bgcolor: "rgba(0, 0, 0, 0.65)" },
-                  }}
-                >
-                  <ChevronRightIcon />
-                </IconButton>
-              </>
-            )}
-
-            {canPreview3d && (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<ViewInArIcon fontSize="small" />}
-                onClick={() => setPreviewOpen(true)}
-                sx={{
-                  position: "absolute",
-                  left: 12,
-                  bottom: 12,
-                  bgcolor: "rgba(0, 0, 0, 0.65)",
-                  color: "#fff",
-                  "&:hover": { bgcolor: "rgba(0, 0, 0, 0.8)" },
-                }}
-              >
-                {t("models:detail.preview3d")}
+    <div className="mx-auto w-full max-w-[1390px]">
+      <PageHeader
+        title={title}
+        backTo="/models"
+        subtitle={
+          isOwner && print.visibility !== "shared" ? undefined : (
+            <VisibilityBadge visibility={print.visibility} ownerName={isOwner ? null : print.owner?.display_name} />
+          )
+        }
+        actions={
+          <>
+            <FavoriteButton print={print} />
+            {canEdit ? (
+              <Button asChild size="sm">
+                <Link to={`/models/${print.id}?edit=${print.id}`}>
+                  <Pencil className="size-4" aria-hidden />
+                  Edit
+                </Link>
               </Button>
-            )}
-          </Box>
+            ) : null}
+            {isOwner ? (
+              <Button size="sm" icon={<Share2 className="size-4" aria-hidden />} onClick={() => setShareOpen(true)}>
+                Share…
+              </Button>
+            ) : null}
+            <ModelActionsMenu
+              print={print}
+              onDeleted={() => navigate("/models")}
+              shareOpen={shareOpen}
+              onShareOpenChange={setShareOpen}
+            />
+          </>
+        }
+      />
 
-          {images.length > 1 && (
-            <Stack direction="row" spacing={1} sx={{ mt: 1.5, overflowX: "auto", pb: 0.5 }}>
-              {images.map((image, idx) => (
-                <ButtonBase
-                  key={image.id}
-                  onClick={() => setActiveImageIndex(idx)}
-                  sx={{
-                    width: 84,
-                    height: 64,
-                    borderRadius: 1.5,
-                    overflow: "hidden",
-                    border: "2px solid",
-                    borderColor: idx === activeImageIndex ? "primary.main" : "divider",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={printsApi.fileUrl(image.url)}
-                    alt=""
-                    sx={{ width: "100%", height: "100%", maxWidth: "100%", objectFit: "cover" }}
-                  />
-                </ButtonBase>
-              ))}
-            </Stack>
-          )}
-
-          {/* Off-screen but laid out at a real size (the snapshot renderer measures it). Fixed, so it can never
-              widen the page: `width: 1` means 100% in MUI, and an absolute 100%-wide box pushed past the edge. */}
-          {needsGeneratedPreview && firstPlate && (
-            <Box
-              sx={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: 640,
-                height: 480,
-                overflow: "hidden",
-                opacity: 0,
-                pointerEvents: "none",
-                zIndex: -1,
-              }}
-              aria-hidden="true"
-            >
-              <ModelSnapshot
-                url={printsApi.fileUrl(firstPlate.url)}
-                ext={extOf(firstPlate.filename)}
-                plateId={firstPlate.id}
-                theme={theme}
-                mode="automatic"
-              />
-            </Box>
-          )}
-
-          <ModelFilesPanel print={print} onUnauthorized={onUnauthorized} onUpdated={setPrint} />
-
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: 3,
-              p: 2,
-              borderRadius: "14px",
-              borderColor: dividerBorderColor,
-            }}
-          >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 700,
-                mb: 1,
-                color: (muiTheme) => muiTheme.thingport.headingText,
-              }}
-            >
-              {t("models:detail.description")}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ whiteSpace: "pre-wrap", color: print.notes ? "text.primary" : "text.disabled" }}
-            >
-              {print.notes || t("models:detail.noDescription")}
-            </Typography>
-
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 700,
-                mt: 2.5,
-                mb: 1,
-                color: (muiTheme) => muiTheme.thingport.headingText,
-              }}
-            >
-              {t("models:detail.tags")}
-            </Typography>
-            {print.tags.length ? (
-              <Stack
-                direction="row"
-                useFlexGap
-                spacing={1}
-                sx={{
-                  flexWrap: "wrap",
-                }}
-              >
-                {print.tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    size="small"
-                    variant="outlined"
-                    component={Link}
-                    to={`/models/tags/${encodeURIComponent(tag)}`}
-                    clickable
-                    sx={{
-                      bgcolor: "background.paper",
-                      borderColor: "divider",
-                      color: "text.primary",
-                      // !important: Chip's own clickable styles use a same-specificity selector.
-                      "&:hover, &:focus-visible, &:active": {
-                        backgroundColor: (muiTheme) => `${muiTheme.palette.background.paper} !important`,
-                      },
-                    }}
-                  />
-                ))}
-              </Stack>
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[2fr_1fr]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <ModelGallery key={print.id} print={print} />
+          <ModelFilesPanel print={print} />
+          <Card padding="lg">
+            <h2 className="mb-2 text-sm font-semibold text-fg">Description</h2>
+            {print.notes ? (
+              <p className="text-sm break-words whitespace-pre-wrap text-fg">{print.notes}</p>
             ) : (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "text.disabled",
-                }}
-              >
-                {t("models:detail.noTags")}
-              </Typography>
+              <p className="text-sm text-subtle">No description yet.</p>
             )}
-          </Paper>
-        </Box>
+            <h2 className="mt-5 mb-2 text-sm font-semibold text-fg">Tags</h2>
+            {print.tags.length ? (
+              <ul className="flex flex-wrap gap-2">
+                {print.tags.map((tag) => (
+                  <li key={tag}>
+                    <Link to={`/models/tags/${encodeURIComponent(tag)}`} className="rounded-full">
+                      <TagBadge tag={tag} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-subtle">No tags yet.</p>
+            )}
+          </Card>
+        </div>
+        {/* Stretched to the left column's height, so the sticky panel inside has room to travel. */}
+        <div className="self-stretch">
+          <ModelSidePanel print={print} />
+        </div>
+      </div>
 
-        {/* alignSelf: stretch overrides the grid's own alignItems: "start" just for this column,
-            so this box is as tall as the (taller) left column -- giving the sticky panel inside
-            it room to travel as the page scrolls instead of being stuck the moment its own
-            (short) content ends. */}
-        <Box sx={{ alignSelf: "stretch" }}>
-          <ModelSidePanel
-            print={print}
-            onSelectCategory={onSelectCategory}
-            onUnauthorized={onUnauthorized}
-            onUpdated={setPrint}
-            viewer={viewer}
-          />
-        </Box>
-      </Box>
-
-      {previewOpen && <Model3DPreviewModal print={print} onClose={() => setPreviewOpen(false)} />}
-    </Box>
+      {editing ? <EditModelModal key={print.id} print={print} onClose={closeEdit} /> : null}
+    </div>
   );
 }

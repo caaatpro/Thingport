@@ -1,214 +1,137 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import CircularProgress from "@mui/material/CircularProgress";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DownloadIcon from "@mui/icons-material/Download";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
-import ShareIcon from "@mui/icons-material/Share";
-import type { SxProps, Theme } from "@mui/material/styles";
-import { UnauthorizedError } from "../../api/client";
-import { type Collection, type CollectionInput, collectionsApi } from "../../api/collections";
-import { useConfirm } from "../../components/ConfirmProvider";
-import DownloadZipConfirmDialog from "../../components/DownloadZipConfirmDialog";
-import ShareDialog from "../../components/ShareDialog";
-import { hasRole } from "../../utils/access";
-import CollectionFormModal from "../CollectionsPage/CollectionFormModal";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Bookmark, BookmarkMinus, Download, MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
+import { collectionsApi, type Collection, type CollectionInput } from "@/api/collections";
+import { errorMessage } from "@/app/queryClient";
+import { DownloadZipConfirmDialog } from "@/features/prints";
+import { ShareDialog } from "@/features/sharing/ShareDialog";
+import { IconButton, Menu, MenuItem, MenuSeparator, useConfirm, useToast } from "@/ui";
+import { CollectionFormDialog } from "../CollectionsPage/CollectionFormDialog";
+import { collectionAccess } from "./access";
+import { useCollectionBookmark } from "./useCollectionBookmark";
+
+const SHARE_HINT =
+  "Everyone you pick sees every model in this collection, including models you add to it later. They can view and download them, but not change them.";
 
 type Props = {
   collection: Collection;
-  onUpdated: (collection: Collection) => void;
-  onUnauthorized?: () => void;
-  onDeleted: () => void;
-  onBookmarksChanged?: () => void;
-  triggerSx?: SxProps<Theme>;
+  /** Called after the collection was deleted (the detail page leaves, the list just refreshes). */
+  onDeleted?: () => void;
+  /** Lighter styling for use over a cover image. */
+  overlay?: boolean;
 };
 
-/** Shared by the collection detail header and the Collections grid cards. */
-export default function CollectionActionsMenu({
-  collection,
-  onUpdated,
-  onUnauthorized,
-  onDeleted,
-  onBookmarksChanged,
-  triggerSx,
-}: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const confirmDialog = useConfirm();
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+/** The "More" menu of a collection, shared by the detail header and the list cards. Items depend on the viewer's role. */
+export function CollectionActionsMenu({ collection, onDeleted, overlay }: Props) {
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const bookmark = useCollectionBookmark(collection);
+  const access = collectionAccess(collection);
   const [editOpen, setEditOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [bookmarking, setBookmarking] = useState(false);
-  const [downloadOpen, setDownloadOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
 
-  const closeMenu = () => setAnchorEl(null);
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["collections"] }),
+      queryClient.invalidateQueries({ queryKey: ["collection", collection.id] }),
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
+    ]);
 
-  const handleToggleBookmark = async () => {
-    closeMenu();
-    if (bookmarking) return;
-    setBookmarking(true);
-    const next = !collection.bookmarked;
-    try {
-      await (next ? collectionsApi.bookmark(collection.id) : collectionsApi.unbookmark(collection.id));
-      onUpdated({ ...collection, bookmarked: next });
-      onBookmarksChanged?.();
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      console.error(err);
-      alert(t("models:collections.bookmarkFailed"));
-    } finally {
-      setBookmarking(false);
-    }
-  };
+  const update = useMutation({
+    mutationFn: (input: CollectionInput) => collectionsApi.update(collection.id, input),
+    onSuccess: refresh,
+  });
 
-  const handleEdit = async (input: CollectionInput) => {
-    try {
-      onUpdated(await collectionsApi.update(collection.id, input));
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      throw err;
-    }
-  };
+  const remove = useMutation({
+    mutationFn: () => collectionsApi.delete(collection.id),
+    onSuccess: async () => {
+      // The detail query would 404 if refetched, so drop it instead.
+      queryClient.removeQueries({ queryKey: ["collection", collection.id] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["collections"] }),
+        queryClient.invalidateQueries({ queryKey: ["bookmarks"] }),
+      ]);
+      onDeleted?.();
+    },
+    onError: (err) => toast.error(errorMessage(err, "Couldn't delete the collection.")),
+  });
 
-  const handleDelete = async () => {
-    closeMenu();
-    const confirmed = await confirmDialog({
-      message: t("models:collections.detail.confirmDelete", { name: collection.name }),
+  const askDelete = async () => {
+    const ok = await confirm({
+      title: "Delete collection",
+      message: `Delete "${collection.name}"? Models in it are not deleted.`,
       destructive: true,
     });
-    if (!confirmed) return;
-    setDeleting(true);
-    try {
-      await collectionsApi.delete(collection.id);
-      onDeleted();
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      console.error(err);
-      alert(t("models:collections.detail.deleteFailed"));
-    } finally {
-      setDeleting(false);
-    }
+    if (ok) remove.mutate();
   };
 
   return (
     <>
-      <IconButton
-        size="small"
-        onClick={(e) => setAnchorEl(e.currentTarget)}
-        aria-label={t("common:more") ?? undefined}
-        disabled={deleting || bookmarking}
-        sx={triggerSx}
+      <Menu
+        trigger={
+          <IconButton label="More" variant={overlay ? "overlay" : "outline"} disabled={remove.isPending}>
+            <MoreVertical className="size-4" aria-hidden />
+          </IconButton>
+        }
       >
-        {deleting ? <CircularProgress size={18} /> : <MoreVertIcon fontSize="small" />}
-      </IconButton>
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem onClick={handleToggleBookmark}>
-          <ListItemIcon>
-            {collection.bookmarked ? (
-              <BookmarkIcon fontSize="small" color="primary" />
-            ) : (
-              <BookmarkBorderIcon fontSize="small" />
-            )}
-          </ListItemIcon>
-          <ListItemText>
-            {collection.bookmarked
-              ? t("models:collections.unbookmarkCollection")
-              : t("models:collections.bookmarkCollection")}
-          </ListItemText>
-        </MenuItem>
         <MenuItem
-          onClick={() => {
-            closeMenu();
-            setDownloadOpen(true);
-          }}
+          icon={bookmark.bookmarked ? <BookmarkMinus /> : <Bookmark />}
+          disabled={bookmark.pending}
+          onSelect={bookmark.toggle}
         >
-          <ListItemIcon>
-            <DownloadIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{t("models:collections.downloadAllZip")}</ListItemText>
+          {bookmark.label}
         </MenuItem>
-        {hasRole(collection.my_role, "edit") && (
-          <MenuItem
-            onClick={() => {
-              closeMenu();
-              setEditOpen(true);
-            }}
-          >
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("common:edit")}</ListItemText>
+        <MenuItem icon={<Download />} onSelect={() => setDownloadOpen(true)}>
+          Download all as zip
+        </MenuItem>
+        {access.canEdit || access.canShare || access.canDelete ? <MenuSeparator /> : null}
+        {access.canEdit ? (
+          <MenuItem icon={<Pencil />} onSelect={() => setEditOpen(true)}>
+            Edit
           </MenuItem>
-        )}
-        {collection.is_owner !== false && (
-          <MenuItem
-            onClick={() => {
-              closeMenu();
-              setShareOpen(true);
-            }}
-          >
-            <ListItemIcon>
-              <ShareIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("models:share.menu")}</ListItemText>
+        ) : null}
+        {access.canShare ? (
+          <MenuItem icon={<Share2 />} onSelect={() => setShareOpen(true)}>
+            Share…
           </MenuItem>
-        )}
-        {hasRole(collection.my_role, "owner") && (
-          <MenuItem onClick={handleDelete}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
+        ) : null}
+        {access.canDelete ? (
+          <MenuItem icon={<Trash2 />} danger onSelect={() => void askDelete()}>
+            Delete
           </MenuItem>
-        )}
+        ) : null}
       </Menu>
 
-      {editOpen && (
-        <CollectionFormModal collection={collection} onClose={() => setEditOpen(false)} onSubmit={handleEdit} />
-      )}
+      {editOpen ? (
+        <CollectionFormDialog
+          collection={collection}
+          onClose={() => setEditOpen(false)}
+          onSubmit={(input) => update.mutateAsync(input).then(() => undefined)}
+        />
+      ) : null}
 
       <DownloadZipConfirmDialog
         open={downloadOpen}
-        onClose={() => setDownloadOpen(false)}
+        onOpenChange={setDownloadOpen}
         filter={{ collection_id: collection.id }}
         filename={`${collection.name || "collection"}.zip`}
-        title={t("models:collections.downloadZipTitle", { name: collection.name })}
-        onUnauthorized={onUnauthorized}
+        title={`Download "${collection.name}" as zip`}
       />
 
-      <ShareDialog
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-        name={collection.name}
-        hint={t("models:share.collectionHint")}
-        loadShares={() => collectionsApi.listShares(collection.id)}
-        saveShares={(ids, roles) => collectionsApi.setShares(collection.id, ids, roles)}
-        withRoles
-        onSaved={() => {
-          collectionsApi
-            .get(collection.id)
-            .then(onUpdated)
-            .catch(() => undefined);
-        }}
-        onUnauthorized={onUnauthorized}
-      />
+      {access.canShare ? (
+        <ShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          name={collection.name}
+          hint={SHARE_HINT}
+          loadShares={() => collectionsApi.listShares(collection.id)}
+          saveShares={(ids, roles) => collectionsApi.setShares(collection.id, ids, roles)}
+          withRoles
+          onSaved={() => void refresh()}
+        />
+      ) : null}
     </>
   );
 }

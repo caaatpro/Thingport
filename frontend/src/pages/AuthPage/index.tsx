@@ -1,85 +1,74 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import Alert from "@mui/material/Alert";
-import type { AuthUser } from "../../api/auth";
-import Wordmark from "../../components/Wordmark";
-import SignInPanel from "./SignInPanel";
-import RegisterPanel, { type Invite } from "./RegisterPanel";
+import { useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import * as Tabs from "@radix-ui/react-tabs";
+import type { AuthResult } from "@/api/auth";
+import { useAuth } from "@/app/auth";
+import { Alert, cn } from "@/ui";
+import { AuthShell } from "./AuthShell";
 import ForgotPasswordPanel from "./ForgotPasswordPanel";
+import RegisterPanel, { type Invite } from "./RegisterPanel";
+import SignInPanel from "./SignInPanel";
 
-type Props = {
-  onSuccess: (token: string, expires_in: number, user: AuthUser) => void;
-  apiUp: boolean | null;
-  allowRegistrations: boolean;
-  passwordResetEnabled: boolean;
-  invite?: Invite | null;
-};
+type TabValue = "signIn" | "register";
 
-export default function AuthPage({ onSuccess, apiUp, allowRegistrations, passwordResetEnabled, invite = null }: Props) {
-  const { t } = useTranslation("app");
-  const [tab, setTab] = React.useState<"signIn" | "register">(invite ? "register" : "signIn");
+const tabClass = cn(
+  "-mb-px flex-1 border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:text-fg",
+  "data-[state=active]:border-accent data-[state=active]:text-fg",
+);
+
+/** Sign in, register, forgot password and the invitation flow (`/register?invite=TOKEN&email=…`). */
+export default function AuthPage() {
+  const { health, login } = useAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [params] = useSearchParams();
+
+  const inviteToken = pathname === "/register" ? params.get("invite") : null;
+  const invite: Invite | null = inviteToken ? { token: inviteToken, email: params.get("email") ?? "" } : null;
+
+  const [tab, setTab] = useState<TabValue>(invite ? "register" : "signIn");
   // Set while the forgot-password form replaces the tabs; carries over the typed sign-in email.
-  const [forgotEmail, setForgotEmail] = React.useState<string | null>(null);
-  // Closed registrations hide the Register tab unless this visit came from an invitation.
-  const canRegister = allowRegistrations || invite !== null;
+  const [forgotEmail, setForgotEmail] = useState<string | null>(null);
+  // Closed registrations hide the Register tab, unless this visit came from an invitation.
+  const canRegister = (health?.allow_registrations ?? true) || invite !== null;
+  const canReset = health?.password_reset_enabled ?? false;
 
+  const onSuccess = (result: AuthResult) => {
+    login(result);
+    navigate("/", { replace: true });
+  };
+
+  const title =
+    forgotEmail !== null ? "Reset password" : tab === "register" && canRegister ? "Create account" : "Sign in";
   return (
-    <Paper
-      elevation={8}
-      sx={{
-        width: "100%",
-        maxWidth: 420,
-        borderRadius: 3,
-        p: 4,
-        border: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <Stack spacing={3} sx={{ mb: 3, textAlign: "center" }}>
-        <Box sx={{ display: "flex", justifyContent: "center" }}>
-          <Wordmark size="lg" />
-        </Box>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-          }}
-        >
-          {t("auth.subtitle")}
-        </Typography>
-      </Stack>
-
-      {apiUp === false && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {t("auth.apiOffline")}
+    <AuthShell title={title} subtitle="Sign in to continue">
+      {health?.ok === false ? (
+        <Alert tone="danger" className="mb-4">
+          API appears offline. Ensure the API service is running.
         </Alert>
-      )}
-
-      {forgotEmail === null && canRegister && (
-        <Tabs
-          value={tab}
-          onChange={(_e, value) => setTab(value)}
-          variant="fullWidth"
-          sx={{ mb: 3, borderBottom: "1px solid", borderColor: "divider" }}
-        >
-          <Tab value="signIn" label={t("auth.signInTab")} />
-          <Tab value="register" label={t("auth.registerTab")} />
-        </Tabs>
-      )}
-
+      ) : null}
       {forgotEmail !== null ? (
         <ForgotPasswordPanel initialEmail={forgotEmail} onBack={() => setForgotEmail(null)} />
-      ) : tab === "register" && canRegister ? (
-        <RegisterPanel onSuccess={onSuccess} invite={invite} />
       ) : (
-        <SignInPanel onSuccess={onSuccess} onForgotPassword={passwordResetEnabled ? setForgotEmail : undefined} />
+        <Tabs.Root value={canRegister ? tab : "signIn"} onValueChange={(next) => setTab(next as TabValue)}>
+          {canRegister ? (
+            <Tabs.List aria-label="Account" className="mb-5 flex border-b border-border">
+              <Tabs.Trigger value="signIn" className={tabClass}>
+                Sign In
+              </Tabs.Trigger>
+              <Tabs.Trigger value="register" className={tabClass}>
+                Register
+              </Tabs.Trigger>
+            </Tabs.List>
+          ) : null}
+          <Tabs.Content value="signIn" className="focus:outline-none">
+            <SignInPanel onSuccess={onSuccess} onForgotPassword={canReset ? setForgotEmail : undefined} />
+          </Tabs.Content>
+          <Tabs.Content value="register" className="focus:outline-none">
+            <RegisterPanel onSuccess={onSuccess} invite={invite} />
+          </Tabs.Content>
+        </Tabs.Root>
       )}
-    </Paper>
+    </AuthShell>
   );
 }

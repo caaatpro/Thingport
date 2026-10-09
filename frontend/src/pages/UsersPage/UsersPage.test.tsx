@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AdminUser } from "../../api/admin";
-import { renderWithProviders } from "../../test/render";
-import type { AnyFn } from "../../test/types";
+import type { AdminUser } from "@/api/admin";
+import { renderWithProviders } from "@/test/render";
+import type { AnyFn } from "@/test/types";
 
 const adminApi = vi.hoisted(() => ({
   listUsers: vi.fn<AnyFn>(),
@@ -20,8 +20,10 @@ const settingsApi = vi.hoisted(() => ({
   getSmtp: vi.fn<AnyFn>(),
   updateRegistrations: vi.fn<AnyFn>(),
 }));
-vi.mock("../../api/admin", async (importOriginal) => ({ ...(await importOriginal<object>()), adminApi }));
-vi.mock("../../api/settings", async (importOriginal) => ({ ...(await importOriginal<object>()), settingsApi }));
+vi.mock("@/api/admin", async (importOriginal) => ({ ...(await importOriginal<object>()), adminApi }));
+vi.mock("@/api/settings", async (importOriginal) => ({ ...(await importOriginal<object>()), settingsApi }));
+
+vi.mock("@/app/auth", () => ({ useUser: () => ({ id: "me" }) }));
 
 const { default: UsersPage } = await import("./index");
 
@@ -64,7 +66,7 @@ const users = [
 ];
 
 function renderPage() {
-  return renderWithProviders(<UsersPage currentUserId="me" />);
+  return renderWithProviders(<UsersPage />);
 }
 
 async function openMenuFor(name: string) {
@@ -121,10 +123,10 @@ describe("UsersPage", () => {
   it("filters by role and by disabled accounts", async () => {
     renderPage();
     await screen.findByText("Anna Ivanova");
-    await userEvent.click(screen.getByRole("button", { name: "Admins" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Admins" }));
     expect(screen.queryByText("Anna Ivanova")).toBeNull();
     expect(screen.getByText("Clara Schmidt")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Disabled" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Disabled" }));
     expect(screen.queryByText("Clara Schmidt")).toBeNull();
     expect(screen.getByText("Boris Petrov")).toBeInTheDocument();
   });

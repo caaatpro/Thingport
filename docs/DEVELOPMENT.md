@@ -131,8 +131,9 @@ mutate the same global `Setting` rows, and parallel workers race each other. See
 
 ### Frontend
 
-There are no frontend tests yet. `npm run test:run` uses `--passWithNoTests`, so it succeeds
-against an empty suite. New tests are welcome.
+Unit and component tests live next to the code (`src/**/*.test.ts(x)`, Vitest + Testing Library):
+`npm --prefix frontend run test:run`. Browser flows are Playwright specs in `frontend/e2e/`, run with
+`scripts/e2e.sh` against a throwaway stack. See [FRONTEND.md](FRONTEND.md) for the UI conventions.
 
 ## Quality checks
 

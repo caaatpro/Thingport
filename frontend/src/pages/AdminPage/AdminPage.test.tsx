@@ -1,14 +1,12 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AdminOverview } from "../../api/admin";
-import { renderWithProviders } from "../../test/render";
-import type { AnyFn } from "../../test/types";
+import type { AdminOverview } from "@/api/admin";
+import { renderWithProviders } from "@/test/render";
+import type { AnyFn } from "@/test/types";
 
 const adminApi = vi.hoisted(() => ({ getOverview: vi.fn<AnyFn>(), retryFailedProcessing: vi.fn<AnyFn>() }));
-const settingsApi = vi.hoisted(() => ({ getVersionCheck: vi.fn<AnyFn>() }));
-vi.mock("../../api/admin", async (importOriginal) => ({ ...(await importOriginal<object>()), adminApi }));
-vi.mock("../../api/settings", async (importOriginal) => ({ ...(await importOriginal<object>()), settingsApi }));
+vi.mock("@/api/admin", async (importOriginal) => ({ ...(await importOriginal<object>()), adminApi }));
 
 const { default: AdminPage } = await import("./index");
 
@@ -21,9 +19,9 @@ const overview = (patch: Partial<AdminOverview> = {}): AdminOverview => ({
 });
 
 beforeEach(() => {
+  adminApi.getOverview.mockReset();
   adminApi.getOverview.mockResolvedValue(overview());
   adminApi.retryFailedProcessing.mockResolvedValue({ ok: true, retried: 2 });
-  settingsApi.getVersionCheck.mockResolvedValue({ status: "unknown" });
 });
 
 describe("AdminPage", () => {
@@ -60,7 +58,7 @@ describe("AdminPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry failed" }));
     await waitFor(() => expect(adminApi.retryFailedProcessing).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("Retrying 2 failed items.")).toBeInTheDocument();
-    expect(adminApi.getOverview).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(adminApi.getOverview).toHaveBeenCalledTimes(2));
   });
 
   it("links to every admin section", async () => {
@@ -68,6 +66,8 @@ describe("AdminPage", () => {
     await screen.findByText("Nothing running");
     for (const [name, path] of [
       ["Users", "/admin-users"],
+      ["Settings", "/admin-settings"],
+      ["Rendering", "/admin-rendering"],
       ["Logs", "/admin-logs"],
       ["Triggers", "/admin-triggers"],
       ["Connections", "/admin-connections"],
@@ -78,12 +78,6 @@ describe("AdminPage", () => {
         .map((a) => a.getAttribute("href"));
       expect(hrefs).toContain(path);
     }
-  });
-
-  it("has no captcha section any more", async () => {
-    renderWithProviders(<AdminPage />);
-    await screen.findByText("Nothing running");
-    expect(screen.queryByText(/captcha/i)).toBeNull();
   });
 
   it("still shows the sections when the overview can't load", async () => {

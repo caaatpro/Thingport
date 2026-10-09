@@ -1,492 +1,142 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import Skeleton from "@mui/material/Skeleton";
-import GridViewIcon from "@mui/icons-material/GridView";
-import ViewListIcon from "@mui/icons-material/ViewList";
-import ViewInArIcon from "@mui/icons-material/ViewInAr";
-import { UnauthorizedError } from "../../api/client";
-import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
-import { type Category, type CategoryMetaInput, categoriesApi } from "../../api/categories";
-import { type PreviewMode } from "../../api/settings";
-import type { AuthUser } from "../../api/auth";
-import { type ResolvedTheme } from "../../constants/settingsOptions";
-import { usePageHeader } from "../../components/Layout/PageHeaderContext";
-import { buildCategoryTree, subtreeIds } from "../../utils/categoryTree";
-import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
-import CategoriesPanel from "./CategoriesPanel";
-import CategoryBanner from "./CategoryBanner";
-import ModelCard from "./ModelCard";
-import ModelRow from "./ModelRow";
-import BulkBar from "./BulkBar";
-import SortTabs from "./SortTabs";
+import { categoriesApi, type Category } from "@/api/categories";
+import { errorMessage } from "@/app/queryClient";
+import {
+  BulkBar,
+  ModelGrid,
+  ModelGridEmpty,
+  ModelGridSkeleton,
+  ScopeSegmented,
+  SortSegmented,
+  ViewToggle,
+  usePrintList,
+  useViewMode,
+} from "@/features/prints";
+import { buildCategoryTree, subtreeIds } from "@/utils/categoryTree";
+import { Alert, Button, PageHeader, Spinner } from "@/ui";
+import { CategoriesPanel } from "./CategoriesPanel";
+import { CategoryBanner } from "./CategoryBanner";
+import { readLibraryParams, withLibraryParams, type LibraryParams } from "./libraryParams";
+import { useCategoryActions } from "./useCategoryActions";
 
-const PAGE_SIZE = 24;
+const NO_CATEGORIES: Category[] = [];
 
-type Props = {
-  categoryId: string | null;
-  onSelectCategory: (id: string | null) => void;
-  categoriesVersion: number;
-  onCategoriesChanged: () => void;
-  /** Bumped when prints change elsewhere, to refetch the grid. */
-  printsVersion: number;
-  onUnauthorized?: () => void;
-  theme: ResolvedTheme;
-  previewMode: PreviewMode;
-  viewer?: AuthUser | null;
-};
-
-const VIEW_KEY = "thingport.library.view";
-type ViewMode = "grid" | "list";
-
-function readView(): ViewMode {
-  try {
-    return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid";
-  } catch {
-    return "grid";
+/** Which empty state fits: a brand-new library, nothing shared yet, or a filter with no hits. */
+function emptyCopy(params: LibraryParams): { title: string; hint: string } {
+  if (params.category) return { title: "No models here", hint: "Nothing matches this category or filter." };
+  if (params.scope === "mine") {
+    return {
+      title: "Your library is empty",
+      hint: "Drop model files anywhere on this page, or use Add to upload files or import a link.",
+    };
   }
+  return {
+    title: "Nothing shared with you yet",
+    hint: "Models and collections other people share with you will show up here.",
+  };
 }
 
-const CARD_GRID_COLUMNS = "repeat(auto-fill, minmax(236px, 1fr))";
+export default function ModelsPage() {
+  const [search, setSearch] = useSearchParams();
+  const params = readLibraryParams(search);
+  const { category, sort, scope } = params;
+  const [view, setView] = useViewMode();
 
-export default function ModelsPage({
-  categoryId,
-  onSelectCategory,
-  categoriesVersion,
-  onCategoriesChanged,
-  printsVersion,
-  onUnauthorized,
-  theme,
-  previewMode,
-  viewer,
-}: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const [items, setItems] = useState<Print[]>([]);
-  const [view, setView] = useState<ViewMode>(readView);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [reloadKey, setReloadKey] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const sortModeParam = searchParams.get("orderBy");
-  const sortMode: PrintSortMode =
-    sortModeParam === "popular" || sortModeParam === "downloads" ? sortModeParam : "newest";
-  const scopeParam = searchParams.get("scope");
-  const scope: "mine" | "shared" | "all" = scopeParam === "shared" || scopeParam === "all" ? scopeParam : "mine";
-  const setScope = (next: "mine" | "shared" | "all") => {
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      if (next === "mine") p.delete("scope");
-      else p.set("scope", next);
-      return p;
-    });
+  const change = (next: Partial<LibraryParams>) => setSearch((prev) => withLibraryParams(prev, next));
+
+  const categoriesQuery = useQuery({ queryKey: ["categories"], queryFn: () => categoriesApi.list() });
+  const categories = categoriesQuery.data ?? NO_CATEGORIES;
+  const tree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const selectedCategory = category ? (tree.byId.get(category) ?? null) : null;
+
+  // A category includes the models at every level beneath it. Wait for the tree so the list loads once.
+  const categoryIds = category ? subtreeIds(tree, category) : [];
+  const categoryFilter = category ? (categoryIds.length === 1 ? category : categoryIds) : undefined;
+  const treeSettled = !category || !categoriesQuery.isPending;
+
+  const list = usePrintList({ category_id: categoryFilter, order_by: sort, scope, enabled: treeSettled });
+  const { items, sentinelRef } = list;
+
+  // Selection belongs to one set of filters; changing them starts over.
+  const filterId = `${category ?? ""}|${sort}|${scope}`;
+  const [selection, setSelection] = useState<{ filterId: string; ids: Set<string> }>({ filterId, ids: new Set() });
+  const selectedIds = selection.filterId === filterId ? selection.ids : new Set<string>();
+  const selectedItems = items.filter((item) => selectedIds.has(item.id));
+  const toggle = (id: string) => {
+    // Only your own models can be changed in bulk.
+    if (items.find((item) => item.id === id)?.is_owner === false) return;
+    const ids = new Set(selectedIds);
+    if (!ids.delete(id)) ids.add(id);
+    setSelection({ filterId, ids });
   };
+  const clear = () => setSelection({ filterId, ids: new Set() });
 
-  const setSortMode = (mode: PrintSortMode) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (mode === "newest") next.delete("orderBy");
-      else next.set("orderBy", mode);
-      return next;
-    });
-  };
-
-  // Mirrors the selected category into ?category=<id>. When the URL and state disagree, both sync
-  // effects fire and undo each other, causing flicker; `syncingFromUrlRef` marks a change that came
-  // from the URL so it isn't pushed straight back.
-  const categoryParam = searchParams.get("category");
-  const syncingFromUrlRef = useRef(false);
-
-  useEffect(() => {
-    if (categoryParam !== categoryId) {
-      syncingFromUrlRef.current = true;
-      onSelectCategory(categoryParam);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryParam]);
-
-  useEffect(() => {
-    if (syncingFromUrlRef.current) {
-      syncingFromUrlRef.current = false;
-      return;
-    }
-    if ((searchParams.get("category") || null) === categoryId) return;
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (categoryId) next.set("category", categoryId);
-      else next.delete("category");
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId]);
-
-  // A category includes the models at every level beneath it.
-  const categoryIdFilter = useMemo(() => {
-    if (!categoryId) return undefined;
-    const ids = subtreeIds(buildCategoryTree(categories), categoryId);
-    return ids.length === 1 ? categoryId : ids;
-  }, [categoryId, categories]);
-
-  const selectedCategory = categoryId ? (categories.find((f) => f.id === categoryId) ?? null) : null;
-  usePageHeader({
-    title: selectedCategory ? selectedCategory.name || t("models:categories.untitled") : undefined,
-    subtitle: selectedCategory ? t("models:categories.subtitle") : undefined,
-    onBack: categoryId ? () => onSelectCategory(null) : undefined,
+  const actions = useCategoryActions(categories, (id) => {
+    if (id === category) change({ category: null });
   });
 
-  // Which empty state fits: a brand-new library, nothing shared yet, or a filter with no hits.
-  const emptyKey = (part: "Title" | "Hint") =>
-    `models:grid.${categoryId ? "emptyFiltered" : scope === "mine" ? "empty" : "emptyShared"}${part}` as const;
+  const loading = list.isLoading || !treeSettled;
+  const empty = emptyCopy(params);
 
-  const handleError = (err: unknown, message?: string) => {
-    if (err instanceof UnauthorizedError) {
-      onUnauthorized?.();
-      return true;
-    }
-    console.error(err);
-    if (message) alert(message);
-    return false;
-  };
-
-  useEffect(() => {
-    setCategoriesLoading(true);
-    (async () => {
-      try {
-        setCategories(await categoriesApi.list());
-      } catch (err) {
-        handleError(err, t("models:errors.loadCategoriesFailed"));
-      } finally {
-        setCategoriesLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoriesVersion]);
-
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [categoryIdFilter, sortMode, scope]);
-
-  useEffect(() => {
-    setLoading(true);
-    (async () => {
-      try {
-        const result = await printsApi.list({
-          category_id: categoryIdFilter,
-          order_by: sortMode,
-          scope,
-          limit: PAGE_SIZE,
-          offset: 0,
-        });
-        setItems(result.items);
-        setOffset(result.items.length);
-        setHasMore(result.hasMore);
-      } catch (err) {
-        handleError(err, t("models:errors.loadFailed"));
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryIdFilter, printsVersion, sortMode, scope, reloadKey]);
-
-  // Live-refresh cards whose files are still being processed (thumbnail/preview/geometry), so a
-  // freshly dropped model flips from a placeholder to its preview without a manual reload.
-  useEffect(() => {
-    const processingIds = items
-      .filter((it) => it.plates?.some((p) => p.processing_status === "queued" || p.processing_status === "processing"))
-      .map((it) => it.id);
-    if (!processingIds.length) return;
-    const timer = setTimeout(async () => {
-      const updated = await Promise.all(processingIds.map((id) => printsApi.get(id).catch(() => null)));
-      const byId = new Map(updated.filter((u): u is Print => Boolean(u)).map((u) => [u.id, u]));
-      if (byId.size) setItems((prev) => prev.map((it) => byId.get(it.id) ?? it));
-    }, 2500);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
-
-  const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const result = await printsApi.list({
-        category_id: categoryIdFilter,
-        order_by: sortMode,
-        scope,
-        limit: PAGE_SIZE,
-        offset,
-      });
-      setItems((prev) => [...prev, ...result.items]);
-      setOffset(offset + result.items.length);
-      setHasMore(result.hasMore);
-    } catch (err) {
-      handleError(err, t("models:errors.loadFailed"));
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const toggleSelected = (id: string) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const selectedItems = items.filter((item) => selectedIds.has(item.id));
-
-  const loadMoreSentinelRef = useInfiniteScroll(loadMore, hasMore, loading || loadingMore);
-
-  const createCategory = async (name: string, parentId: string | null) => {
-    try {
-      await categoriesApi.create(name, [], parentId || undefined);
-      onCategoriesChanged();
-    } catch (err) {
-      handleError(err, t("models:errors.createCategoryFailed"));
-    }
-  };
-
-  const renameCategory = async (id: string, name: string) => {
-    const existing = categories.find((f) => f.id === id);
-    try {
-      await categoriesApi.update(id, name, existing?.tags || [], existing?.parent_id || undefined);
-      onCategoriesChanged();
-    } catch (err) {
-      handleError(err, t("models:errors.renameCategoryFailed"));
-    }
-  };
-
-  const deleteCategory = async (id: string) => {
-    try {
-      await categoriesApi.delete(id);
-      onCategoriesChanged();
-      if (categoryId === id) onSelectCategory(null);
-    } catch (err) {
-      handleError(err, t("models:errors.deleteCategoryFailed"));
-    }
-  };
-
-  // Refetch even on failure: the manager shows the drop optimistically until fresh categories arrive.
-  const reorderCategories = async (categoryIds: string[]) => {
-    try {
-      await categoriesApi.reorder(categoryIds);
-    } catch (err) {
-      handleError(err, t("models:errors.reorderCategoryFailed"));
-    } finally {
-      onCategoriesChanged();
-    }
-  };
-
-  const moveCategory = async (id: string, parentId: string | null, position: number) => {
-    try {
-      await categoriesApi.move(id, parentId, position);
-    } catch (err) {
-      handleError(err, t("models:errors.moveCategoryFailed"));
-    } finally {
-      onCategoriesChanged();
-    }
-  };
-
-  const updateCategoryMeta = async (id: string, meta: CategoryMetaInput) => {
-    try {
-      await categoriesApi.updateMeta(id, meta);
-      onCategoriesChanged();
-    } catch (err) {
-      // Rethrow so CategoryMetaDialog shows the error inline and keeps the user's edits.
-      if (handleError(err)) return;
-      throw err;
-    }
-  };
+  let content;
+  if (loading) {
+    content = <ModelGridSkeleton view={view} />;
+  } else if (list.isError) {
+    content = (
+      <Alert
+        tone="danger"
+        title="Couldn't load models"
+        action={
+          <Button size="sm" onClick={() => void list.refetch()}>
+            Try again
+          </Button>
+        }
+      >
+        {errorMessage(list.error, "Check your connection and try again.")}
+      </Alert>
+    );
+  } else if (!items.length) {
+    content = <ModelGridEmpty title={empty.title}>{empty.hint}</ModelGridEmpty>;
+  } else {
+    content = (
+      <>
+        <ModelGrid items={items} view={view} selection={{ selected: selectedIds, toggle }} />
+        <div ref={sentinelRef} className="flex min-h-8 justify-center py-3">
+          {list.isFetchingNextPage ? <Spinner label="Loading more models" /> : null}
+        </div>
+      </>
+    );
+  }
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={scope}
-          aria-label={t("scope.label", { defaultValue: "Show" })}
-          onChange={(_, next: typeof scope | null) => next && setScope(next)}
-        >
-          {(["mine", "shared", "all"] as const).map((s) => (
-            <ToggleButton key={s} value={s}>
-              {t(`scope.${s}`)}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-          <SortTabs value={sortMode} onChange={setSortMode} />
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={view}
-            aria-label={t("models:view.label")}
-            onChange={(_, next: ViewMode | null) => {
-              if (!next) return;
-              setView(next);
-              try {
-                localStorage.setItem(VIEW_KEY, next);
-              } catch {
-                // The choice just won't persist.
-              }
-            }}
-          >
-            <ToggleButton value="grid" aria-label={t("models:view.grid")}>
-              <GridViewIcon fontSize="small" />
-            </ToggleButton>
-            <ToggleButton value="list" aria-label={t("models:view.list")}>
-              <ViewListIcon fontSize="small" />
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Stack>
-      </Box>
-      <Stack
-        direction="row"
-        spacing={2}
-        sx={{
-          alignItems: "flex-start",
-        }}
-      >
+    <>
+      <PageHeader title="Models" subtitle={selectedCategory ? selectedCategory.name || "Untitled" : undefined} />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <ScopeSegmented value={scope} onChange={(next) => change({ scope: next })} />
+        <div className="flex flex-wrap items-center gap-3">
+          <SortSegmented value={sort} onChange={(next) => change({ sort: next })} />
+          <ViewToggle value={view} onChange={setView} />
+        </div>
+      </div>
+      <div className="flex flex-col lg:flex-row lg:items-start lg:gap-6">
         <CategoriesPanel
           categories={categories}
-          loading={categoriesLoading}
-          selectedId={categoryId}
-          onSelect={onSelectCategory}
-          onCreate={createCategory}
-          onRename={renameCategory}
-          onDelete={deleteCategory}
-          onReorder={reorderCategories}
-          onMove={moveCategory}
-          onUpdateMeta={updateCategoryMeta}
+          loading={categoriesQuery.isPending}
+          error={categoriesQuery.isError}
+          onRetry={() => void categoriesQuery.refetch()}
+          selectedId={category}
+          search={search}
+          onSelect={(id) => change({ category: id })}
+          actions={actions}
         />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          {selectedCategory?.meta_title && (
-            <Box sx={{ mb: 2 }}>
-              <CategoryBanner category={selectedCategory} />
-            </Box>
-          )}
-          {loading ? (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: CARD_GRID_COLUMNS,
-                gap: "20px",
-              }}
-            >
-              {Array.from({ length: 10 }).map((_, i) => (
-                <Box key={i}>
-                  <Box sx={{ width: "100%", aspectRatio: "4 / 3" }}>
-                    <Skeleton variant="rounded" width="100%" height="100%" sx={{ borderRadius: "14px" }} />
-                  </Box>
-                  <Skeleton variant="text" sx={{ mt: 1, width: "70%" }} />
-                  <Skeleton variant="text" sx={{ width: "40%" }} />
-                </Box>
-              ))}
-            </Box>
-          ) : items.length ? (
-            <Stack spacing={2}>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: view === "list" ? "1fr" : CARD_GRID_COLUMNS,
-                  gap: view === "list" ? "8px" : "20px",
-                }}
-              >
-                {items.map((item) => {
-                  const common = {
-                    item,
-                    theme,
-                    previewMode,
-                    onDeleted: (deletedId: string) => setItems((prev) => prev.filter((i) => i.id !== deletedId)),
-                    onFavoriteChange: (updated: Print) =>
-                      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i))),
-                    onUpdated: (updated: Print) =>
-                      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i))),
-                    onUnauthorized,
-                    viewer,
-                    selected: selectedIds.has(item.id),
-                    selectionActive: selectedIds.size > 0,
-                    onToggleSelect: item.is_owner === false ? undefined : () => toggleSelected(item.id),
-                  };
-                  return view === "list" ? (
-                    <ModelRow key={item.id} {...common} />
-                  ) : (
-                    <ModelCard key={item.id} {...common} />
-                  );
-                })}
-              </Box>
-              {hasMore && (
-                <Stack
-                  ref={loadMoreSentinelRef}
-                  direction="row"
-                  sx={{
-                    justifyContent: "center",
-                    py: 1,
-                  }}
-                >
-                  {loadingMore && (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        alignItems: "center",
-                        color: "text.secondary",
-                      }}
-                    >
-                      <CircularProgress size={14} />
-                      <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
-                    </Stack>
-                  )}
-                </Stack>
-              )}
-            </Stack>
-          ) : (
-            <Stack
-              spacing={1}
-              sx={{
-                alignItems: "center",
-                py: 10,
-                px: 2,
-                color: "text.secondary",
-                textAlign: "center",
-              }}
-            >
-              <ViewInArIcon sx={{ fontSize: 56, opacity: 0.35, mb: 1 }} />
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 600,
-                  color: (muiTheme) => muiTheme.thingport.headingText,
-                }}
-              >
-                {t(emptyKey("Title"))}
-              </Typography>
-              <Typography variant="body2" sx={{ maxWidth: 420 }}>
-                {t(emptyKey("Hint"))}
-              </Typography>
-            </Stack>
-          )}
-        </Box>
-      </Stack>
-      {selectedItems.length > 0 && (
-        <BulkBar
-          selected={selectedItems}
-          categories={categories}
-          onClear={() => setSelectedIds(new Set())}
-          onChanged={() => setReloadKey((k) => k + 1)}
-          onUnauthorized={onUnauthorized}
-        />
-      )}
-    </Stack>
+        <div className="min-w-0 flex-1">
+          {selectedCategory ? <CategoryBanner category={selectedCategory} /> : null}
+          {content}
+        </div>
+      </div>
+      {selectedItems.length > 0 ? <BulkBar selected={selectedItems} categories={categories} onClear={clear} /> : null}
+    </>
   );
 }

@@ -1,175 +1,77 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import CircularProgress from "@mui/material/CircularProgress";
-import Alert from "@mui/material/Alert";
-import AlertTitle from "@mui/material/AlertTitle";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi, type PreviewMode } from "../../api/settings";
-import SectionHeader from "../../components/SectionHeader";
+import { usePreviewMode, useSetPreviewMode } from "@/app/preferences";
+import { errorMessage } from "@/app/queryClient";
+import type { PreviewMode } from "@/api/settings";
+import { Alert, cn } from "@/ui";
+import { AdminSection } from "../AdminPage/parts";
 
-type Props = {
-  onUnauthorized?: () => void;
-  onSaved?: (mode: PreviewMode) => void;
-};
+const OPTIONS: { id: PreviewMode; label: string; description: string }[] = [
+  {
+    id: "automatic",
+    label: "Automatic",
+    description: "Load missing previews only as cards enter view, then save them for future visits.",
+  },
+  {
+    id: "on-demand",
+    label: "On demand",
+    description: "Show saved previews immediately and generate missing ones only when requested.",
+  },
+  {
+    id: "disabled",
+    label: "Disabled",
+    description: "Never generate card previews. Interactive viewing remains available by opening a model.",
+  },
+];
 
-export default function PreviewsSection({ onUnauthorized, onSaved }: Props) {
-  const { t } = useTranslation("app");
-  const [mode, setMode] = React.useState<PreviewMode>("automatic");
-  const [loading, setLoading] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void (async () => {
-      try {
-        const data = await settingsApi.getPreviews();
-        if (active) setMode(data.mode);
-      } catch (err) {
-        if (err instanceof UnauthorizedError) onUnauthorized?.();
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [onUnauthorized]);
-
-  const selectMode = async (next: PreviewMode) => {
-    if (next === mode || saving) return;
-    const previous = mode;
-    setMode(next);
-    setSaving(true);
-    setStatus(null);
-    try {
-      const data = await settingsApi.updatePreviews(next);
-      onSaved?.(data.mode);
-    } catch (err) {
-      setMode(previous);
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-      } else {
-        setStatus(err instanceof Error ? err.message : t("adminSettings.previews.failed"));
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const options: Array<{ id: PreviewMode; label: string; description: string }> = [
-    {
-      id: "automatic",
-      label: t("adminSettings.previews.automaticLabel"),
-      description: t("adminSettings.previews.automaticDesc"),
-    },
-    {
-      id: "on-demand",
-      label: t("adminSettings.previews.onDemandLabel"),
-      description: t("adminSettings.previews.onDemandDesc"),
-    },
-    {
-      id: "disabled",
-      label: t("adminSettings.previews.disabledLabel"),
-      description: t("adminSettings.previews.disabledDesc"),
-    },
-  ];
+/** Instance-wide: when the browser renders the 3D thumbnails on model cards. Saves as soon as it's chosen. */
+export default function PreviewsSection() {
+  const current = usePreviewMode();
+  const set = useSetPreviewMode();
+  // Show the choice at once; it snaps back if saving fails.
+  const mode = set.isPending ? set.variables : current;
 
   return (
-    <Stack spacing={3}>
-      <SectionHeader title={t("adminSettings.previews.heading")} subtitle={t("adminSettings.previews.subtitle")} />
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Stack spacing={2}>
-          <Alert severity="info">
-            <AlertTitle>{t("adminSettings.previews.infoTitle")}</AlertTitle>
-            {t("adminSettings.previews.infoScope")}
-            <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2.5 }}>
-              <li>
-                <Typography variant="body2">{t("adminSettings.previews.infoAutomatic")}</Typography>
-              </li>
-              <li>
-                <Typography variant="body2">{t("adminSettings.previews.infoOnDemand")}</Typography>
-              </li>
-              <li>
-                <Typography variant="body2">{t("adminSettings.previews.infoDisabled")}</Typography>
-              </li>
-            </Box>
-          </Alert>
-          <RadioGroup value={mode} onChange={(e) => selectMode(e.target.value as PreviewMode)}>
-            <Stack spacing={1.5}>
-              {options.map((option) => {
-                const selected = mode === option.id;
-                return (
-                  <FormControlLabel
-                    key={option.id}
-                    value={option.id}
-                    control={<Radio />}
-                    disabled={loading || saving}
-                    sx={{
-                      alignItems: "flex-start",
-                      m: 0,
-                      borderRadius: 2,
-                      border: "1px solid",
-                      borderColor: selected ? "primary.main" : "divider",
-                      bgcolor: selected ? "action.selected" : "transparent",
-                      p: 2,
-                    }}
-                    label={
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 600,
-                          }}
-                        >
-                          {option.label}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "text.secondary",
-                          }}
-                        >
-                          {option.description}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                );
-              })}
-            </Stack>
-          </RadioGroup>
-          {(saving || status) && (
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{
-                alignItems: "center",
-              }}
-            >
-              {saving && <CircularProgress size={14} />}
-              {status && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
-                  }}
+    <AdminSection title="Model previews" description="Control background preview generation for the whole instance.">
+      <fieldset className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0" disabled={set.isPending}>
+        <legend className="sr-only">Preview generation</legend>
+        <Alert title="What this controls">
+          This only affects the small 3D thumbnail shown on model cards, never the full model viewer. It also only
+          applies to files with no thumbnail yet: an embedded thumbnail from a sliced .3mf file, or one already
+          generated before, is always reused regardless of this setting. This choice decides what happens for the rest,
+          typically .stl/.obj files or a .3mf with no embedded thumbnail.
+        </Alert>
+        <div className="flex flex-col gap-2">
+          {OPTIONS.map((option) => {
+            const selected = mode === option.id;
+            return (
+              <div
+                key={option.id}
+                className={cn(
+                  "relative flex items-start gap-3 rounded-card border p-3.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40",
+                  selected ? "border-accent bg-accent-soft" : "border-border hover:bg-surface-2",
+                )}
+              >
+                <input
+                  id={`preview-mode-${option.id}`}
+                  type="radio"
+                  name="preview-mode"
+                  value={option.id}
+                  checked={selected}
+                  onChange={() => set.mutate(option.id)}
+                  className="relative z-10 mt-1 size-4 accent-accent"
+                />
+                <label
+                  htmlFor={`preview-mode-${option.id}`}
+                  className="min-w-0 flex-1 cursor-pointer after:absolute after:inset-0 after:rounded-card"
                 >
-                  {status}
-                </Typography>
-              )}
-            </Stack>
-          )}
-        </Stack>
-      </Paper>
-    </Stack>
+                  <span className="block text-sm font-medium text-fg">{option.label}</span>
+                  <span className="block text-sm text-muted">{option.description}</span>
+                </label>
+              </div>
+            );
+          })}
+        </div>
+        {set.error ? <Alert tone="danger">{errorMessage(set.error, "Failed to save preview settings.")}</Alert> : null}
+      </fieldset>
+    </AdminSection>
   );
 }

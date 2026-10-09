@@ -1,101 +1,106 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import Alert from "@mui/material/Alert";
-import Avatar from "@mui/material/Avatar";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
-import InputAdornment from "@mui/material/InputAdornment";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import BlockIcon from "@mui/icons-material/Block";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
-import EditIcon from "@mui/icons-material/Edit";
-import HistoryIcon from "@mui/icons-material/History";
-import KeyIcon from "@mui/icons-material/Key";
-import LogoutIcon from "@mui/icons-material/Logout";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import PersonAddIcon from "@mui/icons-material/PersonAddAlt1";
-import RestoreIcon from "@mui/icons-material/CheckCircleOutlined";
-import SearchIcon from "@mui/icons-material/Search";
-import ShieldIcon from "@mui/icons-material/AdminPanelSettings";
-import PersonIcon from "@mui/icons-material/Person";
-import { UnauthorizedError } from "../../api/client";
-import { adminApi, type AdminUser } from "../../api/admin";
-import { useConfirm } from "../../components/ConfirmProvider";
-import { useToast } from "../../components/ToastProvider";
-import { formatFileSize } from "../../utils/fileSize";
+import { useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Ban,
+  CheckCircle2,
+  History,
+  KeyRound,
+  LogOut,
+  MoreVertical,
+  Pencil,
+  Search,
+  Shield,
+  Trash2,
+  Trash,
+  User,
+  UserPlus,
+} from "lucide-react";
+import { adminApi, type AdminUser } from "@/api/admin";
+import { useUser } from "@/app/auth";
+import { errorMessage } from "@/app/queryClient";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  Input,
+  Menu,
+  MenuItem,
+  MenuSeparator,
+  PageHeader,
+  Segmented,
+  Skeleton,
+  useConfirm,
+  useToast,
+} from "@/ui";
+import { formatFileSize } from "@/utils/fileSize";
+import { LoadError, TABLE, TD, TH, TR, TableScroll, useAdminUsers } from "../AdminPage/parts";
 import CreateUserDialog from "./CreateUserDialog";
-import { DeleteUserDialog, EditUserDialog, ResetLinkDialog, SignOutDialog } from "./UserDialogs";
 import RegistrationsPanel from "./RegistrationsPanel";
-
-type Props = {
-  onUnauthorized?: () => void;
-  /** The signed-in admin: can't change their own role, disable or delete themselves. */
-  currentUserId?: string;
-};
+import { DeleteUserDialog, EditUserDialog, ResetLinkDialog, SignOutDialog } from "./UserDialogs";
 
 type Filter = "all" | "admins" | "members" | "disabled";
 type Dialog = { kind: "edit" | "reset" | "signOut" | "delete"; user: AdminUser } | null;
 
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "admins", label: "Admins" },
+  { value: "members", label: "Members" },
+  { value: "disabled", label: "Disabled" },
+];
+
 const DAY_MS = 24 * 3600 * 1000;
+const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+function lastActive(iso: string | null, now: number): string {
+  if (!iso) return "Never";
+  const diff = new Date(iso).getTime() - now;
+  const days = Math.round(diff / DAY_MS);
+  if (Math.abs(days) >= 1) return relative.format(days, "day");
+  const hours = Math.round(diff / 3600000);
+  if (Math.abs(hours) >= 1) return relative.format(hours, "hour");
+  return relative.format(Math.round(diff / 60000), "minute");
+}
+
+function isFilter(value: string | null): value is Filter {
+  return value === "all" || value === "admins" || value === "members" || value === "disabled";
+}
+
+const roleLabel = (role: AdminUser["role"]) => (role === "ADMIN" ? "Admin" : "Member");
 
 /** Accounts of the instance, with search, filters and everything an admin needs to manage them. */
-export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
-  const { t, i18n } = useTranslation(["app", "common"]);
-  const navigate = useNavigate();
+export default function UsersPage() {
+  const me = useUser();
   const confirm = useConfirm();
-  const showToast = useToast();
+  const toast = useToast();
+  const queryClient = useQueryClient();
   // Fixed at mount: "last active" doesn't need to tick, and render must stay pure.
-  const [now] = React.useState(() => Date.now());
-  const [users, setUsers] = React.useState<AdminUser[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [query, setQuery] = React.useState("");
-  const [filter, setFilter] = React.useState<Filter>("all");
-  const [menu, setMenu] = React.useState<{ anchor: HTMLElement; user: AdminUser } | null>(null);
-  const [dialog, setDialog] = React.useState<Dialog>(null);
-  const [createOpen, setCreateOpen] = React.useState(false);
+  const [now] = useState(() => Date.now());
+  const [params, setParams] = useSearchParams();
+  const query = params.get("q") ?? "";
+  const filterParam = params.get("filter");
+  const filter: Filter = isFilter(filterParam) ? filterParam : "all";
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const load = React.useCallback(async () => {
-    try {
-      setUsers(await adminApi.listUsers());
-      setError(null);
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setError(t("adminSettings.users.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [onUnauthorized, t]);
+  const usersQuery = useAdminUsers();
+  const users = usersQuery.data;
 
-  React.useEffect(() => {
-    void load();
-  }, [load]);
+  const setParam = (key: string, value: string) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value && value !== "all") next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
 
-  const visible = React.useMemo(() => {
+  const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return users.filter((u) => {
+    return (users ?? []).filter((u) => {
       if (filter === "admins" && u.role !== "ADMIN") return false;
       if (filter === "members" && u.role !== "MEMBER") return false;
       if (filter === "disabled" && !u.disabled) return false;
@@ -103,447 +108,258 @@ export default function UsersPage({ onUnauthorized, currentUserId }: Props) {
     });
   }, [users, query, filter]);
 
-  const counts = React.useMemo(
+  const counts = useMemo(
     () => ({
-      total: users.length,
-      admins: users.filter((u) => u.role === "ADMIN").length,
-      disabled: users.filter((u) => u.disabled).length,
+      total: users?.length ?? 0,
+      admins: users?.filter((u) => u.role === "ADMIN").length ?? 0,
+      disabled: users?.filter((u) => u.disabled).length ?? 0,
     }),
     [users],
   );
 
-  const fail = (err: unknown) => {
-    if (err instanceof UnauthorizedError) onUnauthorized?.();
-    else showToast({ message: err instanceof Error ? err.message : String(err), severity: "error" });
+  const changed = async (message?: string) => {
+    if (message) toast.success(message);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin"] }),
+      queryClient.invalidateQueries({ queryKey: ["users"] }),
+    ]);
   };
 
-  const changed = (message?: string) => {
-    if (message) showToast({ message });
-    void load();
-  };
+  const update = useMutation({
+    mutationFn: ({
+      user,
+      patch,
+    }: {
+      user: AdminUser;
+      patch: Parameters<typeof adminApi.updateUser>[1];
+      message: string;
+    }) => adminApi.updateUser(user.id, patch),
+    onSuccess: (_res, { message }) => changed(message),
+    onError: (err) => toast.error(errorMessage(err)),
+  });
 
-  const update = async (user: AdminUser, patch: Parameters<typeof adminApi.updateUser>[1], message: string) => {
-    try {
-      await adminApi.updateUser(user.id, patch);
-      changed(message);
-    } catch (err) {
-      fail(err);
-    }
-  };
-
-  const roleLabel = (role: AdminUser["role"]) =>
-    role === "ADMIN" ? t("adminSettings.users.roleAdmin") : t("adminSettings.users.roleMember");
+  const deleteModels = useMutation({
+    mutationFn: (user: AdminUser) => adminApi.deleteAllPrintsForUser(user.id),
+    onSuccess: (res) => changed(`Deleted ${res.deleted} models.`),
+    onError: (err) => toast.error(errorMessage(err)),
+  });
 
   const toggleDisabled = async (user: AdminUser) => {
     if (!user.disabled) {
       const ok = await confirm({
-        title: t("adminSettings.users.disableConfirm.title", { name: user.display_name }),
-        message: t("adminSettings.users.disableConfirm.message"),
-        confirmLabel: t("adminSettings.users.disableConfirm.confirm"),
+        title: `Disable ${user.display_name}?`,
+        message:
+          "They are signed out at once and can't sign in or use API tokens until you enable the account again. Their models stay as they are.",
+        confirmLabel: "Disable",
         destructive: true,
       });
       if (!ok) return;
     }
-    await update(
+    update.mutate({
       user,
-      { disabled: !user.disabled },
-      t(user.disabled ? "adminSettings.users.enabledDone" : "adminSettings.users.disabledDone", {
-        name: user.display_name,
-      }),
-    );
+      patch: { disabled: !user.disabled },
+      message: user.disabled ? `${user.display_name} can sign in again.` : `${user.display_name} was disabled.`,
+    });
   };
 
-  const deleteModels = async (user: AdminUser) => {
+  const removeModels = async (user: AdminUser) => {
     const ok = await confirm({
-      title: t("adminSettings.users.deleteModels.title", { name: user.display_name }),
-      message: t("adminSettings.users.deleteModels.message", { count: user.print_count }),
+      title: `Delete all models of ${user.display_name}?`,
+      message: `${user.print_count} models and their files are permanently deleted. The account itself stays.`,
+      confirmLabel: "Delete models",
       destructive: true,
     });
-    if (!ok) return;
-    try {
-      const res = await adminApi.deleteAllPrintsForUser(user.id);
-      changed(t("adminSettings.users.deleteModels.done", { count: res.deleted }));
-    } catch (err) {
-      fail(err);
-    }
+    if (ok) deleteModels.mutate(user);
   };
 
-  const lastActive = (iso: string | null) => {
-    if (!iso) return t("adminSettings.users.never");
-    const diff = new Date(iso).getTime() - now;
-    const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
-    const days = Math.round(diff / DAY_MS);
-    if (Math.abs(days) >= 1) return rtf.format(days, "day");
-    const hours = Math.round(diff / 3600000);
-    if (Math.abs(hours) >= 1) return rtf.format(hours, "hour");
-    return rtf.format(Math.round(diff / 60000), "minute");
+  const changeRole = (user: AdminUser) => {
+    const next = user.role === "ADMIN" ? "MEMBER" : "ADMIN";
+    update.mutate({ user, patch: { role: next }, message: `${user.display_name} is now ${roleLabel(next)}.` });
   };
 
-  const formatDate = (iso: string) => new Date(iso).toLocaleDateString(i18n.language);
-
-  const closeMenu = () => setMenu(null);
-  const menuUser = menu?.user ?? null;
-  const isSelf = menuUser?.id === currentUserId;
+  const closeDialog = () => setDialog(null);
 
   return (
-    <Stack spacing={3}>
-      <RegistrationsPanel onUnauthorized={onUnauthorized} />
-
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Stack spacing={1.5}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={1.5}
-          sx={{
-            alignItems: { md: "center" },
-          }}
-        >
-          <TextField
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("adminSettings.users.searchPlaceholder")}
-            size="small"
-            sx={{ width: { xs: "100%", md: 320 } }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={filter}
-            onChange={(_e, next: Filter | null) => next && setFilter(next)}
-          >
-            <ToggleButton value="all">{t("adminSettings.users.filterAll")}</ToggleButton>
-            <ToggleButton value="admins">{t("adminSettings.users.filterAdmins")}</ToggleButton>
-            <ToggleButton value="members">{t("adminSettings.users.filterMembers")}</ToggleButton>
-            <ToggleButton value="disabled" disabled={counts.disabled === 0}>
-              {t("adminSettings.users.filterDisabled")}
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <Box sx={{ flex: 1 }} />
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            {t("adminSettings.users.summary", counts)}
-          </Typography>
-          <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setCreateOpen(true)}>
-            {t("adminSettings.users.addUser")}
+    <div className="mx-auto max-w-6xl">
+      <PageHeader
+        title="Users"
+        subtitle="Accounts, roles and access to this instance."
+        backTo="/admin"
+        actions={
+          <Button variant="primary" icon={<UserPlus className="size-4" />} onClick={() => setCreateOpen(true)}>
+            Add user
           </Button>
-        </Stack>
+        }
+      />
 
-        {loading ? (
-          <Stack
-            sx={{
-              alignItems: "center",
-              py: 4,
-            }}
-          >
-            <CircularProgress size={22} />
-          </Stack>
+      <div className="space-y-4">
+        <RegistrationsPanel />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              aria-label="Search users"
+              placeholder="Search by name or email…"
+              value={query}
+              onChange={(e) => setParam("q", e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Segmented label="Show" value={filter} onChange={(v) => setParam("filter", v)} options={FILTERS} />
+          {users ? (
+            <p className="ml-auto text-sm text-muted">{`${counts.total} users · ${counts.admins} admins · ${counts.disabled} disabled`}</p>
+          ) : null}
+        </div>
+
+        {usersQuery.isPending ? (
+          <div className="space-y-2" aria-hidden>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12" />
+            ))}
+          </div>
+        ) : usersQuery.isError ? (
+          <LoadError error={usersQuery.error} title="Unable to load users." onRetry={() => void usersQuery.refetch()} />
         ) : (
-          <Paper variant="outlined">
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t("adminSettings.users.columnUser")}</TableCell>
-                    <TableCell>{t("adminSettings.users.columnRole")}</TableCell>
-                    <TableCell>{t("adminSettings.users.columnStatus")}</TableCell>
-                    <TableCell align="right">{t("adminSettings.users.columnModels")}</TableCell>
-                    <TableCell align="right">{t("adminSettings.users.columnStorage")}</TableCell>
-                    <TableCell>{t("adminSettings.users.columnLastActive")}</TableCell>
-                    <TableCell>{t("adminSettings.users.columnCreated")}</TableCell>
-                    <TableCell padding="checkbox" />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {visible.map((u) => (
-                    <TableRow key={u.id} hover sx={u.disabled ? { opacity: 0.6 } : undefined}>
-                      <TableCell>
-                        <Stack
-                          direction="row"
-                          spacing={1.5}
-                          sx={{
-                            alignItems: "center",
-                          }}
-                        >
-                          <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>
+          <TableScroll>
+            <table className={TABLE}>
+              <thead>
+                <tr>
+                  <th className={TH}>User</th>
+                  <th className={TH}>Role</th>
+                  <th className={TH}>Status</th>
+                  <th className={`${TH} text-right`}>Models</th>
+                  <th className={`${TH} text-right`}>Storage</th>
+                  <th className={TH}>Last active</th>
+                  <th className={TH}>Created</th>
+                  <th className={TH}>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((u) => {
+                  const isSelf = u.id === me.id;
+                  return (
+                    <tr key={u.id} className={TR}>
+                      {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label */}
+                      <td className={TD}>
+                        <div className={`flex items-center gap-3 ${u.disabled ? "opacity-60" : ""}`}>
+                          <span
+                            aria-hidden
+                            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-muted"
+                          >
                             {(u.display_name || u.email).slice(0, 1).toUpperCase()}
-                          </Avatar>
-                          <Box sx={{ minWidth: 0 }}>
-                            <Stack
-                              direction="row"
-                              spacing={0.75}
-                              sx={{
-                                alignItems: "center",
-                              }}
-                            >
-                              <Typography
-                                variant="body2"
-                                noWrap
-                                sx={{
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {u.display_name}
-                              </Typography>
-                              {u.id === currentUserId && (
-                                <Chip
-                                  size="small"
-                                  label={t("adminSettings.users.you")}
-                                  sx={{ height: 18, fontSize: 11 }}
-                                />
-                              )}
-                            </Stack>
-                            <Typography
-                              variant="caption"
-                              noWrap
-                              sx={{
-                                color: "text.secondary",
-                                display: "block",
-                              }}
-                            >
-                              {u.email}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={roleLabel(u.role)}
-                          size="small"
-                          color={u.role === "ADMIN" ? "primary" : "default"}
-                          variant={u.role === "ADMIN" ? "filled" : "outlined"}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          useFlexGap
-                          sx={{
-                            flexWrap: "wrap",
-                          }}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate font-medium text-fg">{u.display_name}</span>
+                              {isSelf ? <Badge tone="accent">You</Badge> : null}
+                            </div>
+                            <div className="truncate text-xs text-muted">{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={TD}>
+                        <Badge tone={u.role === "ADMIN" ? "accent" : "outline"}>{roleLabel(u.role)}</Badge>
+                      </td>
+                      <td className={TD}>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge tone={u.disabled ? "danger" : "outline"}>{u.disabled ? "Disabled" : "Active"}</Badge>
+                          {!u.email_verified ? <Badge tone="warning">Email not verified</Badge> : null}
+                        </div>
+                      </td>
+                      <td className={`${TD} text-right tabular-nums`}>{u.print_count}</td>
+                      <td className={`${TD} text-right whitespace-nowrap tabular-nums`}>
+                        {u.storage_bytes ? formatFileSize(u.storage_bytes) : "—"}
+                      </td>
+                      <td className={`${TD} whitespace-nowrap`}>
+                        <span title={u.last_login_at ? new Date(u.last_login_at).toLocaleString() : undefined}>
+                          {lastActive(u.last_login_at, now)}
+                        </span>
+                      </td>
+                      <td className={`${TD} whitespace-nowrap text-muted`}>
+                        {new Date(u.created_at).toLocaleDateString()}
+                      </td>
+                      <td className={`${TD} w-12 text-right`}>
+                        <Menu
+                          trigger={
+                            <IconButton label="User actions" size="sm">
+                              <MoreVertical className="size-4" />
+                            </IconButton>
+                          }
                         >
-                          <Chip
-                            size="small"
-                            label={
-                              u.disabled
-                                ? t("adminSettings.users.statusDisabled")
-                                : t("adminSettings.users.statusActive")
-                            }
-                            color={u.disabled ? "error" : "success"}
-                            variant={u.disabled ? "filled" : "outlined"}
-                          />
-                          {!u.email_verified && (
-                            <Chip
-                              size="small"
-                              color="warning"
-                              variant="outlined"
-                              label={t("adminSettings.users.statusUnverified")}
-                            />
-                          )}
-                        </Stack>
-                      </TableCell>
-                      <TableCell align="right">{u.print_count}</TableCell>
-                      <TableCell align="right">{u.storage_bytes ? formatFileSize(u.storage_bytes) : "—"}</TableCell>
-                      <TableCell>
-                        <Tooltip title={u.last_login_at ? new Date(u.last_login_at).toLocaleString(i18n.language) : ""}>
-                          <span>{lastActive(u.last_login_at)}</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>{formatDate(u.created_at)}</TableCell>
-                      <TableCell padding="checkbox">
-                        <IconButton
-                          size="small"
-                          aria-label={t("adminSettings.users.actions.open")}
-                          onClick={(e) => setMenu({ anchor: e.currentTarget, user: u })}
-                        >
-                          <MoreVertIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {visible.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 4, color: "text.secondary" }}>
-                        {t("adminSettings.users.noMatches")}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
+                          <MenuItem icon={<Pencil />} onSelect={() => setDialog({ kind: "edit", user: u })}>
+                            Edit name…
+                          </MenuItem>
+                          {!isSelf ? (
+                            <MenuItem icon={u.role === "ADMIN" ? <User /> : <Shield />} onSelect={() => changeRole(u)}>
+                              {u.role === "ADMIN" ? "Make regular member" : "Make administrator"}
+                            </MenuItem>
+                          ) : null}
+                          <MenuItem icon={<KeyRound />} onSelect={() => setDialog({ kind: "reset", user: u })}>
+                            Password reset link…
+                          </MenuItem>
+                          <MenuItem icon={<LogOut />} onSelect={() => setDialog({ kind: "signOut", user: u })}>
+                            Sign out everywhere…
+                          </MenuItem>
+                          <MenuItem asChild>
+                            <Link to={`/admin-logs?user=${u.id}`} className="flex items-center gap-2.5">
+                              <History className="size-4" aria-hidden />
+                              View activity
+                            </Link>
+                          </MenuItem>
+                          <MenuSeparator />
+                          {!isSelf ? (
+                            <MenuItem
+                              icon={u.disabled ? <CheckCircle2 /> : <Ban />}
+                              onSelect={() => void toggleDisabled(u)}
+                            >
+                              {u.disabled ? "Enable account" : "Disable account"}
+                            </MenuItem>
+                          ) : null}
+                          <MenuItem
+                            danger
+                            icon={<Trash />}
+                            disabled={u.print_count === 0}
+                            onSelect={() => void removeModels(u)}
+                          >
+                            Delete all models…
+                          </MenuItem>
+                          {!isSelf ? (
+                            <MenuItem danger icon={<Trash2 />} onSelect={() => setDialog({ kind: "delete", user: u })}>
+                              Delete user…
+                            </MenuItem>
+                          ) : null}
+                        </Menu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {visible.length === 0 ? (
+              <EmptyState title="No users match." className="py-10">
+                Try a different search or filter.
+              </EmptyState>
+            ) : null}
+          </TableScroll>
         )}
-      </Stack>
+      </div>
 
-      <Menu anchorEl={menu?.anchor} open={Boolean(menu)} onClose={closeMenu}>
-        {menuUser && [
-          <MenuItem
-            key="edit"
-            onClick={() => {
-              setDialog({ kind: "edit", user: menuUser });
-              closeMenu();
-            }}
-          >
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("adminSettings.users.actions.edit")}</ListItemText>
-          </MenuItem>,
-          !isSelf && (
-            <MenuItem
-              key="role"
-              onClick={() => {
-                const next = menuUser.role === "ADMIN" ? "MEMBER" : "ADMIN";
-                closeMenu();
-                void update(
-                  menuUser,
-                  { role: next },
-                  t("adminSettings.users.roleChanged", { name: menuUser.display_name, role: roleLabel(next) }),
-                );
-              }}
-            >
-              <ListItemIcon>
-                {menuUser.role === "ADMIN" ? <PersonIcon fontSize="small" /> : <ShieldIcon fontSize="small" />}
-              </ListItemIcon>
-              <ListItemText>
-                {menuUser.role === "ADMIN"
-                  ? t("adminSettings.users.actions.makeMember")
-                  : t("adminSettings.users.actions.makeAdmin")}
-              </ListItemText>
-            </MenuItem>
-          ),
-          <MenuItem
-            key="reset"
-            onClick={() => {
-              setDialog({ kind: "reset", user: menuUser });
-              closeMenu();
-            }}
-          >
-            <ListItemIcon>
-              <KeyIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("adminSettings.users.actions.resetPassword")}</ListItemText>
-          </MenuItem>,
-          <MenuItem
-            key="signout"
-            onClick={() => {
-              setDialog({ kind: "signOut", user: menuUser });
-              closeMenu();
-            }}
-          >
-            <ListItemIcon>
-              <LogoutIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("adminSettings.users.actions.signOut")}</ListItemText>
-          </MenuItem>,
-          <MenuItem
-            key="activity"
-            onClick={() => {
-              closeMenu();
-              navigate(`/admin-logs?user=${menuUser.id}`);
-            }}
-          >
-            <ListItemIcon>
-              <HistoryIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("adminSettings.users.actions.viewActivity")}</ListItemText>
-          </MenuItem>,
-          <Divider key="divider" />,
-          !isSelf && (
-            <MenuItem
-              key="disable"
-              onClick={() => {
-                closeMenu();
-                void toggleDisabled(menuUser);
-              }}
-            >
-              <ListItemIcon>
-                {menuUser.disabled ? <RestoreIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
-              </ListItemIcon>
-              <ListItemText>
-                {menuUser.disabled ? t("adminSettings.users.actions.enable") : t("adminSettings.users.actions.disable")}
-              </ListItemText>
-            </MenuItem>
-          ),
-          <MenuItem
-            key="models"
-            disabled={menuUser.print_count === 0}
-            onClick={() => {
-              closeMenu();
-              void deleteModels(menuUser);
-            }}
-            sx={{ color: "error.main" }}
-          >
-            <ListItemIcon sx={{ color: "inherit" }}>
-              <DeleteSweepIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{t("adminSettings.users.actions.deleteModels")}</ListItemText>
-          </MenuItem>,
-          !isSelf && (
-            <MenuItem
-              key="delete"
-              onClick={() => {
-                setDialog({ kind: "delete", user: menuUser });
-                closeMenu();
-              }}
-              sx={{ color: "error.main" }}
-            >
-              <ListItemIcon sx={{ color: "inherit" }}>
-                <DeleteForeverIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>{t("adminSettings.users.actions.deleteUser")}</ListItemText>
-            </MenuItem>
-          ),
-        ]}
-      </Menu>
-
-      <CreateUserDialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => void load()}
-        onUnauthorized={onUnauthorized}
-      />
-      <EditUserDialog
-        user={dialog?.kind === "edit" ? dialog.user : null}
-        onClose={() => setDialog(null)}
-        onChanged={changed}
-        onUnauthorized={onUnauthorized}
-      />
-      <ResetLinkDialog
-        user={dialog?.kind === "reset" ? dialog.user : null}
-        onClose={() => setDialog(null)}
-        onUnauthorized={onUnauthorized}
-      />
-      <SignOutDialog
-        user={dialog?.kind === "signOut" ? dialog.user : null}
-        onClose={() => setDialog(null)}
-        onChanged={changed}
-        onUnauthorized={onUnauthorized}
-      />
-      <DeleteUserDialog
-        user={dialog?.kind === "delete" ? dialog.user : null}
-        onClose={() => setDialog(null)}
-        onChanged={changed}
-        onUnauthorized={onUnauthorized}
-      />
-    </Stack>
+      <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={() => void changed()} />
+      {dialog?.kind === "edit" ? <EditUserDialog user={dialog.user} onClose={closeDialog} onChanged={changed} /> : null}
+      {dialog?.kind === "reset" ? <ResetLinkDialog user={dialog.user} onClose={closeDialog} /> : null}
+      {dialog?.kind === "signOut" ? (
+        <SignOutDialog user={dialog.user} onClose={closeDialog} onChanged={changed} />
+      ) : null}
+      {dialog?.kind === "delete" ? (
+        <DeleteUserDialog user={dialog.user} onClose={closeDialog} onChanged={changed} />
+      ) : null}
+    </div>
   );
 }

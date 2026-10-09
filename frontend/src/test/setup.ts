@@ -1,7 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
-import "../i18n";
 
 afterEach(() => {
   cleanup();
@@ -9,7 +8,7 @@ afterEach(() => {
   window.sessionStorage.clear();
 });
 
-// jsdom lacks these browser APIs; MUI and the app's lists use them.
+// jsdom lacks these browser APIs; the app's lists use them.
 if (!window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,

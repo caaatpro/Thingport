@@ -1,62 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Paper from "@mui/material/Paper";
-import Skeleton from "@mui/material/Skeleton";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import SettingsIcon from "@mui/icons-material/Settings";
-import PeopleIcon from "@mui/icons-material/People";
-import HistoryIcon from "@mui/icons-material/History";
-import BoltIcon from "@mui/icons-material/Bolt";
-import CableIcon from "@mui/icons-material/Cable";
-import ViewInArIcon from "@mui/icons-material/ViewInAr";
-import SyncIcon from "@mui/icons-material/Sync";
-import { adminApi, type AdminOverview } from "../../api/admin";
-import { UnauthorizedError } from "../../api/client";
-import { useToast } from "../../components/ToastProvider";
-import { formatFileSize } from "../../utils/fileSize";
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Cable, ChevronRight, History, RefreshCw, Settings, Users, Zap, Box } from "lucide-react";
+import { adminApi, type AdminOverview } from "@/api/admin";
+import { errorMessage } from "@/app/queryClient";
+import { Button, Card, PageHeader, Skeleton, cn, useToast } from "@/ui";
+import { formatFileSize } from "@/utils/fileSize";
 
-type Section = {
-  path: string;
-  icon: React.ReactNode;
-  labelKey: string;
-  descriptionKey: string;
-};
+type Section = { path: string; icon: ReactNode; label: string; description: string };
 
 const SECTIONS: Section[] = [
-  { path: "/admin-users", icon: <PeopleIcon />, labelKey: "adminSettings.users.heading", descriptionKey: "users" },
-  { path: "/admin-settings", icon: <SettingsIcon />, labelKey: "common:settings", descriptionKey: "settings" },
+  { path: "/admin-users", icon: <Users />, label: "Users", description: "Accounts, roles, access and invitations" },
   {
-    path: "/admin-rendering",
-    icon: <ViewInArIcon />,
-    labelKey: "adminSettings.rendering.heading",
-    descriptionKey: "rendering",
+    path: "/admin-settings",
+    icon: <Settings />,
+    label: "Settings",
+    description: "Storage layout, Thingiverse access and session length",
   },
-  { path: "/admin-logs", icon: <HistoryIcon />, labelKey: "adminSettings.logs.heading", descriptionKey: "logs" },
-  {
-    path: "/admin-triggers",
-    icon: <BoltIcon />,
-    labelKey: "adminSettings.triggers.heading",
-    descriptionKey: "triggers",
-  },
+  { path: "/admin-rendering", icon: <Box />, label: "Rendering", description: "How 3D previews are generated" },
+  { path: "/admin-logs", icon: <History />, label: "Logs", description: "Who did what, and when" },
+  { path: "/admin-triggers", icon: <Zap />, label: "Triggers", description: "One-off maintenance jobs" },
   {
     path: "/admin-connections",
-    icon: <CableIcon />,
-    labelKey: "adminSettings.connections.heading",
-    descriptionKey: "connections",
+    icon: <Cable />,
+    label: "Connections",
+    description: "Email delivery and the database connection",
   },
 ];
-
-type Props = {
-  onUnauthorized?: () => void;
-};
-
-const cardBorder = (theme: { palette: { mode: string } }) =>
-  theme.palette.mode === "dark" ? "transparent" : "divider";
 
 function StatCard({
   title,
@@ -64,236 +34,145 @@ function StatCard({
   lines,
   action,
   href,
-  tone,
+  warn,
 }: {
   title: string;
-  value: React.ReactNode;
+  value: ReactNode;
   lines: string[];
-  action?: React.ReactNode;
-  /** Makes the whole card a link. */
+  action?: ReactNode;
+  /** Makes the whole card a link (via the title). */
   href?: string;
-  tone?: "warning";
+  warn?: boolean;
 }) {
   return (
-    <Paper
-      variant="outlined"
-      {...(href ? { component: RouterLink, to: href } : {})}
-      sx={{
-        p: 2.5,
-        flex: 1,
-        minWidth: 0,
-        borderRadius: "12px",
-        color: "inherit",
-        textDecoration: "none",
-        borderColor: (theme) => (tone === "warning" ? theme.palette.warning.main : cardBorder(theme)),
-        transition: "box-shadow .15s ease, transform .15s ease",
-        ...(href
-          ? { "&:hover, &:focus-visible": { boxShadow: 4, transform: "translateY(-1px)", outline: "none" } }
-          : {}),
-      }}
-    >
-      <Typography
-        variant="caption"
-        sx={{
-          color: "text.secondary",
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          fontWeight: 600,
-        }}
-      >
-        {title}
-      </Typography>
-      <Typography
-        variant="h5"
-        sx={{
-          fontWeight: 700,
-          mt: 0.5,
-          mb: 0.75,
-          color: (theme) => theme.thingport.headingText,
-        }}
-      >
-        {value}
-      </Typography>
-      <Stack spacing={0.25}>
+    <Card interactive={Boolean(href)} className={cn("relative min-w-0", warn && "border-warning/60")} padding="md">
+      <p className="text-xs font-semibold tracking-wide text-muted uppercase">
+        {href ? (
+          <Link to={href} className="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none">
+            {title}
+          </Link>
+        ) : (
+          title
+        )}
+      </p>
+      <p className="mt-1 mb-2 text-2xl font-bold tracking-tight text-fg tabular-nums">{value}</p>
+      <ul className="space-y-0.5 text-sm text-muted">
         {lines.map((line) => (
-          <Typography
-            key={line}
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            {line}
-          </Typography>
+          <li key={line}>{line}</li>
         ))}
-      </Stack>
-      {action && <Box sx={{ mt: 1.5 }}>{action}</Box>}
-    </Paper>
+      </ul>
+      {action ? <div className="relative mt-3">{action}</div> : null}
+    </Card>
   );
 }
 
-export default function AdminPage({ onUnauthorized }: Props) {
-  const { t } = useTranslation(["app", "common"]);
-  const showToast = useToast();
-  // undefined = loading, null = failed (the cards hide).
-  const [overview, setOverview] = useState<AdminOverview | null | undefined>(undefined);
-  const [retrying, setRetrying] = useState(false);
+function StatSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-3" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} className="h-32 rounded-card" />
+      ))}
+    </div>
+  );
+}
 
-  const load = useCallback(async () => {
-    try {
-      setOverview(await adminApi.getOverview());
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      setOverview(null);
-    }
-  }, [onUnauthorized]);
+function Overview({ overview }: { overview: AdminOverview }) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const retry = useMutation({
+    mutationFn: () => adminApi.retryFailedProcessing(),
+    onSuccess: async (res) => {
+      toast.success(`Retrying ${res.retried} failed items.`);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "overview"] });
+    },
+    onError: (err) => toast.error(errorMessage(err, "Couldn't retry. Try again.")),
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { users, library, processing, imports } = overview;
+  const busy = processing.queued + processing.processing;
+  const failed = processing.failed;
+  const idle = busy + failed === 0;
 
-  const retryFailed = async () => {
-    setRetrying(true);
-    try {
-      const res = await adminApi.retryFailedProcessing();
-      showToast({ message: t("adminSettings.overview.retried", { count: res.retried }) });
-      await load();
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else showToast({ message: err instanceof Error ? err.message : String(err), severity: "error" });
-    } finally {
-      setRetrying(false);
-    }
-  };
-
-  const busyCount = overview ? overview.processing.queued + overview.processing.processing : 0;
-  const failedCount = overview?.processing.failed ?? 0;
+  const userLines = [
+    `${users.active_7d} active this week`,
+    ...(users.disabled > 0 ? [`${users.disabled} disabled`] : []),
+    ...(users.pending_invitations > 0 ? [`${users.pending_invitations} pending invitations`] : []),
+  ];
+  const backgroundLines = [
+    idle && imports.running === 0 ? "Nothing running" : "",
+    busy > 0 ? `${busy} processing` : "",
+    failed > 0 ? `${failed} failed` : "",
+    imports.running > 0 ? `${imports.running} imports running` : "",
+    imports.failed_24h > 0 ? `${imports.failed_24h} imports failed in 24 h` : "",
+  ].filter(Boolean);
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 960 }}>
-      {overview === undefined && (
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} variant="rounded" height={132} sx={{ flex: 1, borderRadius: "12px" }} />
-          ))}
-        </Stack>
-      )}
-      {overview && (
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-          <StatCard
-            title={t("adminSettings.overview.users")}
-            value={overview.users.total}
-            href="/admin-users"
-            lines={[
-              t("adminSettings.overview.usersDetail", { active: overview.users.active_7d }),
-              ...(overview.users.disabled > 0
-                ? [t("adminSettings.overview.disabledCount", { count: overview.users.disabled })]
-                : []),
-              ...(overview.users.pending_invitations > 0
-                ? [t("adminSettings.overview.invitations", { count: overview.users.pending_invitations })]
-                : []),
-            ]}
-          />
-          <StatCard
-            title={t("adminSettings.overview.library")}
-            value={formatFileSize(overview.library.model_bytes) || "0 B"}
-            lines={[
-              t("adminSettings.overview.models", { count: overview.library.models }),
-              t("adminSettings.overview.collections", { count: overview.library.collections }),
-            ]}
-          />
-          <StatCard
-            title={t("adminSettings.overview.background")}
-            value={busyCount + failedCount === 0 ? "✓" : busyCount}
-            tone={failedCount > 0 ? "warning" : undefined}
-            lines={[
-              busyCount + failedCount === 0 && overview.imports.running === 0
-                ? t("adminSettings.overview.allClear")
-                : "",
-              busyCount > 0 ? t("adminSettings.overview.queued", { count: busyCount }) : "",
-              failedCount > 0 ? t("adminSettings.overview.failed", { count: failedCount }) : "",
-              overview.imports.running > 0
-                ? t("adminSettings.overview.importsRunning", { count: overview.imports.running })
-                : "",
-              overview.imports.failed_24h > 0
-                ? t("adminSettings.overview.importsFailed", { count: overview.imports.failed_24h })
-                : "",
-            ].filter(Boolean)}
-            action={
-              failedCount > 0 ? (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<SyncIcon fontSize="small" />}
-                  disabled={retrying}
-                  onClick={() => void retryFailed()}
-                >
-                  {t("adminSettings.overview.retry")}
-                </Button>
-              ) : undefined
-            }
-          />
-        </Stack>
-      )}
-
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
-        {SECTIONS.map((section) => (
-          <Paper
-            key={section.path}
-            variant="outlined"
-            component={RouterLink}
-            to={section.path}
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              color: "inherit",
-              textDecoration: "none",
-              borderRadius: "12px",
-              borderColor: cardBorder,
-              transition: "box-shadow .15s ease, transform .15s ease",
-              "&:hover, &:focus-visible": { boxShadow: 4, transform: "translateY(-1px)", outline: "none" },
-            }}
-          >
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: "10px",
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "primary.main",
-                bgcolor: (theme) => theme.palette.action.hover,
-              }}
+    <div className="grid gap-4 md:grid-cols-3">
+      <StatCard title="Users" value={users.total} href="/admin-users" lines={userLines} />
+      <StatCard
+        title="Library"
+        value={formatFileSize(library.model_bytes) || "0 B"}
+        lines={[`${library.models} models`, `${library.collections} collections`]}
+      />
+      <StatCard
+        title="Background work"
+        value={idle ? "✓" : busy}
+        warn={failed > 0 || imports.failed_24h > 0}
+        lines={backgroundLines}
+        action={
+          failed > 0 ? (
+            <Button
+              size="sm"
+              icon={<RefreshCw className="size-4" />}
+              loading={retry.isPending}
+              onClick={() => retry.mutate()}
             >
-              {section.icon}
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 700,
-                  color: (theme) => theme.thingport.headingText,
-                }}
-              >
-                {t(section.labelKey)}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                }}
-              >
-                {t(`adminSettings.overview.descriptions.${section.descriptionKey}`)}
-              </Typography>
-            </Box>
-            <ChevronRightIcon fontSize="small" sx={{ color: "text.disabled" }} />
-          </Paper>
-        ))}
-      </Box>
-    </Stack>
+              Retry failed
+            </Button>
+          ) : undefined
+        }
+      />
+    </div>
+  );
+}
+
+/** The administration home: a live summary, then a tile for every section. */
+export default function AdminPage() {
+  const overviewQuery = useQuery({ queryKey: ["admin", "overview"], queryFn: () => adminApi.getOverview() });
+
+  return (
+    <div className="mx-auto max-w-5xl">
+      <PageHeader title="Administration" subtitle="Accounts, settings and maintenance for this instance." />
+      <div className="space-y-6">
+        {overviewQuery.isPending ? <StatSkeleton /> : null}
+        {/* A failed overview just hides the cards: the section links below still work. */}
+        {overviewQuery.data ? <Overview overview={overviewQuery.data} /> : null}
+
+        <nav aria-label="Administration sections">
+          <ul className="grid gap-3 md:grid-cols-2">
+            {SECTIONS.map((section) => (
+              <li key={section.path}>
+                <Link
+                  to={section.path}
+                  className="group flex items-center gap-4 rounded-card border border-border bg-surface p-4 shadow-card transition-[box-shadow,transform,border-color] hover:-translate-y-0.5 hover:border-border-strong hover:shadow-hover"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent-text [&>svg]:size-5">
+                    {section.icon}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-fg">{section.label}</span>
+                    <span className="block text-xs text-muted">{section.description}</span>
+                  </span>
+                  <ChevronRight
+                    className="size-4 text-subtle transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </div>
   );
 }

@@ -1,264 +1,87 @@
-import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import type { Theme } from "@mui/material/styles";
-import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import LockIcon from "@mui/icons-material/Lock";
-import { type Collection } from "../../api/collections";
-import { type PreviewMode } from "../../api/settings";
-import { type ResolvedTheme } from "../../constants/settingsOptions";
-import { renderPreviewContent } from "../../components/media/renderPreviewContent";
-import { collectionDisplayName } from "../../utils/collectionDisplay";
-import CollectionActionsMenu from "../CollectionDetailPage/CollectionActionsMenu";
-import VisibilityBadge from "../../components/VisibilityBadge";
+import { Boxes, Lock } from "lucide-react";
+import type { Collection } from "@/api/collections";
+import PrintThumb from "@/features/media/PrintThumb";
+import { VisibilityBadge } from "@/features/prints";
+import { Card, cn } from "@/ui";
+import { collectionDisplayName } from "@/utils/collectionDisplay";
+import { CollectionActionsMenu } from "../CollectionDetailPage/CollectionActionsMenu";
 
-type Props = {
-  collection: Collection;
-  theme: ResolvedTheme;
-  previewMode: PreviewMode;
-  onUpdated: (collection: Collection) => void;
-  onDeleted: (id: string) => void;
-  onUnauthorized?: () => void;
-  onBookmarksChanged?: () => void;
-};
+const COVER_TILES = 4;
 
-const COVER_TILE_LIMIT = 4;
-
-/** Opens that model directly, separate from the card's own click target. */
-function CoverTile({
-  print,
-  theme,
-  previewMode,
-  overlayCount,
-}: {
-  print: Collection["cover_items"][number];
-  theme: ResolvedTheme;
-  previewMode: PreviewMode;
-  overlayCount?: number;
-}) {
-  const { t } = useTranslation(["models", "common"]);
+function CoverTile({ print, extra }: { print: Collection["cover_items"][number]; extra?: number }) {
   return (
-    <Box
-      component={Link}
+    <Link
       to={`/models/${print.id}`}
       aria-label={print.title || print.name}
-      sx={{ display: "block", position: "relative", width: "100%", height: "100%", overflow: "hidden" }}
+      className="relative block size-full overflow-hidden"
     >
-      {renderPreviewContent(print, "card", theme, t, previewMode)}
-      {Boolean(overlayCount && overlayCount > 0) && (
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            bgcolor: "rgba(0, 0, 0, 0.55)",
-          }}
-        >
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            +{overlayCount}
-          </Typography>
-        </Box>
-      )}
-    </Box>
+      <PrintThumb print={print} />
+      {extra ? (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-bold text-white">
+          +{extra}
+        </span>
+      ) : null}
+    </Link>
   );
 }
 
-// Two cards peeking out below so a collection reads as a stack. Back to front.
-const STACK_LAYERS = [
-  { insetPx: 20, dropPx: 12, opacity: 0.55 },
-  { insetPx: 10, dropPx: 6, opacity: 0.8 },
-];
-const STACK_DEPTH_PX = Math.max(...STACK_LAYERS.map((layer) => layer.dropPx));
-
-const cardBackground = (muiTheme: Theme) =>
-  muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[100];
-
-export default function CollectionCard({
-  collection,
-  theme,
-  previewMode,
-  onUpdated,
-  onDeleted,
-  onUnauthorized,
-  onBookmarksChanged,
-}: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const coverItems = collection.cover_items.slice(0, COVER_TILE_LIMIT);
-  const extraCount = collection.item_count > COVER_TILE_LIMIT ? collection.item_count - COVER_TILE_LIMIT : 0;
-  const displayName = collectionDisplayName(collection, t);
-  // With a single model, go straight to it.
-  const soleModelId = collection.item_count === 1 ? coverItems[0]?.id : undefined;
-  const openTarget = soleModelId ? `/models/${soleModelId}` : `/models/collections/${collection.id}`;
+/** One collection: a mosaic of up to four models (each a link to that model), then its name, count and sharing. */
+export function CollectionCard({ collection }: { collection: Collection }) {
+  const tiles = collection.cover_items.slice(0, COVER_TILES);
+  const extra = collection.item_count > COVER_TILES ? collection.item_count - COVER_TILES : 0;
+  const name = collectionDisplayName(collection);
+  const system = Boolean(collection.system_key);
+  const notOwner = collection.is_owner === false;
+  const count = `${collection.item_count} ${collection.item_count === 1 ? "model" : "models"}`;
 
   return (
-    <Box sx={{ position: "relative", pb: `${STACK_DEPTH_PX}px` }}>
-      {STACK_LAYERS.map(({ insetPx, dropPx, opacity }) => (
-        <Box
-          key={dropPx}
-          aria-hidden
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: insetPx,
-            right: insetPx,
-            bottom: STACK_DEPTH_PX - dropPx,
-            borderRadius: "12px",
-            border: "1px solid",
-            borderColor: "divider",
-            bgcolor: cardBackground,
-            opacity,
-          }}
-        />
-      ))}
-      <Paper
-        variant="outlined"
-        sx={{
-          position: "relative",
-          overflow: "hidden",
-          borderRadius: "12px",
-          borderColor: "divider",
-          bgcolor: cardBackground,
-          "&:hover .collection-card-actions": { opacity: 1 },
-        }}
-      >
-        <Box
-          sx={{
-            width: "100%",
-            aspectRatio: "4 / 3",
-            bgcolor: (muiTheme) =>
-              muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[200],
-          }}
-        >
-          {coverItems.length === 0 && (
-            <Stack
-              sx={{
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                height: "100%",
-                color: "text.disabled",
-              }}
-            >
-              <Typography variant="caption">{t("models:collections.card.empty")}</Typography>
-            </Stack>
-          )}
-          {coverItems.length === 1 && <CoverTile print={coverItems[0]} theme={theme} previewMode={previewMode} />}
-          {coverItems.length > 1 && (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gridTemplateRows: "repeat(2, 1fr)",
-                gap: "2px",
-                width: "100%",
-                height: "100%",
-              }}
-            >
-              {coverItems.map((item, idx) => (
-                <CoverTile
-                  key={item.id}
-                  print={item}
-                  theme={theme}
-                  previewMode={previewMode}
-                  overlayCount={idx === coverItems.length - 1 ? extraCount : undefined}
-                />
-              ))}
-            </Box>
-          )}
-        </Box>
-
-        {!collection.system_key && (
-          <Box
-            className="collection-card-actions"
-            onClick={(e) => e.stopPropagation()}
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              bgcolor: "rgba(0, 0, 0, 0.55)",
-              borderRadius: "50%",
-            }}
-          >
-            <CollectionActionsMenu
-              collection={collection}
-              onUpdated={onUpdated}
-              onDeleted={() => onDeleted(collection.id)}
-              onUnauthorized={onUnauthorized}
-              onBookmarksChanged={onBookmarksChanged}
-              triggerSx={{ color: "#fff" }}
-            />
-          </Box>
-        )}
-
-        <Box
-          component={Link}
-          to={openTarget}
-          sx={{
-            display: "block",
-            color: "inherit",
-            textDecoration: "none",
-            p: 1.5,
-            transition: "background-color .15s ease",
-            "&:hover": { bgcolor: "background.paper" },
-          }}
-        >
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{
-              alignItems: "center",
-              minWidth: 0,
-            }}
-          >
-            {collection.system_key && <LockIcon sx={{ fontSize: 14, color: "text.disabled", flexShrink: 0 }} />}
-            <Typography
-              variant="body2"
-              noWrap
-              title={displayName}
-              sx={{
-                fontWeight: 600,
-                color: (muiTheme) => muiTheme.thingport.headingText,
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-              {displayName}
-            </Typography>
-            {!collection.system_key && (collection.visibility === "shared" || collection.is_owner === false) && (
-              <VisibilityBadge
-                compact
-                visibility={collection.visibility}
-                ownerName={collection.is_owner === false ? collection.owner?.display_name : null}
+    <Card padding="none" interactive className="group relative overflow-hidden">
+      <div className="aspect-[4/3] w-full bg-surface-2">
+        {tiles.length === 0 ? (
+          <div className="flex size-full items-center justify-center text-xs text-subtle">No models yet</div>
+        ) : (
+          <div className={cn("grid size-full gap-0.5", tiles.length > 1 && "grid-cols-2 grid-rows-2")}>
+            {tiles.map((print, index) => (
+              <CoverTile
+                key={print.id}
+                print={print}
+                extra={tiles.length > 1 && index === tiles.length - 1 ? extra : undefined}
               />
-            )}
-          </Stack>
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{
-              alignItems: "center",
-              mt: 0.5,
-              color: "#858585",
-            }}
-          >
-            <Inventory2OutlinedIcon sx={{ fontSize: 14 }} />
-            <Typography variant="caption">
-              {t("models:collections.card.itemCount", { count: collection.item_count })}
-            </Typography>
-          </Stack>
-        </Box>
-      </Paper>
-    </Box>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {system ? null : (
+        <div className="absolute top-2 right-2 z-[3]">
+          <CollectionActionsMenu collection={collection} overlay />
+        </div>
+      )}
+
+      <Link
+        to={`/models/collections/${collection.id}`}
+        className="block p-3 transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+      >
+        <span className="flex min-w-0 items-center gap-1.5">
+          {system ? <Lock className="size-3.5 shrink-0 text-subtle" aria-hidden /> : null}
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg" title={name}>
+            {name}
+          </span>
+        </span>
+        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+          <span className="inline-flex items-center gap-1">
+            <Boxes className="size-3.5" aria-hidden />
+            {count}
+          </span>
+          {system ? null : (
+            <VisibilityBadge
+              visibility={collection.visibility}
+              ownerName={notOwner ? collection.owner?.display_name : null}
+            />
+          )}
+        </span>
+      </Link>
+    </Card>
   );
 }

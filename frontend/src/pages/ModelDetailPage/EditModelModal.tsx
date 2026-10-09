@@ -1,634 +1,479 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import IconButton from "@mui/material/IconButton";
-import Box from "@mui/material/Box";
-import Divider from "@mui/material/Divider";
-import Chip from "@mui/material/Chip";
-import CloseIcon from "@mui/icons-material/Close";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { type Print, printsApi } from "../../api/prints";
-import { categoriesApi, type Category } from "../../api/categories";
-import type { AuthUser } from "../../api/auth";
-import { UnauthorizedError } from "../../api/client";
-import { useConfirm } from "../../components/ConfirmProvider";
-import { useToast } from "../../components/ToastProvider";
-import TagInput from "../../components/TagInput";
-import { buildCategoryTree, flattenCategoryTree } from "../../utils/categoryTree";
-import { localId } from "../../utils/localId";
-
-type ImageItem =
-  { kind: "existing"; id: string; url: string } | { kind: "new"; localId: string; file: File; previewUrl: string };
-
-type PlateItem = { kind: "existing"; id: string; filename: string } | { kind: "new"; localId: string; file: File };
-
-function imageKey(img: ImageItem): string {
-  return img.kind === "existing" ? img.id : img.localId;
-}
-
-function plateKey(p: PlateItem): string {
-  return p.kind === "existing" ? p.id : p.localId;
-}
-
-function moveItem<T>(list: T[], index: number, dir: -1 | 1): T[] {
-  const swapIndex = index + dir;
-  if (index < 0 || swapIndex < 0 || swapIndex >= list.length) return list;
-  const next = [...list];
-  [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  return next;
-}
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  GripVertical,
+  ImagePlus,
+  RotateCcw,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { printsApi, type Print } from "@/api/prints";
+import { categoriesApi } from "@/api/categories";
+import { useAuth } from "@/app/auth";
+import { errorMessage } from "@/app/queryClient";
+import { useInvalidatePrints } from "@/features/prints";
+import { authorDisplay } from "@/features/prints/authorDisplay";
+import {
+  Alert,
+  Badge,
+  Button,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+  TagInput,
+  useConfirm,
+  useToast,
+  cn,
+  type SelectOption,
+} from "@/ui";
+import { buildCategoryTree, flattenCategoryTree } from "@/utils/categoryTree";
+import { localId } from "@/utils/localId";
+import {
+  imageKey,
+  initialValues,
+  isDirty,
+  moveItem,
+  plateKey,
+  saveModelEdits,
+  validate,
+  type EditValues,
+  type ImageItem,
+  type PlateItem,
+} from "./editModel";
+import { SortableList } from "./Sortable";
 
 type Props = {
   print: Print;
   onClose: () => void;
-  onUnauthorized?: () => void;
-  onUpdated: (print: Print) => void;
-  /** Shown as the author of a direct upload, which has none. Label only. */
-  viewer?: AuthUser | null;
 };
 
-/** Edits are staged locally and committed only on "Update"; "Cancel" discards them. */
-export default function EditModelModal({ print, onClose, onUnauthorized, onUpdated, viewer }: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const confirmDialog = useConfirm();
-  const showToast = useToast();
+const iconBtn = "size-7";
 
-  const [title, setTitle] = useState(print.title || print.name);
-  const [categoryId, setCategoryId] = useState<string | null>(print.category_id ?? null);
-  const [notes, setNotes] = useState(print.notes ?? "");
-  const [tags, setTags] = useState<string[]>(print.tags);
+/** Edits are staged locally and committed on "Update"; closing with changes asks first. */
+export default function EditModelModal({ print, onClose }: Props) {
+  const confirm = useConfirm();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidatePrints();
+  const { user: viewer } = useAuth();
   const isOwner = print.is_owner !== false;
-  const hasImportedAuthor = Boolean(print.author || print.creator || print.source_provider);
-  const showViewerAsAuthor = !hasImportedAuthor && Boolean(viewer);
-  const [authorResetPending, setAuthorResetPending] = useState(false);
-  const [images, setImages] = useState<ImageItem[]>(() =>
-    print.preview_images.map((img): ImageItem => ({ kind: "existing", id: img.id, url: img.url })),
-  );
-  // Removals are tracked explicitly rather than diffed: a new upload's thumbnail may still be
-  // generating, and a diff would delete it as soon as it appeared.
-  const [removedImageIds, setRemovedImageIds] = useState<Set<string>>(new Set());
-  const [plateItems, setPlateItems] = useState<PlateItem[]>(() =>
-    print.plates.map((p): PlateItem => ({ kind: "existing", id: p.id, filename: p.filename })),
-  );
-  const [categories, setCategories] = useState<Category[] | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
+
+  const [values, setValues] = useState<EditValues>(() => initialValues(print));
   const [error, setError] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
+  const patch = (next: Partial<EditValues>) => setValues((prev) => ({ ...prev, ...next }));
 
-  const createdUrlsRef = useRef<string[]>([]);
-  const addImageInputRef = useRef<HTMLInputElement>(null);
-  const addFileInputRef = useRef<HTMLInputElement>(null);
+  // Object URLs for freshly picked images; released when the dialog goes away.
+  const createdUrls = useRef<string[]>([]);
+  useEffect(
+    () => () => {
+      for (const url of createdUrls.current) URL.revokeObjectURL(url);
+    },
+    [],
+  );
+  const imageInput = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    categoriesApi
-      .list()
-      .then(setCategories)
-      .catch(() => setCategories([]));
-  }, []);
+  const categories = useQuery({ queryKey: ["categories"], queryFn: () => categoriesApi.list(), enabled: isOwner });
+  const categoryOptions = useMemo<SelectOption[]>(() => {
+    const flat = flattenCategoryTree(buildCategoryTree(categories.data ?? []));
+    return [
+      { value: "", label: "No category" },
+      ...flat.map(({ category, depth }) => ({
+        value: category.id,
+        label: category.name,
+        // Top-level categories only group; a model goes in one of their children (unless it already sits there).
+        disabled: depth === 0 && category.id !== values.categoryId,
+        indent: Math.max(0, depth - 1),
+      })),
+    ];
+  }, [categories.data, values.categoryId]);
 
-  const markDirty = () => setDirty(true);
+  const errors = validate(values);
+  const dirty = isDirty(print, values, isOwner);
 
-  const flatCategories = useMemo(() => flattenCategoryTree(buildCategoryTree(categories ?? [])), [categories]);
-
-  const onAddImages = (fileList: FileList | null) => {
-    if (!fileList?.length) return;
-    const newItems: ImageItem[] = Array.from(fileList).map((file) => {
-      const previewUrl = URL.createObjectURL(file);
-      createdUrlsRef.current.push(previewUrl);
-      return { kind: "new", localId: localId(), file, previewUrl };
-    });
-    setImages((prev) => [...prev, ...newItems]);
-    markDirty();
-  };
-  const removeImage = (key: string) => {
-    const target = images.find((img) => imageKey(img) === key);
-    if (target?.kind === "existing") {
-      setRemovedImageIds((ids) => new Set(ids).add(target.id));
-    }
-    setImages((prev) => prev.filter((img) => imageKey(img) !== key));
-    markDirty();
-  };
-  const moveImageBy = (key: string, dir: -1 | 1) => {
-    setImages((prev) =>
-      moveItem(
-        prev,
-        prev.findIndex((img) => imageKey(img) === key),
-        dir,
-      ),
-    );
-    markDirty();
-  };
-
-  const onAddFiles = (fileList: FileList | null) => {
-    if (!fileList?.length) return;
-    const newItems: PlateItem[] = Array.from(fileList).map((file) => ({
-      kind: "new",
-      localId: localId(),
-      file,
-    }));
-    setPlateItems((prev) => [...prev, ...newItems]);
-    markDirty();
-  };
-  const removePlateItem = (key: string) => {
-    setPlateItems((prev) => (prev.length <= 1 ? prev : prev.filter((p) => plateKey(p) !== key)));
-    markDirty();
-  };
-  const movePlateItemBy = (key: string, dir: -1 | 1) => {
-    setPlateItems((prev) =>
-      moveItem(
-        prev,
-        prev.findIndex((p) => plateKey(p) === key),
-        dir,
-      ),
-    );
-    markDirty();
-  };
+  const save = useMutation({
+    mutationFn: async () => {
+      const ctx = { latest: print, previewError: null as string | null, skippedImages: 0 };
+      try {
+        await saveModelEdits(print, values, isOwner, ctx);
+      } catch (err) {
+        // Whatever was saved before the failure still shows on the page.
+        throw Object.assign(err instanceof Error ? err : new Error("Update failed"), { saved: ctx.latest });
+      }
+      return ctx;
+    },
+    onSuccess: (ctx) => {
+      queryClient.setQueryData(["print", print.id], ctx.latest);
+      void invalidate();
+      onClose();
+      if (ctx.skippedImages > 0) {
+        toast.warning(
+          ctx.skippedImages === 1
+            ? "Couldn't process 1 image, so it wasn't added. Try a JPG or PNG."
+            : `Couldn't process ${ctx.skippedImages} images, so they weren't added. Try JPG or PNG.`,
+        );
+      }
+      if (ctx.previewError) toast.warning(ctx.previewError);
+      else toast.success("Model updated");
+    },
+    onError: (err) => {
+      const saved = (err as { saved?: Print }).saved;
+      if (saved) queryClient.setQueryData(["print", print.id], saved);
+      void invalidate();
+      setError(errorMessage(err, "Couldn't update the model. Try again."));
+    },
+  });
+  const saving = save.isPending;
 
   const requestClose = async () => {
     if (saving) return;
-    if (dirty) {
-      const confirmed = await confirmDialog({
-        message: t("models:edit.confirmDiscard"),
-        confirmLabel: t("models:edit.discardConfirmLabel"),
+    if (
+      dirty &&
+      !(await confirm({
+        message: "Discard all unsaved changes to this model?",
+        confirmLabel: "Discard",
         destructive: true,
-      });
-      if (!confirmed) return;
-    }
+      }))
+    )
+      return;
     onClose();
   };
 
-  const handleUpdate = async () => {
-    setSaving(true);
+  const submit = () => {
+    setShowErrors(true);
+    if (errors.title || errors.plates) return;
     setError(null);
-    let latest: Print = print;
-    try {
-      const metaRes = await printsApi.updateMeta(print.id, { title, notes });
-      latest = metaRes.print ?? latest;
-
-      // Categories and the author belong to the owner; someone editing through a shared collection can't change them.
-      if (isOwner) {
-        const catRes = await printsApi.updateCategory(print.id, categoryId);
-        latest = catRes.print ?? latest;
-      }
-
-      const tagsRes = await printsApi.setTags(print.id, tags);
-      latest = tagsRes.print ?? latest;
-
-      if (isOwner && authorResetPending) {
-        const authorRes = await printsApi.resetAuthor(print.id);
-        latest = authorRes.print ?? latest;
-      }
-
-      // Preview images are isolated from the model-file upload below: an oversize or undecodable
-      // image used to throw here and abort the whole save, so newly added model files never got
-      // uploaded. Now a preview failure is reported but lets the rest of the save finish.
-      let previewError: string | null = null;
-      try {
-        for (const id of removedImageIds) {
-          const res = await printsApi.deletePreviewImage(print.id, id);
-          latest = res.print ?? latest;
-        }
-        const newImageFiles = images.filter((img) => img.kind === "new").map((img) => img.file);
-        let newImageIdsInOrder: string[] = [];
-        if (newImageFiles.length) {
-          const beforeIds = new Set(latest.preview_images.map((img) => img.id));
-          const uploadRes = await printsApi.addPreviewImages(print.id, newImageFiles);
-          latest = uploadRes.print;
-          newImageIdsInOrder = latest.preview_images
-            .filter((img) => !beforeIds.has(img.id))
-            .toSorted((a, b) => a.position - b.position)
-            .map((img) => img.id);
-          // The server silently skips images it can't decode, so it can return fewer ids than files
-          // sent. Tell the user instead of losing the image without a word -- and never let a missing
-          // id slip into the reorder below, where it serialises to null and 400s the request.
-          const skipped = newImageFiles.length - newImageIdsInOrder.length;
-          if (skipped > 0) {
-            showToast({ message: t("models:edit.previewImagesSkipped", { count: skipped }) });
-          }
-        }
-        if (images.length) {
-          let nextNew = 0;
-          const known = images
-            .map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]))
-            .filter((id): id is string => Boolean(id));
-          // Reorder needs an exhaustive id list; images this modal never saw go after, in their order.
-          const knownIds = new Set(known);
-          const unknown = latest.preview_images
-            .filter((img) => !knownIds.has(img.id))
-            .toSorted((a, b) => a.position - b.position)
-            .map((img) => img.id);
-          const finalOrder = [...known, ...unknown];
-          if (finalOrder.length) {
-            const reorderRes = await printsApi.reorderPreviewImages(print.id, finalOrder);
-            latest = reorderRes.print ?? latest;
-          }
-        }
-      } catch (err) {
-        if (err instanceof UnauthorizedError) throw err;
-        console.error(err);
-        previewError = err instanceof Error ? err.message : t("models:edit.previewImagesFailed");
-      }
-
-      // Upload before delete so a model's only file can be swapped in one save.
-      const newPlateFiles = plateItems.filter((p) => p.kind === "new").map((p) => p.file);
-      let newPlateIdsInOrder: string[] = [];
-      if (newPlateFiles.length) {
-        const beforeIds = new Set(latest.plates.map((p) => p.id));
-        const uploadRes = await printsApi.addPlates(print.id, newPlateFiles);
-        latest = uploadRes.print;
-        newPlateIdsInOrder = latest.plates
-          .filter((p) => !beforeIds.has(p.id))
-          .toSorted((a, b) => a.position - b.position)
-          .map((p) => p.id);
-      }
-      const keptPlateIds = new Set(plateItems.filter((p) => p.kind === "existing").map((p) => p.id));
-      for (const original of print.plates) {
-        if (keptPlateIds.has(original.id)) continue;
-        const res = await printsApi.deletePlate(print.id, original.id);
-        latest = res.print ?? latest;
-      }
-      // The replaced file got its " (2)" suffix from the old one; rename back now it's gone.
-      for (const [index, plateId] of newPlateIdsInOrder.entries()) {
-        const wanted = newPlateFiles[index].name;
-        const current = latest.plates.find((p) => p.id === plateId);
-        if (!current || current.filename === wanted) continue;
-        const res = await printsApi.renamePlate(print.id, plateId, wanted);
-        latest = res.print ?? latest;
-      }
-      {
-        let nextNew = 0;
-        const finalOrder = plateItems.map((p) => (p.kind === "existing" ? p.id : newPlateIdsInOrder[nextNew++]));
-        const reorderRes = await printsApi.reorderPlates(print.id, finalOrder);
-        latest = reorderRes.print ?? latest;
-      }
-
-      onUpdated(latest);
-      onClose();
-      // Meta, tags and model files are saved by now; if only the previews failed, surface that
-      // reason instead of a blanket success so the user knows to retry just the images.
-      showToast(previewError ? { message: previewError } : { message: t("models:edit.updateSuccess") });
-    } catch (err) {
-      onUpdated(latest);
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      console.error(err);
-      setError(err instanceof Error ? err.message : t("models:edit.updateFailed"));
-    } finally {
-      setSaving(false);
-    }
+    save.mutate();
   };
 
+  const addImages = (files: FileList | null) => {
+    if (!files?.length) return;
+    const added = Array.from(files).map((file): ImageItem => {
+      const previewUrl = URL.createObjectURL(file);
+      createdUrls.current.push(previewUrl);
+      return { kind: "new", localId: localId(), file, previewUrl };
+    });
+    patch({ images: [...values.images, ...added] });
+  };
+  const addPlates = (files: FileList | null) => {
+    if (!files?.length) return;
+    const added = Array.from(files).map((file): PlateItem => ({
+      kind: "new",
+      localId: localId(),
+      file,
+      name: file.name,
+    }));
+    patch({ plates: [...values.plates, ...added] });
+  };
+  const renamePlate = (key: string, name: string) =>
+    patch({ plates: values.plates.map((p) => (plateKey(p) === key ? { ...p, name } : p)) });
+  const removePlate = (key: string) => {
+    if (values.plates.length <= 1) return;
+    patch({ plates: values.plates.filter((p) => plateKey(p) !== key) });
+  };
+  const moveImage = (index: number, dir: -1 | 1) => patch({ images: moveItem(values.images, index, dir) });
+  const movePlate = (index: number, dir: -1 | 1) => patch({ plates: moveItem(values.plates, index, dir) });
+
+  const author = authorDisplay(print, viewer);
+  const hasImportedAuthor = Boolean(print.author || print.creator || print.source_provider);
+
   return (
-    <Dialog open onClose={requestClose} fullWidth maxWidth="md">
-      <DialogTitle>{t("models:edit.title")}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={3} sx={{ mt: 0.5 }}>
-          {error && <Alert severity="error">{error}</Alert>}
+    <Modal
+      open
+      onOpenChange={(open) => {
+        if (!open) void requestClose();
+      }}
+      title="Edit model"
+      size="xl"
+      locked={saving}
+      footer={
+        <>
+          <Button onClick={() => void requestClose()} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={submit} loading={saving}>
+            Update
+          </Button>
+        </>
+      }
+    >
+      <form
+        className="flex flex-col gap-6 pt-1"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        {error ? <Alert tone="danger">{error}</Alert> : null}
 
-          <TextField
-            label={t("models:edit.titleLabel")}
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              markDirty();
-            }}
-            disabled={saving}
-            fullWidth
-            // oxlint-disable-next-line jsx-a11y/no-autofocus
-            autoFocus
-          />
-
-          {isOwner && (
-            <FormControl fullWidth disabled={saving || !categories}>
-              <InputLabel id="edit-model-category-label">{t("models:detail.category")}</InputLabel>
-              <Select
-                labelId="edit-model-category-label"
-                label={t("models:detail.category")}
-                value={categoryId ?? ""}
-                onChange={(e) => {
-                  setCategoryId(e.target.value || null);
-                  markDirty();
-                }}
-              >
-                <MenuItem value="">{t("models:edit.noCategory")}</MenuItem>
-                {flatCategories.map(({ category, depth }) =>
-                  depth === 0 ? (
-                    // Top-level categories are headings. A disabled MenuItem, not ListSubheader: MUI's Select
-                    // still handles clicks on the latter and gets stuck open.
-                    <MenuItem key={category.id} disabled divider sx={{ fontWeight: 700, opacity: "1 !important" }}>
-                      {category.name}
-                    </MenuItem>
-                  ) : (
-                    <MenuItem key={category.id} value={category.id} sx={{ pl: 1 + depth * 2 }}>
-                      {category.name}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-          )}
-
-          {isOwner && (
-            <Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                  display: "block",
-                  mb: 0.5,
-                }}
-              >
-                {t("models:detail.author")}
-              </Typography>
-              <Stack
-                direction="row"
-                sx={{
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Typography variant="body2">
-                  {authorResetPending
-                    ? t("models:edit.authorWillBeYou")
-                    : print.author?.name ||
-                      print.author?.handle ||
-                      print.creator ||
-                      (showViewerAsAuthor ? viewer!.display_name : null) ||
-                      t("models:card.unknownAuthor")}
-                </Typography>
-                {hasImportedAuthor &&
-                  (authorResetPending ? (
-                    <Button size="small" disabled={saving} onClick={() => setAuthorResetPending(false)}>
-                      {t("models:edit.undoResetAuthor")}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="small"
-                      disabled={saving}
-                      startIcon={<RestartAltIcon fontSize="small" />}
-                      onClick={() => {
-                        setAuthorResetPending(true);
-                        markDirty();
-                      }}
-                    >
-                      {t("models:edit.resetAuthor")}
-                    </Button>
-                  ))}
-              </Stack>
-            </Box>
-          )}
-
-          <Divider />
-
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              {t("models:edit.previewImages")}
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 0.5 }}>
-              {images.map((img, idx) => {
-                const key = imageKey(img);
-                const src = img.kind === "existing" ? printsApi.fileUrl(img.url) : img.previewUrl;
-                return (
-                  <Box
-                    key={key}
-                    sx={{
-                      position: "relative",
-                      flexShrink: 0,
-                      width: 96,
-                      height: 96,
-                      borderRadius: 1,
-                      overflow: "hidden",
-                      border: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  >
-                    <Box
-                      component="img"
-                      src={src}
-                      sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                    {idx === 0 && (
-                      <Chip
-                        label={t("models:edit.thumbnailBadge")}
-                        size="small"
-                        sx={{ position: "absolute", bottom: 3, left: 3, height: 18, fontSize: 10 }}
-                      />
-                    )}
-                    <IconButton
-                      size="small"
-                      disabled={saving}
-                      onClick={() => removeImage(key)}
-                      sx={{
-                        position: "absolute",
-                        top: 2,
-                        right: 2,
-                        bgcolor: "rgba(0,0,0,0.55)",
-                        color: "#fff",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
-                      }}
-                    >
-                      <CloseIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                    <Stack direction="row" sx={{ position: "absolute", bottom: 2, right: 2 }}>
-                      <IconButton
-                        size="small"
-                        disabled={saving || idx === 0}
-                        onClick={() => moveImageBy(key, -1)}
-                        sx={{ color: "#fff", bgcolor: "rgba(0,0,0,0.55)", "&:hover": { bgcolor: "rgba(0,0,0,0.75)" } }}
-                      >
-                        <ChevronLeftIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        disabled={saving || idx === images.length - 1}
-                        onClick={() => moveImageBy(key, 1)}
-                        sx={{ color: "#fff", bgcolor: "rgba(0,0,0,0.55)", "&:hover": { bgcolor: "rgba(0,0,0,0.75)" } }}
-                      >
-                        <ChevronRightIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    </Stack>
-                  </Box>
-                );
-              })}
-              <Box
-                component="button"
-                type="button"
-                disabled={saving}
-                onClick={() => addImageInputRef.current?.click()}
-                sx={{
-                  flexShrink: 0,
-                  width: 96,
-                  height: 96,
-                  borderRadius: 1,
-                  border: "1px dashed",
-                  borderColor: "divider",
-                  bgcolor: "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 0.5,
-                  color: "text.secondary",
-                }}
-              >
-                <AddPhotoAlternateIcon fontSize="small" />
-                <Typography variant="caption">{t("common:add")}</Typography>
-              </Box>
-              <input
-                ref={addImageInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => {
-                  onAddImages(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-            </Stack>
-          </Box>
-
-          <TextField
-            label={t("models:detail.description")}
-            value={notes}
-            onChange={(e) => {
-              setNotes(e.target.value);
-              markDirty();
-            }}
-            disabled={saving}
-            fullWidth
-            multiline
-            minRows={3}
-          />
-
-          <Box>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                mb: 0.5,
-              }}
-            >
-              {t("models:detail.tags")}
-            </Typography>
-            <TagInput
-              value={tags}
-              onChange={(v) => {
-                setTags(v);
-                markDirty();
-              }}
+        <Field label="Title" error={showErrors ? errors.title : undefined}>
+          {(control) => (
+            <Input
+              {...control}
+              value={values.title}
+              onChange={(e) => patch({ title: e.target.value })}
+              disabled={saving}
             />
-          </Box>
+          )}
+        </Field>
 
-          <Divider />
-
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              {t("models:edit.modelFiles")}
-            </Typography>
-            <Stack spacing={1}>
-              {plateItems.map((p, idx) => {
-                const key = plateKey(p);
-                const filename = p.kind === "existing" ? p.filename : p.file.name;
-                return (
-                  <Stack
-                    key={key}
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems: "center",
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.5,
-                    }}
-                  >
-                    <InsertDriveFileIcon fontSize="small" color="action" />
-                    <Typography variant="body2" noWrap sx={{ flex: 1 }}>
-                      {filename}
-                    </Typography>
-                    {p.kind === "new" && <Chip label={t("models:edit.newBadge")} size="small" />}
-                    <IconButton size="small" disabled={saving || idx === 0} onClick={() => movePlateItemBy(key, -1)}>
-                      <ArrowUpwardIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      disabled={saving || idx === plateItems.length - 1}
-                      onClick={() => movePlateItemBy(key, 1)}
-                    >
-                      <ArrowDownwardIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      disabled={saving || plateItems.length <= 1}
-                      onClick={() => removePlateItem(key)}
-                    >
-                      <DeleteIcon fontSize="small" color="error" />
-                    </IconButton>
-                  </Stack>
-                );
-              })}
-              <Button
-                size="small"
-                disabled={saving}
-                startIcon={<UploadFileIcon fontSize="small" />}
-                onClick={() => addFileInputRef.current?.click()}
-                sx={{ alignSelf: "flex-start" }}
-              >
-                {t("models:edit.addFiles")}
-              </Button>
-              <input
-                ref={addFileInputRef}
-                type="file"
-                multiple
-                hidden
-                onChange={(e) => {
-                  onAddFiles(e.target.files);
-                  e.target.value = "";
-                }}
+        {isOwner ? (
+          <Field label="Category">
+            {(control) => (
+              <Select
+                id={control.id}
+                value={values.categoryId ?? ""}
+                onChange={(value) => patch({ categoryId: value || null })}
+                options={categoryOptions}
+                disabled={saving || categories.isPending}
               />
-            </Stack>
-          </Box>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={requestClose} disabled={saving}>
-          {t("common:cancel")}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleUpdate}
-          disabled={saving}
-          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
-        >
-          {t("models:edit.update")}
-        </Button>
-      </DialogActions>
-    </Dialog>
+            )}
+          </Field>
+        ) : null}
+
+        {isOwner ? (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-fg">Author</p>
+              <p className="truncate text-sm text-muted">
+                {values.resetAuthor ? "You (after Update)" : (author.name ?? "Unknown author")}
+              </p>
+            </div>
+            {hasImportedAuthor ? (
+              values.resetAuthor ? (
+                <Button size="sm" variant="ghost" disabled={saving} onClick={() => patch({ resetAuthor: false })}>
+                  Undo
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={saving}
+                  icon={<RotateCcw className="size-4" aria-hidden />}
+                  onClick={() => patch({ resetAuthor: true })}
+                >
+                  Reset author
+                </Button>
+              )
+            ) : null}
+          </div>
+        ) : null}
+
+        <section aria-labelledby="edit-images" className="border-t border-border pt-5">
+          <h3 id="edit-images" className="mb-2 text-sm font-semibold text-fg">
+            Preview images
+          </h3>
+          <SortableList
+            label="Preview images"
+            direction="horizontal"
+            items={values.images}
+            getId={imageKey}
+            onReorder={(images) => patch({ images })}
+            className="flex gap-2 overflow-x-auto pb-1"
+            itemClassName="shrink-0"
+            trailing={
+              <li className="shrink-0">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => imageInput.current?.click()}
+                  className="flex size-24 flex-col items-center justify-center gap-1 rounded-control border border-dashed border-border-strong text-xs text-muted hover:bg-surface-2 disabled:opacity-50"
+                >
+                  <ImagePlus className="size-5" aria-hidden />
+                  Add images
+                </button>
+              </li>
+            }
+          >
+            {(img, index, drag) => (
+              <div className="relative size-24 overflow-hidden rounded-control border border-border bg-surface-2">
+                <img
+                  src={img.kind === "existing" ? printsApi.fileUrl(img.url) : img.previewUrl}
+                  alt=""
+                  draggable={false}
+                  {...drag.attributes}
+                  {...drag.listeners}
+                  aria-label={`Drag preview image ${index + 1}`}
+                  className="size-full cursor-grab touch-none object-cover"
+                />
+                {index === 0 ? (
+                  <Badge tone="solid" className="absolute bottom-1 left-1">
+                    Thumbnail
+                  </Badge>
+                ) : null}
+                <IconButton
+                  label={`Remove image ${index + 1}`}
+                  variant="overlay"
+                  noTip
+                  disabled={saving}
+                  className={cn(iconBtn, "absolute top-1 right-1")}
+                  onClick={() => patch({ images: values.images.filter((i) => imageKey(i) !== imageKey(img)) })}
+                >
+                  <X className="size-3.5" aria-hidden />
+                </IconButton>
+                <div className="absolute right-1 bottom-1 flex gap-0.5">
+                  <IconButton
+                    label={`Move image ${index + 1} left`}
+                    variant="overlay"
+                    noTip
+                    className="size-6"
+                    disabled={saving || index === 0}
+                    onClick={() => moveImage(index, -1)}
+                  >
+                    <ChevronLeft className="size-3.5" aria-hidden />
+                  </IconButton>
+                  <IconButton
+                    label={`Move image ${index + 1} right`}
+                    variant="overlay"
+                    noTip
+                    className="size-6"
+                    disabled={saving || index === values.images.length - 1}
+                    onClick={() => moveImage(index, 1)}
+                  >
+                    <ChevronRight className="size-3.5" aria-hidden />
+                  </IconButton>
+                </div>
+              </div>
+            )}
+          </SortableList>
+          <input
+            ref={imageInput}
+            type="file"
+            accept="image/*"
+            multiple
+            tabIndex={-1}
+            aria-label="Add preview images"
+            className="sr-only"
+            onChange={(e) => {
+              addImages(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </section>
+
+        <Field label="Description">
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={4}
+              value={values.notes}
+              onChange={(e) => patch({ notes: e.target.value })}
+              disabled={saving}
+            />
+          )}
+        </Field>
+
+        <Field label="Tags">
+          {(control) => (
+            <TagInput
+              id={control.id}
+              value={values.tags}
+              onChange={(tags) => patch({ tags })}
+              placeholder="Type a tag and press Enter"
+              disabled={saving}
+            />
+          )}
+        </Field>
+
+        <section aria-labelledby="edit-files" className="border-t border-border pt-5">
+          <h3 id="edit-files" className="mb-2 text-sm font-semibold text-fg">
+            Model files
+          </h3>
+          <SortableList
+            label="Model files"
+            direction="vertical"
+            items={values.plates}
+            getId={plateKey}
+            onReorder={(plates) => patch({ plates })}
+            className="flex flex-col gap-2"
+          >
+            {(plate, index, drag) => (
+              <div className="flex items-center gap-2 rounded-control border border-border px-2 py-1.5">
+                <button
+                  type="button"
+                  {...drag.attributes}
+                  {...drag.listeners}
+                  aria-label={`Drag ${plate.name || "file"}`}
+                  disabled={saving}
+                  className="inline-flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded text-subtle hover:bg-surface-2"
+                >
+                  <GripVertical className="size-4" aria-hidden />
+                </button>
+                <FileText className="size-4 shrink-0 text-subtle" aria-hidden />
+                <Input
+                  aria-label={`File name ${index + 1}`}
+                  value={plate.name}
+                  onChange={(e) => renamePlate(plateKey(plate), e.target.value)}
+                  disabled={saving}
+                  aria-invalid={!plate.name.trim() || undefined}
+                  className="h-8 min-w-0 flex-1"
+                />
+                {plate.kind === "new" ? <Badge tone="accent">New</Badge> : null}
+                <IconButton
+                  label={`Move ${plate.name} up`}
+                  noTip
+                  className={iconBtn}
+                  disabled={saving || index === 0}
+                  onClick={() => movePlate(index, -1)}
+                >
+                  <ArrowUp className="size-4" aria-hidden />
+                </IconButton>
+                <IconButton
+                  label={`Move ${plate.name} down`}
+                  noTip
+                  className={iconBtn}
+                  disabled={saving || index === values.plates.length - 1}
+                  onClick={() => movePlate(index, 1)}
+                >
+                  <ArrowDown className="size-4" aria-hidden />
+                </IconButton>
+                <IconButton
+                  label={`Remove ${plate.name}`}
+                  variant="danger"
+                  noTip
+                  className={iconBtn}
+                  disabled={saving || values.plates.length <= 1}
+                  onClick={() => removePlate(plateKey(plate))}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </IconButton>
+              </div>
+            )}
+          </SortableList>
+          {showErrors && errors.plates ? <p className="mt-1.5 text-xs text-danger">{errors.plates}</p> : null}
+          <Button
+            size="sm"
+            className="mt-2"
+            disabled={saving}
+            icon={<Upload className="size-4" aria-hidden />}
+            onClick={() => fileInput.current?.click()}
+          >
+            Add files
+          </Button>
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            tabIndex={-1}
+            aria-label="Add model files"
+            className="sr-only"
+            onChange={(e) => {
+              addPlates(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </section>
+      </form>
+    </Modal>
   );
 }

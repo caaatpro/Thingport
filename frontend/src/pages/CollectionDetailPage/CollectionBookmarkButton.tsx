@@ -1,64 +1,17 @@
-import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import Tooltip from "@mui/material/Tooltip";
-import IconButton from "@mui/material/IconButton";
-import BookmarkIcon from "@mui/icons-material/Bookmark";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
-import { UnauthorizedError } from "../../api/client";
-import { collectionsApi } from "../../api/collections";
+import { Bookmark, BookmarkCheck } from "lucide-react";
+import type { Collection } from "@/api/collections";
+import { IconButton } from "@/ui";
+import { useCollectionBookmark } from "./useCollectionBookmark";
 
-type Props = {
-  collectionId: string;
-  bookmarked: boolean;
-  onUnauthorized?: () => void;
-  onBookmarksChanged?: () => void;
-  /** Lets other controls on the page showing this state stay in sync. */
-  onToggled?: (bookmarked: boolean) => void;
-};
-
-export default function CollectionBookmarkButton({
-  collectionId,
-  bookmarked,
-  onUnauthorized,
-  onBookmarksChanged,
-  onToggled,
-}: Props) {
-  const { t } = useTranslation(["models", "common"]);
-  const [override, setOverride] = useState<boolean | null>(null);
-  const isBookmarked = override ?? bookmarked;
-  const pendingRef = useRef(false);
-
-  const toggle = async () => {
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    const next = !isBookmarked;
-    setOverride(next);
-    try {
-      await (next ? collectionsApi.bookmark(collectionId) : collectionsApi.unbookmark(collectionId));
-      onToggled?.(next);
-      onBookmarksChanged?.();
-    } catch (err) {
-      setOverride(bookmarked);
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      console.error(err);
-      alert(t("models:collections.bookmarkFailed"));
-    } finally {
-      pendingRef.current = false;
-    }
-  };
-
-  const label = isBookmarked
-    ? t("models:collections.unbookmarkCollection")
-    : t("models:collections.bookmarkCollection");
-
+export function CollectionBookmarkButton({ collection }: { collection: Collection }) {
+  const { bookmarked, label, toggle, pending } = useCollectionBookmark(collection);
   return (
-    <Tooltip title={label}>
-      <IconButton size="small" onClick={toggle} aria-label={label}>
-        {isBookmarked ? <BookmarkIcon fontSize="small" color="primary" /> : <BookmarkBorderIcon fontSize="small" />}
-      </IconButton>
-    </Tooltip>
+    <IconButton label={label} variant="outline" aria-pressed={bookmarked} disabled={pending} onClick={toggle}>
+      {bookmarked ? (
+        <BookmarkCheck className="size-4 text-accent-text" aria-hidden />
+      ) : (
+        <Bookmark className="size-4" aria-hidden />
+      )}
+    </IconButton>
   );
 }

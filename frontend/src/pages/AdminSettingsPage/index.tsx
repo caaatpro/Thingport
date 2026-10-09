@@ -1,20 +1,22 @@
-import Stack from "@mui/material/Stack";
-import Divider from "@mui/material/Divider";
+import { PageHeader } from "@/ui";
+import SessionSection from "./SessionSection";
 import StorageSection from "./StorageSection";
 import ThingiverseSection from "./ThingiverseSection";
-import SessionSection from "./SessionSection";
 
-type Props = {
-  onUnauthorized?: () => void;
-};
-
-// Instance-wide settings, all on one page.
-export default function AdminSettingsPage({ onUnauthorized }: Props) {
+/** Instance-wide settings, one card per concern. */
+export default function AdminSettingsPage() {
   return (
-    <Stack spacing={4} divider={<Divider />}>
-      <ThingiverseSection onUnauthorized={onUnauthorized} />
-      <StorageSection onUnauthorized={onUnauthorized} />
-      <SessionSection onUnauthorized={onUnauthorized} />
-    </Stack>
+    <div className="mx-auto max-w-4xl">
+      <PageHeader
+        title="Admin Settings"
+        subtitle="Storage layout, Thingiverse access and session length."
+        backTo="/admin"
+      />
+      <div className="space-y-4">
+        <StorageSection />
+        <ThingiverseSection />
+        <SessionSection />
+      </div>
+    </div>
   );
 }

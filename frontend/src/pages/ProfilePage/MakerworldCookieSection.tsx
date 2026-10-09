@@ -1,174 +1,99 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import Chip from "@mui/material/Chip";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Alert from "@mui/material/Alert";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi } from "../../api/settings";
-import type { MakerWorldSettings } from "../../utils/settings";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { settingsApi } from "@/api/settings";
+import { useMakerWorldCookie } from "@/app/preferences";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Badge, Button, Field, Textarea } from "@/ui";
+import { Section } from "./Section";
 
-type Props = {
-  cookie: string;
-  onUpdateMakerWorld: (patch: Partial<MakerWorldSettings>) => void;
-  onUnauthorized?: () => void;
-};
+/** Never displays the stored cookie. Saves it on the server and keeps a copy in this browser for imports. */
+export function MakerworldCookieSection() {
+  const queryClient = useQueryClient();
+  const [localCookie, setLocalCookie] = useMakerWorldCookie();
+  const query = useQuery({ queryKey: ["settings", "makerworld"], queryFn: () => settingsApi.getMakerworld() });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
-/** Never displays the stored cookie. Saves locally and syncs to the backend. */
-export default function MakerworldCookieSection({ cookie, onUpdateMakerWorld, onUnauthorized }: Props) {
-  const { t } = useTranslation(["app", "common"]);
-  const [configured, setConfigured] = React.useState(Boolean(cookie.trim()));
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let active = true;
-    settingsApi
-      .getMakerworld()
-      .then((res) => {
-        if (active) setConfigured(res.configured);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const startEdit = () => {
-    setDraft("");
-    setError(null);
-    setEditing(true);
-  };
-
-  const cancelEdit = () => {
-    setEditing(false);
-    setDraft("");
-    setError(null);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      const result = await settingsApi.updateMakerworld(draft.trim() || null);
-      onUpdateMakerWorld({ cookie: draft });
-      setConfigured(result.configured);
+  const save = useMutation({
+    mutationFn: (cookie: string | null) => settingsApi.updateMakerworld(cookie),
+    onSuccess: (res, cookie) => {
+      setLocalCookie(cookie ?? "");
+      queryClient.setQueryData(["settings", "makerworld"], res);
       setEditing(false);
       setDraft("");
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setError(err instanceof Error ? err.message : t("profile.makerworld.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
-  const handleRemove = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      const result = await settingsApi.updateMakerworld(null);
-      onUpdateMakerWorld({ cookie: "" });
-      setConfigured(result.configured);
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        onUnauthorized?.();
-        return;
-      }
-      setError(err instanceof Error ? err.message : t("profile.makerworld.failed"));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const configured = query.data?.configured ?? Boolean(localCookie.trim());
 
   return (
-    <Box>
-      <Typography
-        variant="subtitle1"
-        sx={{
-          fontWeight: 600,
-          color: (muiTheme) => muiTheme.thingport.headingText,
-        }}
-      >
-        {t("profile.makerworld.heading")}
-      </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-          mb: 1.5,
-        }}
-      >
-        {t("profile.makerworld.description")}
-      </Typography>
-
-      <Paper
-        variant="outlined"
-        sx={{ p: 2.5, borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider") }}
-      >
-        {editing ? (
-          <Stack spacing={1.5}>
-            <TextField
-              multiline
-              minRows={3}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={t("profile.makerworld.placeholder") ?? undefined}
-              disabled={saving}
-              // oxlint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
-            />
-            <Stack direction="row" spacing={1}>
-              <Button size="small" variant="contained" onClick={handleSave} disabled={saving || !draft.trim()}>
-                {saving ? t("profile.saving") : t("common:save")}
-              </Button>
-              <Button size="small" onClick={cancelEdit} disabled={saving}>
-                {t("common:cancel")}
-              </Button>
-            </Stack>
-          </Stack>
-        ) : (
-          <Stack
-            direction="row"
-            spacing={1}
-            useFlexGap
-            sx={{
-              alignItems: "center",
-              flexWrap: "wrap",
+    <Section
+      title="MakerWorld"
+      description="Required to import links or models from MakerWorld. Paste the Cookie header from a logged-in makerworld.com request."
+    >
+      {editing ? (
+        <div className="flex flex-col gap-3">
+          <Field label="MakerWorld cookie">
+            {(p) => (
+              <Textarea
+                {...p}
+                rows={3}
+                // oxlint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="example: mw_session=...; mw_token=...;"
+                disabled={save.isPending}
+              />
+            )}
+          </Field>
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              loading={save.isPending}
+              disabled={!draft.trim()}
+              onClick={() => save.mutate(draft.trim())}
+            >
+              Save
+            </Button>
+            <Button
+              size="sm"
+              disabled={save.isPending}
+              onClick={() => {
+                setEditing(false);
+                setDraft("");
+                save.reset();
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={configured ? "accent" : "outline"}>{configured ? "Added" : "Not added"}</Badge>
+          <Button
+            size="sm"
+            onClick={() => {
+              save.reset();
+              setEditing(true);
             }}
           >
-            <Chip
-              label={configured ? t("profile.makerworld.added") : t("profile.makerworld.notAdded")}
-              size="small"
-              color={configured ? "success" : "default"}
-              variant={configured ? "filled" : "outlined"}
-            />
-            <Button size="small" onClick={startEdit}>
-              {configured ? t("common:edit") : t("profile.makerworld.add")}
+            {configured ? "Edit" : "Add"}
+          </Button>
+          {configured ? (
+            <Button size="sm" variant="danger-ghost" loading={save.isPending} onClick={() => save.mutate(null)}>
+              Remove
             </Button>
-            {configured && (
-              <Button size="small" color="error" onClick={handleRemove} disabled={saving}>
-                {t("common:remove")}
-              </Button>
-            )}
-          </Stack>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mt: 1.5 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-      </Paper>
-    </Box>
+          ) : null}
+        </div>
+      )}
+      {save.isError ? (
+        <Alert tone="danger" className="mt-3">
+          {errorMessage(save.error, "Couldn't save. Try again.")}
+        </Alert>
+      ) : null}
+    </Section>
   );
 }

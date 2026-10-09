@@ -1,220 +1,132 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import Stack from "@mui/material/Stack";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
-import Alert from "@mui/material/Alert";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogActions from "@mui/material/DialogActions";
-import { UnauthorizedError } from "../../api/client";
-import { settingsApi, type DatabaseInfo } from "../../api/settings";
-
-type Props = {
-  onUnauthorized?: () => void;
-};
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { settingsApi } from "@/api/settings";
+import { errorMessage } from "@/app/queryClient";
+import { Alert, Button, Field, Input, Skeleton, useConfirm, useToast } from "@/ui";
+import { AdminSection, LoadError } from "../AdminPage/parts";
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <Stack
-      direction="row"
-      spacing={2}
-      sx={{
-        justifyContent: "space-between",
-        alignItems: "baseline",
-      }}
-    >
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-        }}
-      >
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-        {value}
-      </Typography>
-    </Stack>
+    <div className="flex items-baseline justify-between gap-4 text-sm">
+      <dt className="text-muted">{label}</dt>
+      <dd className="font-mono text-fg">{value}</dd>
+    </div>
   );
 }
 
 /** Host/port are fixed at startup. "Test & Save" verifies new credentials before switching, and the
  *  switch doesn't survive a restart. */
-export default function DatabaseTab({ onUnauthorized }: Props) {
-  const { t } = useTranslation(["app", "common"]);
-  const [info, setInfo] = React.useState<DatabaseInfo | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+export default function DatabaseTab() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const query = useQuery({ queryKey: ["settings", "database"], queryFn: () => settingsApi.getDatabase() });
+  // null = untouched: the field shows what the server reports.
+  const [database, setDatabase] = useState<string | null>(null);
+  const [user, setUser] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
 
-  const [database, setDatabase] = React.useState("");
-  const [user, setUser] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [status, setStatus] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const info = query.data;
+  const dbName = (database ?? info?.database ?? "").trim();
+  const dbUser = (user ?? info?.user ?? "").trim();
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await settingsApi.getDatabase();
-      setInfo(data);
-      setDatabase(data.database ?? "");
-      setUser(data.user ?? "");
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setLoadError(t("adminSettings.database.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [onUnauthorized, t]);
-
-  React.useEffect(() => {
-    void load();
-  }, [load]);
-
-  const confirmSwitch = async () => {
-    setConfirmOpen(false);
-    setSaving(true);
-    setStatus(null);
-    setError(null);
-    try {
-      const next = await settingsApi.testAndSaveDatabase({ database: database.trim(), user: user.trim(), password });
-      setInfo(next);
+  const save = useMutation({
+    mutationFn: () => settingsApi.testAndSaveDatabase({ database: dbName, user: dbUser, password }),
+    onSuccess: (next) => {
+      queryClient.setQueryData(["settings", "database"], next);
+      setDatabase(null);
+      setUser(null);
       setPassword("");
-      setStatus(t("adminSettings.database.saved"));
-    } catch (err) {
-      if (err instanceof UnauthorizedError) onUnauthorized?.();
-      else setError(err instanceof Error ? err.message : t("adminSettings.database.failed"));
-    } finally {
-      setSaving(false);
-    }
+      toast.success("Connected and switched.");
+    },
+  });
+
+  if (query.isPending) return <Skeleton className="h-80" />;
+  if (query.isError || !info) {
+    return <LoadError error={query.error} title="Unable to load database info." onRetry={() => void query.refetch()} />;
+  }
+
+  const unset = "—";
+  const dirty = dbName !== (info.database ?? "") || dbUser !== (info.user ?? "") || password.trim() !== "";
+  const canSubmit = dirty && Boolean(dbName && dbUser && password.trim());
+
+  const submit = async () => {
+    const ok = await confirm({
+      title: "Switch the live database?",
+      message: (
+        <>
+          <p>
+            This repoints every database call this running instance makes at a different database. If the new
+            credentials are wrong or unreachable, the switch is rejected and nothing changes.
+          </p>
+          <p className="mt-2">
+            Switch to database &quot;{dbName}&quot; as user &quot;{dbUser}&quot;? This does not persist across a
+            restart. Update DATABASE_URL if you want it to stick.
+          </p>
+        </>
+      ),
+      confirmLabel: "Test & Save",
+    });
+    if (ok) save.mutate();
   };
 
-  if (loading) {
-    return (
-      <Stack
-        sx={{
-          alignItems: "center",
-          py: 4,
-        }}
-      >
-        <CircularProgress size={20} />
-      </Stack>
-    );
-  }
-
-  if (loadError || !info) {
-    return <Alert severity="error">{loadError || t("adminSettings.database.loadFailed")}</Alert>;
-  }
-
-  const unset = t("adminSettings.database.unset");
-  const isDirty =
-    database.trim() !== (info.database ?? "") || user.trim() !== (info.user ?? "") || password.trim() !== "";
-
   return (
-    <Stack spacing={3}>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "text.secondary",
+    <AdminSection
+      title="Database"
+      description="Host and port always reflect the DATABASE_URL this instance was started with and can't be changed here. Database, user, and password can be switched live: the new credentials are tested before anything is applied, so a typo can't take the app down, but the switch only affects this running process and won't survive a restart."
+    >
+      <form
+        className="flex max-w-xl flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSubmit && !save.isPending) void submit();
         }}
       >
-        {t("adminSettings.database.helpText")}
-      </Typography>
-
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Stack spacing={2}>
-          <Stack spacing={1.5}>
-            <Row label={t("adminSettings.database.hostLabel")} value={info.host ?? unset} />
-            <Row label={t("adminSettings.database.portLabel")} value={info.port ? String(info.port) : unset} />
-          </Stack>
-
-          <TextField
-            label={t("adminSettings.database.nameLabel")}
-            value={database}
-            onChange={(e) => setDatabase(e.target.value)}
-            disabled={saving}
-            fullWidth
-          />
-          <TextField
-            label={t("adminSettings.database.userLabel")}
-            value={user}
-            onChange={(e) => setUser(e.target.value)}
-            disabled={saving}
-            fullWidth
-            autoComplete="off"
-          />
-          <TextField
-            type="password"
-            label={t("adminSettings.database.passwordLabel")}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t("adminSettings.database.passwordPlaceholder") ?? undefined}
-            disabled={saving}
-            fullWidth
-            autoComplete="new-password"
-          />
-
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <Button
-              variant="contained"
-              onClick={() => setConfirmOpen(true)}
-              disabled={saving || !isDirty || !database.trim() || !user.trim() || !password.trim()}
-            >
-              {saving ? t("adminSettings.database.saving") : t("adminSettings.database.testAndSave")}
-            </Button>
-            {saving && <CircularProgress size={14} />}
-            {status && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.secondary",
-                }}
-              >
-                {status}
-              </Typography>
-            )}
-          </Stack>
-
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
-            </Alert>
+        <dl className="space-y-1.5 rounded-control bg-surface-2 p-3">
+          <Row label="Host" value={info.host ?? unset} />
+          <Row label="Port" value={info.port ? String(info.port) : unset} />
+        </dl>
+        <Field label="Database">
+          {(p) => (
+            <Input
+              {...p}
+              value={database ?? info.database ?? ""}
+              disabled={save.isPending}
+              onChange={(e) => setDatabase(e.target.value)}
+            />
           )}
-        </Stack>
-      </Paper>
-
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t("adminSettings.database.confirmTitle")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 0.5 }}>
-            <Alert severity="warning">{t("adminSettings.database.confirmWarning")}</Alert>
-            <DialogContentText>
-              {t("adminSettings.database.confirmBody", { database: database.trim(), user: user.trim() })}
-            </DialogContentText>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)}>{t("common:cancel")}</Button>
-          <Button variant="contained" color="warning" onClick={confirmSwitch}>
-            {t("adminSettings.database.testAndSave")}
+        </Field>
+        <Field label="User">
+          {(p) => (
+            <Input
+              {...p}
+              value={user ?? info.user ?? ""}
+              autoComplete="off"
+              disabled={save.isPending}
+              onChange={(e) => setUser(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label="Password">
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              value={password}
+              placeholder="Required to test and apply a switch"
+              autoComplete="new-password"
+              disabled={save.isPending}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
+        </Field>
+        {save.error ? <Alert tone="danger">{errorMessage(save.error, "Failed to switch database.")}</Alert> : null}
+        <div>
+          <Button type="submit" variant="primary" loading={save.isPending} disabled={!canSubmit}>
+            Test &amp; Save
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Stack>
+        </div>
+      </form>
+    </AdminSection>
   );
 }

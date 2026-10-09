@@ -1,6 +1,0 @@
-# Builds the rewritten frontend (frontend-next/) instead of frontend/. Temporary: used by
-# `E2E_NEXT=1 scripts/e2e.sh` and the local test stack until the rewrite replaces frontend/.
-services:
-  frontend:
-    build:
-      context: ./frontend-next
