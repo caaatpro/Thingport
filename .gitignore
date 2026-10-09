@@ -20,6 +20,7 @@ backend/prisma/dev.db*
 # Thingport runtime content
 data/
 imports/
+!frontend/src/features/imports/
 backend/storage/
 
 # IDE, operating-system, and temporary files
