@@ -9,12 +9,12 @@ import type {
   PrintFile,
 } from "../../generated/prisma/client";
 import { accessRoleOf, type AccessRole } from "../../lib/access";
-import { plateThumbExists, plateThumbPath } from "../../services/printService";
-import { previewImageExists, previewImagePath } from "../../services/previewImageService";
+import { plateThumbExists, plateThumbPath } from "./plateThumbnails";
+import { previewImageExists, previewImagePath } from "./previewImages";
 import { preparedFilename } from "../../services/preparedPrint";
 import { modelPreviewGlbExists, modelPreviewGlbPath } from "../../services/modelPreviewCache";
 import { buildImportSourceUrl } from "../../services/importService";
-import { toAuthorOut, type AuthorOut, type CategoryOut } from "../library/dto";
+import { toAuthorOut, type AuthorOut } from "../library/dto";
 
 export type PreparedPrintOut = {
   printer?: string | null;

@@ -1,19 +1,14 @@
 import type { Router } from "express";
-import authorsRouter from "../../routes/authors";
-import categoriesRouter from "../../routes/categories";
-import tagsRouter from "../../routes/tags";
-import collectionsRouter from "../../routes/collections";
-import bookmarksRouter from "../../routes/bookmarks";
-import searchRouter from "../../routes/search";
-import dashboardRouter from "../../routes/dashboard";
+import { authorsApi } from "./authorsRoutes";
+import { categoriesApi } from "./categoriesRoutes";
+import { collectionsApi } from "./collectionsRoutes";
+import { discoveryApi } from "./discoveryRoutes";
+import { tagsApi } from "./tagsRoutes";
 
-// Transitional: these still live in src/routes and are moved into this module one by one.
 export const routers: Router[] = [
-  authorsRouter,
-  categoriesRouter,
-  tagsRouter,
-  collectionsRouter,
-  bookmarksRouter,
-  searchRouter,
-  dashboardRouter,
+  authorsApi.router,
+  categoriesApi.router,
+  tagsApi.router,
+  collectionsApi.router,
+  discoveryApi.router,
 ];

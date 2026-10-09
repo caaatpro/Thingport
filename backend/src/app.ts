@@ -1,11 +1,11 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import { resolveCorsOrigins } from "./cors";
-
 import { errorHandler, notFoundHandler } from "./http/errorHandler";
+import { resolveCorsOrigins } from "./http/cors";
 import { requestLogger } from "./http/requestLogger";
 import { apiRouters } from "./modules";
 
+/** The whole HTTP application: middleware, then every module's routers under /api, then the error handlers. */
 export function createApp(): Express {
   const app = express();
 

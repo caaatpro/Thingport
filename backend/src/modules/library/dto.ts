@@ -1,6 +1,7 @@
 import type { Author, Category, Collection, CollectionRole } from "../../generated/prisma/client";
 import { accessRoleOf, type AccessRole } from "../../lib/access";
 import type { PrintOut } from "../prints/dto";
+import type { DashboardAuthor, DashboardModel, DashboardSummary } from "./dashboard";
 
 export type AuthorOut = {
   id: string;
@@ -146,5 +147,42 @@ export function toCategoryOut(category: Category): CategoryOut {
     makerworld_cat_ids: formatCatIds(category.makerworldCatIds),
     thingiverse_cat_ids: formatCatIds(category.thingiverseCatIds),
     printables_cat_ids: formatCatIds(category.printablesCatIds),
+  };
+}
+
+export function toDashboardModelOut(m: DashboardModel) {
+  return {
+    id: m.id,
+    name: m.name,
+    thumb_url: m.thumbUrl,
+    view_count: m.viewCount,
+    print_count: m.printCount,
+    created_at: m.createdAt,
+  };
+}
+
+export function toDashboardAuthorOut(a: DashboardAuthor) {
+  return {
+    id: a.id,
+    name: a.name,
+    handle: a.handle,
+    avatar_url: a.avatarUrl,
+    model_count: a.modelCount,
+  };
+}
+
+export function toDashboardSummaryOut(summary: DashboardSummary) {
+  return {
+    collection_count: summary.collectionCount,
+    model_count: summary.modelCount,
+    author_count: summary.authorCount,
+    category_count: summary.categoryCount,
+    top_viewed: summary.topViewed.map(toDashboardModelOut),
+    top_printed: summary.topPrinted.map(toDashboardModelOut),
+    top_authors: summary.topAuthors.map(toDashboardAuthorOut),
+    top_providers: summary.topProviders.map((p) => ({ provider: p.provider, model_count: p.modelCount })),
+    recently_added: summary.recentlyAdded.map(toDashboardModelOut),
+    recently_viewed: summary.recentlyViewed.map(toDashboardModelOut),
+    favorites: summary.favorites.map(toDashboardModelOut),
   };
 }

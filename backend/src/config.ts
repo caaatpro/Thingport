@@ -108,6 +108,8 @@ export const IMPORT_COLLECTION_DELAY_MS = envInt("IMPORT_COLLECTION_DELAY_MS", 1
 export const IMPORT_MAKERWORLD_CALL_DELAY_MS = envInt("IMPORT_MAKERWORLD_CALL_DELAY_MS", 5000);
 // Gap between a single import's preview-image fetches (up to ~20 per model).
 export const IMPORT_PREVIEW_IMAGE_DELAY_MS = envInt("IMPORT_PREVIEW_IMAGE_DELAY_MS", 250);
+// Instance-wide MakerWorld login cookie, used when neither the request nor the user's settings carry one.
+export const MAKERWORLD_COOKIE = (process.env.MAKERWORLD_COOKIE || "").trim();
 export const IMPORT_USER_AGENT = "Thingport/1.0";
 export const IMPORT_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";

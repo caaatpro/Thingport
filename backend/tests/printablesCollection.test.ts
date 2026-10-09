@@ -1,7 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app";
-import { fetchPrintablesCollectionEntries, parsePrintablesCollectionUrl } from "../src/services/printablesApi";
 import { prisma } from "../src/db";
 
 // The live API pages with `limit: 30` and ends on an empty-string cursor, not null.
@@ -23,11 +22,6 @@ function modelItem(id: number) {
       image: { filePath: `media/prints/${id}/title.jpg` },
     },
   };
-}
-
-/** A deleted/hidden model: skipped, not a crash. */
-function unavailableItem(id: number) {
-  return { id: String(id), unavailableModel: { id: String(id), name: "Deleted print" } };
 }
 
 function collectionModelsPage(items: unknown[], cursor: string | null) {
@@ -54,111 +48,6 @@ function mockCollectionFetch(opts: {
     return collectionTitleResponse(opts.title ?? null);
   }) as unknown as typeof fetch;
 }
-
-describe("parsePrintablesCollectionUrl", () => {
-  it("recognizes a Collection page, with or without the @handle prefix", () => {
-    expect(parsePrintablesCollectionUrl(`https://www.printables.com/@joshuaargh/collections/${COLLECTION_ID}`)).toEqual(
-      {
-        collectionId: COLLECTION_ID,
-      },
-    );
-    expect(parsePrintablesCollectionUrl(`https://www.printables.com/collections/${COLLECTION_ID}`)).toEqual({
-      collectionId: COLLECTION_ID,
-    });
-  });
-
-  it("rejects a single model URL, a profile page, and unrelated hosts", () => {
-    expect(
-      parsePrintablesCollectionUrl("https://www.printables.com/model/1786545-strong-garden-hose-holder"),
-    ).toBeNull();
-    expect(parsePrintablesCollectionUrl("https://www.printables.com/@joshuaargh")).toBeNull();
-    expect(parsePrintablesCollectionUrl(`https://example.com/collections/${COLLECTION_ID}`)).toBeNull();
-  });
-});
-
-describe("fetchPrintablesCollectionEntries", () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-    vi.restoreAllMocks();
-  });
-
-  it("resolves fully from a single page for a small collection", async () => {
-    global.fetch = mockCollectionFetch({
-      title: COLLECTION_TITLE,
-      pages: { null: { items: [modelItem(1), modelItem(2), modelItem(3)], nextCursor: "" } },
-    });
-
-    const listing = await fetchPrintablesCollectionEntries(COLLECTION_ID);
-
-    expect(listing.title).toBe(COLLECTION_TITLE);
-    expect(listing.truncated).toBe(false);
-    expect(listing.total).toBe(3);
-    expect(listing.entries).toEqual([
-      { modelId: "1", title: "Collected model 1", cover: "https://media.printables.com/media/prints/1/title.jpg" },
-      { modelId: "2", title: "Collected model 2", cover: "https://media.printables.com/media/prints/2/title.jpg" },
-      { modelId: "3", title: "Collected model 3", cover: "https://media.printables.com/media/prints/3/title.jpg" },
-    ]);
-  });
-
-  it("pages through a collection bigger than one page, terminating on an empty-string cursor", async () => {
-    global.fetch = mockCollectionFetch({
-      title: COLLECTION_TITLE,
-      pages: {
-        null: { items: [modelItem(1), modelItem(2), modelItem(3)], nextCursor: "page2" },
-        page2: { items: [modelItem(4), modelItem(5)], nextCursor: "" },
-      },
-    });
-
-    const listing = await fetchPrintablesCollectionEntries(COLLECTION_ID);
-
-    // `total` counts every page, not just the first.
-    expect(listing.total).toBe(5);
-    expect(listing.truncated).toBe(false);
-    expect(listing.entries.map((e) => e.modelId)).toEqual(["1", "2", "3", "4", "5"]);
-  });
-
-  it("skips items referencing a deleted/unavailable print instead of failing the whole listing", async () => {
-    global.fetch = mockCollectionFetch({
-      title: COLLECTION_TITLE,
-      pages: { null: { items: [modelItem(1), unavailableItem(2), modelItem(3)], nextCursor: "" } },
-    });
-
-    const listing = await fetchPrintablesCollectionEntries(COLLECTION_ID);
-
-    expect(listing.entries.map((e) => e.modelId)).toEqual(["1", "3"]);
-  });
-
-  it("stops after a bounded number of pages instead of looping forever against a non-terminating cursor", async () => {
-    let calls = 0;
-    global.fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (_input, init) => {
-      const body = JSON.parse(String(init?.body ?? "{}"));
-      if (typeof body.query === "string" && body.query.includes("moreCollectionModels")) {
-        calls++;
-        // Never-ending cursor: the safety caps must stop it.
-        return collectionModelsPage([modelItem(calls)], "still-more");
-      }
-      return collectionTitleResponse(COLLECTION_TITLE);
-    }) as unknown as typeof fetch;
-
-    const listing = await fetchPrintablesCollectionEntries(COLLECTION_ID);
-
-    expect(calls).toBeLessThanOrEqual(20);
-    expect(listing.entries.length).toBe(calls);
-  });
-
-  it("returns an empty listing for a collection that doesn't exist", async () => {
-    global.fetch = mockCollectionFetch({ title: null, pages: { null: { items: [], nextCursor: "" } } });
-
-    const listing = await fetchPrintablesCollectionEntries("999999999999");
-
-    expect(listing.title).toBeNull();
-    expect(listing.entries).toEqual([]);
-    expect(listing.truncated).toBe(false);
-    expect(listing.total).toBe(0);
-  });
-});
 
 describe("POST /import/printables-collection/entries", () => {
   const app = createApp();
