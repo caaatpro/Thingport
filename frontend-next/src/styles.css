@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* Dark mode is a class on <html>, set by app/theme.tsx (never the OS setting directly). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f2f5;
+  --color-border: #e3e6ea;
+  --color-border-strong: #cdd2d9;
+  /* Text */
+  --color-fg: #101419;
+  --color-muted: #586270;
+  --color-subtle: #8a93a0;
+  /* Brand */
+  --color-accent: #15803d;
+  --color-accent-hover: #166534;
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #e6f4ea;
+  --color-accent-text: #15803d;
+  /* Status */
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3e2;
+  --color-success: #15803d;
+  --color-success-soft: #e6f4ea;
+  --color-info: #1d4ed8;
+  --color-info-soft: #e8effd;
+  /* Backdrop for 3D previews and thumbnails that have no image */
+  --color-canvas: #eef0f3;
+
+  --radius-control: 0.625rem;
+  --radius-card: 0.875rem;
+  --radius-dialog: 1.125rem;
+
+  --shadow-card: 0 1px 2px rgb(16 20 25 / 0.05), 0 1px 1px rgb(16 20 25 / 0.03);
+  --shadow-hover: 0 8px 24px rgb(16 20 25 / 0.1), 0 2px 6px rgb(16 20 25 / 0.06);
+  --shadow-overlay: 0 16px 48px rgb(16 20 25 / 0.18), 0 4px 12px rgb(16 20 25 / 0.08);
+
+  --animate-fade-in: fade-in 0.12s ease-out;
+  --animate-pop-in: pop-in 0.14s ease-out;
+  --animate-slide-up: slide-up 0.18s ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+.dark {
+  color-scheme: dark;
+  --color-bg: #0a0d11;
+  --color-surface: #11151b;
+  --color-surface-2: #181d25;
+  --color-border: #232a34;
+  --color-border-strong: #343d4a;
+  --color-fg: #e9ecf0;
+  --color-muted: #9aa4b2;
+  --color-subtle: #6a7584;
+  --color-accent: #22c55e;
+  --color-accent-hover: #4ade80;
+  --color-accent-fg: #04210f;
+  --color-accent-soft: #0f2a1a;
+  --color-accent-text: #4ade80;
+  --color-danger: #f87171;
+  --color-danger-soft: #2e1417;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #2b2110;
+  --color-success: #4ade80;
+  --color-success-soft: #0f2a1a;
+  --color-info: #8ab4ff;
+  --color-info-soft: #14203a;
+  --color-canvas: #151a21;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-hover: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+  --shadow-overlay: 0 16px 48px rgb(0 0 0 / 0.6), 0 4px 12px rgb(0 0 0 / 0.4);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings:
+      "cv11" 1,
+      "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  #root {
+    isolation: isolate;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  }
+  button,
+  [role="button"],
+  summary {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  /* Quiet, thin scrollbars that follow the theme. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+}

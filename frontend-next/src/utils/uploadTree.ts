@@ -1,0 +1,163 @@
+import { UnauthorizedError } from "../api/client";
+import { categoriesApi } from "../api/categories";
+import { printsApi, type Print } from "../api/prints";
+
+export type UploadEntry = {
+  file: File;
+  relativePath: string;
+};
+
+type FileSystemEntry = {
+  isFile: boolean;
+  isDirectory: boolean;
+  name: string;
+  file?: (success: (file: File) => void, error?: (err: unknown) => void) => void;
+  createReader?: () => FileSystemDirectoryReader;
+};
+
+type FileSystemDirectoryReader = {
+  readEntries: (success: (entries: FileSystemEntry[]) => void, error?: (err: unknown) => void) => void;
+};
+
+function normalizeRelativePath(path: string) {
+  const trimmed = (path || "").replace(/\\/g, "/").replace(/^\/+/, "");
+  return trimmed || "";
+}
+
+export function entriesFromFileList(files: FileList | File[]): UploadEntry[] {
+  return Array.from(files || []).map((file) => {
+    const anyFile = file as File & { webkitRelativePath?: string };
+    const relativePath = normalizeRelativePath(anyFile.webkitRelativePath || file.name);
+    return { file, relativePath: relativePath || file.name };
+  });
+}
+
+async function readAllEntries(reader: FileSystemDirectoryReader) {
+  const entries: FileSystemEntry[] = [];
+  while (true) {
+    const batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+      reader.readEntries(resolve, reject);
+    });
+    if (!batch.length) break;
+    entries.push(...batch);
+  }
+  return entries;
+}
+
+async function traverseEntry(entry: FileSystemEntry, parentPath: string, output: UploadEntry[]) {
+  const entryPath = normalizeRelativePath(parentPath ? `${parentPath}/${entry.name}` : entry.name);
+  if (entry.isFile && entry.file) {
+    const file = await new Promise<File>((resolve, reject) => entry.file?.(resolve, reject));
+    output.push({ file, relativePath: entryPath || file.name });
+    return;
+  }
+  if (entry.isDirectory && entry.createReader) {
+    const reader = entry.createReader();
+    const entries = await readAllEntries(reader);
+    await Promise.all(entries.map((child) => traverseEntry(child, entryPath, output)));
+  }
+}
+
+export async function entriesFromDataTransfer(dataTransfer: DataTransfer): Promise<UploadEntry[]> {
+  const output: UploadEntry[] = [];
+  const items = Array.from(dataTransfer.items || []);
+  const entryItems = items
+    .map((item) => (item as unknown as { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.())
+    .filter(Boolean) as FileSystemEntry[];
+
+  if (entryItems.length) {
+    await Promise.all(entryItems.map((entry) => traverseEntry(entry, "", output)));
+    return output;
+  }
+
+  for (const item of items) {
+    if (item.kind !== "file") continue;
+    const file = item.getAsFile();
+    if (!file) continue;
+    const anyFile = file as File & { webkitRelativePath?: string };
+    const relativePath = normalizeRelativePath(anyFile.webkitRelativePath || file.name);
+    output.push({ file, relativePath: relativePath || file.name });
+  }
+
+  if (!output.length) {
+    return entriesFromFileList(dataTransfer.files || []);
+  }
+  return output;
+}
+
+export async function uploadEntriesToCategory(
+  entries: UploadEntry[],
+  parentCategoryId: string | null,
+  onUnauthorized?: () => void,
+) {
+  const failed: string[] = [];
+  let uploaded = 0;
+  let aborted = false;
+  const uploadedEntries: UploadEntry[] = [];
+  const prints: Print[] = [];
+  const categoryCache = new Map<string, string>();
+  const baseKey = parentCategoryId || "root";
+
+  // Folders reuse a same-named category in the same place, so uploading a tree twice doesn't duplicate it.
+  let existingCategories: Awaited<ReturnType<typeof categoriesApi.list>> | null = null;
+
+  const getOrCreateCategory = async (parentId: string | null, parentKey: string, name: string) => {
+    const key = `${parentKey}/${name}`;
+    const cached = categoryCache.get(key);
+    if (cached) return cached;
+    existingCategories ??= await categoriesApi.list();
+    const match = existingCategories.find((c) => (c.parent_id ?? null) === parentId && c.name === name);
+    if (match) {
+      categoryCache.set(key, match.id);
+      return match.id;
+    }
+    const created = await categoriesApi.create(name, [], parentId || undefined);
+    const categoryId = (created as { id: string }).id;
+    categoryCache.set(key, categoryId);
+    return categoryId;
+  };
+
+  for (const entry of entries) {
+    const normalized = normalizeRelativePath(entry.relativePath || entry.file.name);
+    const segments = normalized.split("/").filter(Boolean);
+    if (!segments.length) continue;
+    segments.pop();
+    let targetCategoryId = parentCategoryId;
+    let parentKey = baseKey;
+    for (const segment of segments) {
+      try {
+        targetCategoryId = await getOrCreateCategory(targetCategoryId, parentKey, segment);
+        parentKey = `${parentKey}/${segment}`;
+      } catch (err) {
+        if (err instanceof UnauthorizedError) {
+          onUnauthorized?.();
+          aborted = true;
+          break;
+        }
+        console.error("Category creation failed for", segment, err);
+        failed.push(entry.file.name);
+        targetCategoryId = null;
+        break;
+      }
+    }
+    if (aborted) break;
+    if (targetCategoryId === null && segments.length) continue;
+    try {
+      // Folder-tree leaves are always single-plate prints.
+      const result = await printsApi.upload([entry.file], { category_id: targetCategoryId || undefined });
+      uploaded += 1;
+      uploadedEntries.push(entry);
+      prints.push(...result.prints);
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        onUnauthorized?.();
+        aborted = true;
+        break;
+      }
+      console.error("Upload failed for", entry.file.name, err);
+      const message = err instanceof Error ? err.message.trim() : "";
+      failed.push(message && message !== "Upload failed" ? `${entry.file.name} (${message})` : entry.file.name);
+    }
+  }
+  return { uploaded, failed, uploadedEntries, prints };
+}
