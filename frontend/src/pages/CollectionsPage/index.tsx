@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import AddIcon from "@mui/icons-material/Add";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -8,10 +10,8 @@ import { UnauthorizedError } from "../../api/client";
 import { type Collection, type CollectionInput, collectionsApi } from "../../api/collections";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
-import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import CollectionCard from "./CollectionCard";
 import CollectionFormModal from "./CollectionFormModal";
-import CollectionsActionsMenu from "./CollectionsActionsMenu";
 
 type Props = {
   onUnauthorized?: () => void;
@@ -25,10 +25,6 @@ export default function CollectionsPage({ onUnauthorized, onBookmarksChanged, th
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-
-  usePageHeader({
-    actions: <CollectionsActionsMenu onAddCollection={() => setFormOpen(true)} />,
-  });
 
   const handleError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
@@ -71,6 +67,11 @@ export default function CollectionsPage({ onUnauthorized, onBookmarksChanged, th
 
   return (
     <Stack spacing={2}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setFormOpen(true)}>
+          {t("models:collections.newCollection")}
+        </Button>
+      </Box>
       {loading ? (
         <Stack
           sx={{
@@ -84,14 +85,8 @@ export default function CollectionsPage({ onUnauthorized, onBookmarksChanged, th
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(6, 1fr)",
-            columnGap: "20px",
-            rowGap: "20px",
-            "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(6, 1fr)" },
-            "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(5, 1fr)" },
-            "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-            "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-            "@media (max-width: 860px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+            gridTemplateColumns: "repeat(auto-fill, minmax(236px, 1fr))",
+            gap: "20px",
           }}
         >
           {collections.map((collection) => (

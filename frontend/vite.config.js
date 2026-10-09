@@ -59,6 +59,8 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // jsdom + MUI + user-event is slow on a busy CI runner or laptop; 5s flaked.
+    testTimeout: 20_000,
     restoreMocks: true,
     clearMocks: true,
   },

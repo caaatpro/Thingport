@@ -48,3 +48,15 @@ test("a model page does not scroll sideways", async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("the collections page has a visible New Collection button that creates one", async ({ page }) => {
+  await page.goto("/models/collections");
+  const name = `Created ${Date.now().toString(36)}`;
+  await page.getByRole("button", { name: "New Collection" }).click();
+  await page.getByRole("dialog").getByLabel("Name").fill(name);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Create|Save/ })
+    .click();
+  await expect(page.getByText(name).first()).toBeVisible();
+});
