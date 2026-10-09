@@ -52,7 +52,12 @@ export default function ZipImportModal({ config, onClose }: { config: ZipPromptC
             <Button onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={() => void importSelected()} loading={busy} disabled={selected.size === 0}>
+            <Button
+              variant="primary"
+              onClick={() => void importSelected()}
+              loading={busy}
+              disabled={selected.size === 0}
+            >
               Import selected
             </Button>
           </>
@@ -80,7 +85,11 @@ export default function ZipImportModal({ config, onClose }: { config: ZipPromptC
                 {selected.size} of {entries.length} selected
               </p>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => setSelected(new Set(entries.map((e) => e.path)))} disabled={busy || allSelected}>
+                <Button
+                  size="sm"
+                  onClick={() => setSelected(new Set(entries.map((e) => e.path)))}
+                  disabled={busy || allSelected}
+                >
                   Select all
                 </Button>
                 <Button size="sm" onClick={() => setSelected(new Set())} disabled={busy || selected.size === 0}>
@@ -89,7 +98,9 @@ export default function ZipImportModal({ config, onClose }: { config: ZipPromptC
               </div>
             </div>
             {entries.length === 0 ? (
-              <p className="rounded-control border border-border px-3 py-4 text-sm text-muted">No files found in this zip.</p>
+              <p className="rounded-control border border-border px-3 py-4 text-sm text-muted">
+                No files found in this zip.
+              </p>
             ) : (
               <ul className="max-h-[360px] divide-y divide-border overflow-auto rounded-control border border-border">
                 {entries.map((entry) => (

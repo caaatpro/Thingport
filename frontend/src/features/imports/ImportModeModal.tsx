@@ -3,7 +3,11 @@ import { useAction } from "./useAction";
 import type { ImportMode, ModePromptConfig } from "./prompts";
 
 const OPTIONS: { mode: ImportMode; title: string; description: string }[] = [
-  { mode: "separate", title: "Import as separate models", description: "Each file becomes its own model with a single plate." },
+  {
+    mode: "separate",
+    title: "Import as separate models",
+    description: "Each file becomes its own model with a single plate.",
+  },
   {
     mode: "multiplate",
     title: "Import as one model with several files",
@@ -41,9 +45,7 @@ export default function ImportModeModal({ config, onClose }: { config: ModePromp
             <span className="mt-0.5 block text-sm text-muted">{option.description}</span>
           </button>
         ))}
-        {busy ? (
-          <output className="text-sm text-muted">Importing…</output>
-        ) : null}
+        {busy ? <output className="text-sm text-muted">Importing…</output> : null}
         {error ? <Alert tone="danger">{error}</Alert> : null}
       </div>
     </Modal>

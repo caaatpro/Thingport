@@ -47,7 +47,8 @@ export function ImportJobsProvider({ children }: { children: ReactNode }) {
     enabled: jobId !== null,
     staleTime: 0,
     retry: false,
-    refetchInterval: (query) => (query.state.status === "error" || query.state.data?.status !== "RUNNING" ? false : POLL_MS),
+    refetchInterval: (query) =>
+      query.state.status === "error" || query.state.data?.status !== "RUNNING" ? false : POLL_MS,
   });
 
   // Pick up a job that was started before this page loaded (or in another tab).

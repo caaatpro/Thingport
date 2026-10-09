@@ -7,19 +7,22 @@ export function useAction() {
   const [error, setError] = useState<string | null>(null);
 
   /** Resolves true when the action finished without throwing. */
-  const run = useCallback(async (action: () => Promise<void>, fallback = "Import failed. Try again."): Promise<boolean> => {
-    setBusy(true);
-    setError(null);
-    try {
-      await action();
-      return true;
-    } catch (err) {
-      setError(errorMessage(err, fallback));
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const run = useCallback(
+    async (action: () => Promise<void>, fallback = "Import failed. Try again."): Promise<boolean> => {
+      setBusy(true);
+      setError(null);
+      try {
+        await action();
+        return true;
+      } catch (err) {
+        setError(errorMessage(err, fallback));
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [],
+  );
 
   return { busy, error, setError, run };
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { queueReducer, queueSummary, queueTitle, runUploadQueue, type QueueAction, type QueueItem } from "./uploadQueue";
+import {
+  queueReducer,
+  queueSummary,
+  queueTitle,
+  runUploadQueue,
+  type QueueAction,
+  type QueueItem,
+} from "./uploadQueue";
 
 const item = (id: string, status: QueueItem["status"] = "uploading"): QueueItem => ({ id, name: `${id}.stl`, status });
 

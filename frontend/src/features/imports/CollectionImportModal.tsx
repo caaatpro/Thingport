@@ -7,7 +7,13 @@ import { useAction } from "./useAction";
 import type { CollectionPromptConfig } from "./prompts";
 
 /** Lists the models of a Thingiverse/Printables collection (or a Thingiverse user's likes) to pick from. */
-export default function CollectionImportModal({ config, onClose }: { config: CollectionPromptConfig; onClose: () => void }) {
+export default function CollectionImportModal({
+  config,
+  onClose,
+}: {
+  config: CollectionPromptConfig;
+  onClose: () => void;
+}) {
   const entriesQuery = useQuery({
     queryKey: ["import-entries", config.label],
     queryFn: config.loadEntries,
@@ -48,7 +54,12 @@ export default function CollectionImportModal({ config, onClose }: { config: Col
             <Button onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={() => void importSelected()} loading={busy} disabled={selected.size === 0}>
+            <Button
+              variant="primary"
+              onClick={() => void importSelected()}
+              loading={busy}
+              disabled={selected.size === 0}
+            >
               Import selected
             </Button>
           </>
@@ -80,7 +91,11 @@ export default function CollectionImportModal({ config, onClose }: { config: Col
                 {selected.size} of {entries.length} selected
               </p>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => setPicked(defaultCollectionSelection(entries))} disabled={busy || allSelected}>
+                <Button
+                  size="sm"
+                  onClick={() => setPicked(defaultCollectionSelection(entries))}
+                  disabled={busy || allSelected}
+                >
                   Select all
                 </Button>
                 <Button size="sm" onClick={() => setPicked(new Set())} disabled={busy || selected.size === 0}>
@@ -89,11 +104,20 @@ export default function CollectionImportModal({ config, onClose }: { config: Col
               </div>
             </div>
             {entries.length === 0 ? (
-              <p className="rounded-control border border-border px-3 py-4 text-sm text-muted">No models found in this collection.</p>
+              <p className="rounded-control border border-border px-3 py-4 text-sm text-muted">
+                No models found in this collection.
+              </p>
             ) : (
               <ul className="max-h-[420px] divide-y divide-border overflow-auto rounded-control border border-border">
                 {entries.map((entry) => (
-                  <li key={entry.design_id} className={entry.already_imported ? "flex items-center gap-3 px-3 py-2 opacity-60" : "flex items-center gap-3 px-3 py-2"}>
+                  <li
+                    key={entry.design_id}
+                    className={
+                      entry.already_imported
+                        ? "flex items-center gap-3 px-3 py-2 opacity-60"
+                        : "flex items-center gap-3 px-3 py-2"
+                    }
+                  >
                     <Checkbox
                       aria-label={`Select ${entry.title}`}
                       checked={selected.has(entry.design_id)}
@@ -101,7 +125,13 @@ export default function CollectionImportModal({ config, onClose }: { config: Col
                       disabled={busy || entry.already_imported}
                     />
                     {entry.cover ? (
-                      <img src={entry.cover} alt="" loading="lazy" decoding="async" className="size-10 shrink-0 rounded-md bg-surface-2 object-cover" />
+                      <img
+                        src={entry.cover}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="size-10 shrink-0 rounded-md bg-surface-2 object-cover"
+                      />
                     ) : (
                       <span className="size-10 shrink-0 rounded-md bg-surface-2" aria-hidden />
                     )}

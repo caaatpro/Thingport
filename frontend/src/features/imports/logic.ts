@@ -2,7 +2,15 @@ import type { ImportJob } from "@/api/imports";
 import type { UploadEntry } from "@/utils/uploadTree";
 
 /** Every list that can show an imported or uploaded model; invalidate all of them after a change. */
-export const LIBRARY_QUERY_PREFIXES = ["prints", "collections", "collection", "categories", "dashboard", "tags", "authors"] as const;
+export const LIBRARY_QUERY_PREFIXES = [
+  "prints",
+  "collections",
+  "collection",
+  "categories",
+  "dashboard",
+  "tags",
+  "authors",
+] as const;
 
 const SYSTEM_COLLECTION_IDS = new Set(["favorites", "history"]);
 
@@ -46,7 +54,8 @@ export function splitZips<T extends { file: { name: string } }>(entries: T[]): {
 export function jobResultLink(job: ImportJob): { to: string; label: string } | null {
   if (job.status !== "DONE") return null;
   if (job.result_print_id) return { to: `/models/${job.result_print_id}`, label: "Open model" };
-  if (job.result_collection_id) return { to: `/models/collections/${job.result_collection_id}`, label: "Open collection" };
+  if (job.result_collection_id)
+    return { to: `/models/collections/${job.result_collection_id}`, label: "Open collection" };
   if (job.imported + job.already_in_library > 0) return { to: "/models", label: "Open library" };
   return null;
 }
@@ -77,7 +86,10 @@ export function jobCompletionMessage(job: ImportJob): { tone: "success" | "warni
     return { tone: "warning", message: `Import finished: ${breakdown}.` };
   }
   if (job.imported === 0 && job.already_in_library > 0) {
-    return { tone: "success", message: `Nothing new: ${plural(job.already_in_library, "model is", "models are")} already in your library.` };
+    return {
+      tone: "success",
+      message: `Nothing new: ${plural(job.already_in_library, "model is", "models are")} already in your library.`,
+    };
   }
   return { tone: "success", message: `Import complete: ${breakdown || "nothing to import"}.` };
 }

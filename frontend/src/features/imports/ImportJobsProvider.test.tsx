@@ -39,7 +39,9 @@ beforeEach(() => {
 describe("ImportJobsProvider", () => {
   it("resumes a running job, polls it, then refreshes the library and links to the result", async () => {
     api.getActiveImportJob.mockResolvedValue(base);
-    api.getImportJob.mockResolvedValueOnce(base).mockResolvedValue({ ...base, status: "DONE", processed: 4, imported: 4 });
+    api.getImportJob
+      .mockResolvedValueOnce(base)
+      .mockResolvedValue({ ...base, status: "DONE", processed: 4, imported: 4 });
 
     const { queryClient } = renderWithProviders(
       <ImportJobsProvider>

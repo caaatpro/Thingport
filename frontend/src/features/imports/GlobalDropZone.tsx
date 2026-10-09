@@ -32,7 +32,10 @@ export function GlobalDropZone() {
       const entries = await entriesFromDataTransfer(dataTransfer);
       if (!entries.length) return;
       const queued = entries.map((entry) => ({ id: localId(), payload: entry.file }));
-      dispatch({ type: "add", items: queued.map(({ id, payload }) => ({ id, name: payload.name, status: "uploading" })) });
+      dispatch({
+        type: "add",
+        items: queued.map(({ id, payload }) => ({ id, name: payload.name, status: "uploading" })),
+      });
       const succeeded = await runUploadQueue(
         queued,
         async (file) => {
@@ -117,11 +120,16 @@ export function GlobalDropZone() {
           <ul className="min-h-0 flex-1 overflow-y-auto">
             {items.map((item) => (
               <li key={item.id} className="flex items-center gap-2 px-3 py-1.5 text-sm" title={item.error || item.name}>
-                {item.status === "uploading" ? <Loader2 className="size-4 shrink-0 animate-spin text-subtle" aria-hidden /> : null}
+                {item.status === "uploading" ? (
+                  <Loader2 className="size-4 shrink-0 animate-spin text-subtle" aria-hidden />
+                ) : null}
                 {item.status === "ready" ? <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden /> : null}
                 {item.status === "failed" ? <XCircle className="size-4 shrink-0 text-danger" aria-hidden /> : null}
                 {item.status === "ready" && item.printId ? (
-                  <Link to={`/models/${item.printId}`} className="flex min-w-0 flex-1 items-center gap-1.5 text-fg hover:underline">
+                  <Link
+                    to={`/models/${item.printId}`}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-fg hover:underline"
+                  >
                     <span className="min-w-0 flex-1 truncate">{item.name}</span>
                     <ExternalLink className="size-3.5 shrink-0 text-subtle" aria-hidden />
                     <span className="sr-only">Open model</span>
@@ -129,7 +137,11 @@ export function GlobalDropZone() {
                 ) : (
                   <>
                     <span className="min-w-0 flex-1 truncate text-fg">{item.name}</span>
-                    <span className={item.status === "failed" ? "shrink-0 text-xs text-danger" : "shrink-0 text-xs text-muted"}>
+                    <span
+                      className={
+                        item.status === "failed" ? "shrink-0 text-xs text-danger" : "shrink-0 text-xs text-muted"
+                      }
+                    >
                       {item.status === "failed" ? "Failed" : item.status === "ready" ? "Ready" : "Uploading"}
                     </span>
                   </>

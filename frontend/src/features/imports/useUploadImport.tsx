@@ -61,7 +61,8 @@ export function useUploadImport() {
     }
   };
 
-  const uploadToCategory = (entries: UploadEntry[]) => uploadEntriesToCategory(entries, categoryId || null, onUnauthorized);
+  const uploadToCategory = (entries: UploadEntry[]) =>
+    uploadEntriesToCategory(entries, categoryId || null, onUnauthorized);
 
   const uploadEntries = async (entries: UploadEntry[]) => {
     if (!entries.length) return;
@@ -83,7 +84,11 @@ export function useUploadImport() {
             label: normal.map((entry) => entry.file.name).join(", "),
             count: normal.length,
             onChoose: async (mode) => {
-              apply(mode === "multiplate" ? await uploadFlatAsMultiplate(normal.map((e) => e.file)) : await uploadToCategory(normal));
+              apply(
+                mode === "multiplate"
+                  ? await uploadFlatAsMultiplate(normal.map((e) => e.file))
+                  : await uploadToCategory(normal),
+              );
             },
           });
         } else {
@@ -189,7 +194,11 @@ export function useUploadImport() {
       ) => {
         onPrompt?.();
         setImporting(false);
-        await prompts.ask.collection({ label: url, loadEntries: () => guard(load), onImportSelected: (ids) => guard(() => start(ids)) });
+        await prompts.ask.collection({
+          label: url,
+          loadEntries: () => guard(load),
+          onImportSelected: (ids) => guard(() => start(ids)),
+        });
       };
 
       if (profileScope !== "url" && isMakerworldModelUrl(url)) {
@@ -233,7 +242,8 @@ export function useUploadImport() {
       await prompts.ask.zip({
         label: inspect.filename,
         onImportAsZip: async () => afterSingleImport(await guard(() => importsApi.fromLink(payload))),
-        loadEntries: async () => (await guard(() => importsApi.listZipEntries(payload))).entries.map((e) => ({ path: e.path, size: e.size })),
+        loadEntries: async () =>
+          (await guard(() => importsApi.listZipEntries(payload))).entries.map((e) => ({ path: e.path, size: e.size })),
         onImportSelected: (entries) => guard(() => jobs.startZipImport({ ...payload, entries })),
       });
     } catch (err) {

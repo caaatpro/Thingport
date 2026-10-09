@@ -61,7 +61,11 @@ export async function runUploadQueue<T>(
         }
         break;
       }
-      dispatch({ type: "update", id, patch: { status: "failed", error: err instanceof Error ? err.message : undefined } });
+      dispatch({
+        type: "update",
+        id,
+        patch: { status: "failed", error: err instanceof Error ? err.message : undefined },
+      });
     }
   }
   return succeeded;

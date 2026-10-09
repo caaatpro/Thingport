@@ -104,8 +104,8 @@ export default function ImportLinkDialog({ open, onOpenChange, importing, onSubm
 
         {blocked ? (
           <Alert tone="warning">
-            MakerWorld collections can only be imported with the Thingport Grab browser extension, not here. Paste a single
-            model link instead, or use Thingport Grab to bulk-import a whole collection.
+            MakerWorld collections can only be imported with the Thingport Grab browser extension, not here. Paste a
+            single model link instead, or use Thingport Grab to bulk-import a whole collection.
           </Alert>
         ) : null}
 

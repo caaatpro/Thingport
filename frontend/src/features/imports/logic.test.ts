@@ -32,13 +32,19 @@ const file = (name: string) => ({ name }) as File;
 
 describe("resolveImportTarget", () => {
   it("reads the category from /models", () => {
-    expect(resolveImportTarget("/models", "?category=c1&sort=popular")).toEqual({ categoryId: "c1", collectionId: null });
+    expect(resolveImportTarget("/models", "?category=c1&sort=popular")).toEqual({
+      categoryId: "c1",
+      collectionId: null,
+    });
   });
   it("ignores the category param outside the library", () => {
     expect(resolveImportTarget("/tags", "?category=c1")).toEqual({ categoryId: null, collectionId: null });
   });
   it("reads a collection id and drops the category", () => {
-    expect(resolveImportTarget("/models/collections/abc%20d", "?category=c1")).toEqual({ categoryId: null, collectionId: "abc d" });
+    expect(resolveImportTarget("/models/collections/abc%20d", "?category=c1")).toEqual({
+      categoryId: null,
+      collectionId: "abc d",
+    });
   });
   it("treats favorites and history as no target", () => {
     expect(resolveImportTarget("/models/collections/favorites", "")).toEqual({ categoryId: null, collectionId: null });
@@ -79,9 +85,17 @@ describe("import jobs", () => {
   });
   it("describes outcomes without zero parts", () => {
     expect(jobBreakdown(job({ imported: 2, already_in_library: 0, failed_count: 1 }))).toBe("2 imported, 1 failed");
-    expect(jobCompletionMessage(job({ imported: 3 }))).toEqual({ tone: "success", message: "Import complete: 3 imported." });
+    expect(jobCompletionMessage(job({ imported: 3 }))).toEqual({
+      tone: "success",
+      message: "Import complete: 3 imported.",
+    });
     expect(jobCompletionMessage(job({ imported: 3, failed_count: 1 })).tone).toBe("warning");
-    expect(jobCompletionMessage(job({ imported: 0, already_in_library: 2 })).message).toContain("already in your library");
-    expect(jobCompletionMessage(job({ status: "ERROR", error_message: "Boom" }))).toEqual({ tone: "error", message: "Boom" });
+    expect(jobCompletionMessage(job({ imported: 0, already_in_library: 2 })).message).toContain(
+      "already in your library",
+    );
+    expect(jobCompletionMessage(job({ status: "ERROR", error_message: "Boom" }))).toEqual({
+      tone: "error",
+      message: "Boom",
+    });
   });
 });
