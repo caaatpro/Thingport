@@ -2,7 +2,6 @@
 package-lock.json
 **/CHANGELOG.md
 backend/prisma/migrations/
-web/.astro/
 .husky/_/
 
 # prettier-plugin-sh would claim these, but they aren't shell scripts

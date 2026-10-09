@@ -10,9 +10,7 @@ It's useful without Thingport too: on MakerWorld model pages it adds a **Downloa
 button that turns the Bambu Studio project into a 3MF that PrusaSlicer, Cura and other slicers open
 with its colors and print settings intact. See [Download normalized](#download-normalized-no-thingport-needed).
 
-**Get it from the [Chrome Web Store](https://chromewebstore.google.com/detail/nmblahmglpbplmfcggghdgohohlaeiee),
-[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/thingport-grab/) or
-[Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/kahfidpmojfocohinlmglnfoaimocbol).**
+**Get it from your Thingport instance's Downloads page.**
 
 It talks directly to your Thingport instance's API from the extension's background script -- no
 separate server, no data sent anywhere else -- and converts files in your browser. See the [privacy policy](PRIVACY.md) for exactly what
@@ -45,73 +43,25 @@ it stores and sends.
 
 ## Install
 
-### Chrome / other Chromium browsers
+Your Thingport instance serves the extension itself: open **Downloads** in the sidebar and download the
+Chromium build (`thingport-grab-chrome.zip`). Neither the extension nor the instance talk to any browser store.
 
-Install **[Thingport Grab from the Chrome Web Store](https://chromewebstore.google.com/detail/nmblahmglpbplmfcggghdgohohlaeiee)**
--- click **Add to Chrome**, then click the new Thingport icon in your toolbar (it may be under the
-puzzle-piece Extensions button) and enter your instance's URL and your Thingport login. Chrome
-keeps it up to date from then on. Other Chromium browsers that install from the Chrome Web Store
-(Brave, Vivaldi, Opera with its Chrome extensions add-on) work the same way.
+### Chrome, Edge and other Chromium browsers
 
-<details>
-<summary>Alternative: install the Chrome build by hand</summary>
-
-Only needed if you can't use the store, e.g. to try a build before it's been published there:
-
-1. Download `thingport-grab-chrome.zip` from the
-   [`extension-latest` release](https://github.com/TautvydasDerzinskas/Thingport/releases/tag/extension-latest)
-   and unzip it somewhere permanent (the browser loads the extension from that folder every time it
+1. Unzip the download somewhere permanent (the browser loads the extension from that folder every time it
    starts, so don't delete it).
-2. Open `chrome://extensions` and turn on **Developer mode** (top right).
+2. Open `chrome://extensions` (Edge: `edge://extensions`) and turn on **Developer mode**.
 3. Click **Load unpacked** and select the unzipped folder.
+4. Click the new Thingport icon in your toolbar (it may be under the puzzle-piece Extensions button) and
+   enter your instance's URL and your Thingport login or API token.
 
 A hand-installed copy doesn't update itself -- repeat these steps for a newer version.
-</details>
 
 ### Firefox
 
-Install **[Thingport Grab from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/thingport-grab/)**
--- click **Add to Firefox**, then click the new Thingport icon in your toolbar (it may be under the
-puzzle-piece Extensions button) and enter your instance's URL and your Thingport login. Firefox
-keeps it up to date from then on.
-
-<details>
-<summary>Alternative: install the Firefox build by hand</summary>
-
-Only needed if you can't use the store, e.g. to try a build before it's been published there.
-Firefox refuses to install _any_ unsigned extension outside of Developer Edition/Nightly, so this
-is a Mozilla-signed `.xpi` rather than a zip -- CI signs one for self-distribution (the "unlisted"
-channel) on every push to `main` (see [Releases](CONTRIBUTING.md#releases-ci) in the development
-guide):
-
-1. Download `thingport-grab-firefox.xpi` from the
-   [`extension-latest` release](https://github.com/TautvydasDerzinskas/Thingport/releases/tag/extension-latest).
-2. Open it directly (double-click, or `File > Open File` in Firefox) -- or drag it onto a Firefox
-   window -- and confirm the install prompt.
-
-</details>
-
-### Microsoft Edge
-
-Install **[Thingport Grab from Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/kahfidpmojfocohinlmglnfoaimocbol)**
--- click **Get**, then click the new Thingport icon in your toolbar (it may be under the
-puzzle-piece Extensions button) and enter your instance's URL and your Thingport login. Edge keeps
-it up to date from then on.
-
-<details>
-<summary>Alternative: install the Edge build by hand</summary>
-
-Only needed if you can't use the store, e.g. to try a build before it's been published there:
-
-1. Download `thingport-grab-edge.zip` from the
-   [`extension-latest` release](https://github.com/TautvydasDerzinskas/Thingport/releases/tag/extension-latest)
-   and unzip it somewhere permanent (Edge loads the extension from that folder every time it
-   starts, so don't delete it).
-2. Open `edge://extensions` and turn on **Developer mode** (in the left sidebar).
-3. Click **Load unpacked** and select the unzipped folder.
-
-A hand-installed copy doesn't update itself -- repeat these steps for a newer version.
-</details>
+Firefox refuses to install _any_ unsigned extension outside of Developer Edition/Nightly. Use the `.xpi` built by
+the release workflow (see [Releases](CONTRIBUTING.md#releases-ci)), open it in Firefox (double-click, or
+`File > Open File`) and confirm the install prompt.
 
 ## Download normalized (no Thingport needed)
 
@@ -210,5 +160,5 @@ only to your own Thingport instance and the provider site you're on. The
 
 The extension is TypeScript and SCSS, built per browser with esbuild. See
 **[CONTRIBUTING.md](CONTRIBUTING.md)** for the development setup, the code layout, building and
-packaging for the Chrome Web Store, Edge Add-ons and addons.mozilla.org, and how the screenshots
+packaging, and how the screenshots
 above are generated.

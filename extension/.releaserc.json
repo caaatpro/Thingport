@@ -1,7 +1,7 @@
 {
   "extends": "semantic-release-monorepo",
   "branches": ["main"],
-  "repositoryUrl": "https://github.com/TautvydasDerzinskas/Thingport.git",
+  "repositoryUrl": "https://github.com/caaatpro/Thingport.git",
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",

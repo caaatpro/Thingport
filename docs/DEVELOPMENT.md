@@ -10,19 +10,17 @@ instance, follow the Docker Compose instructions in the [README](../README.md) i
 | `backend/`   | Express + Prisma API (TypeScript). Serves everything under `/api/*`.         |
 | `frontend/`  | React + Vite single-page app.                                                |
 | `extension/` | "Thingport Grab" browser extension -- TypeScript + SCSS, built with esbuild. |
-| `bridge/`    | Slicer bridge helper app (Go).                                               |
 | `docs/`      | This documentation.                                                          |
 
 ## Prerequisites
 
 - **Node.js 20 or newer.** `backend/package.json` sets `engines.node >= 20`, and CI builds on 20.
 - **Docker**, to run Postgres. Everything else runs natively so you get hot reload.
-- **Go 1.21+** -- only if you're changing `bridge/`.
 
 ## 1. Install dependencies
 
 ```bash
-git clone https://github.com/TautvydasDerzinskas/Thingport.git
+git clone <your fork of the repository>
 cd Thingport
 
 npm install # root -- installs the husky pre-commit hook
@@ -167,17 +165,6 @@ Chrome and Edge run the background bundle as a service worker while Firefox runs
 page -- if you add top-level code there, make sure it works in both. See
 [extension/CONTRIBUTING.md](../extension/CONTRIBUTING.md) for the code layout, the per-browser
 builds, the store zips and the screenshot generator.
-
-## Bridge
-
-```bash
-cd bridge
-go test ./...
-go run ./cmd/thingport-bridge
-```
-
-macOS URL-scheme handling uses Cocoa and needs cgo, so the macOS build only works on a Mac.
-Windows and Linux binaries cross-compile with `CGO_ENABLED=0`.
 
 ## Related documents
 

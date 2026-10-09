@@ -55,7 +55,6 @@ path-filtered, so only the parts you touched run:
 | `backend/**`   | oxlint, then a multi-arch Docker image build (which runs `tsc`)                                 |
 | `frontend/**`  | oxlint, `tsc --noEmit`, then a Docker image build                                               |
 | `extension/**` | oxlint, `tsc --noEmit`, the Chrome/Edge/Firefox builds, and `web-ext lint` on the Firefox build |
-| `bridge/**`    | `go test ./...` and a build for Windows, Linux and macOS                                        |
 
 Nothing is published from a pull request -- images are built to prove they build, but only pushes
 to `main` publish anything.
@@ -76,8 +75,8 @@ If you couldn't verify something end to end, say so. That's useful information, 
 - **Match the surrounding code.** This codebase uses long explanatory comments that say _why_
   something is the way it is -- particularly where behaviour is non-obvious or a workaround exists.
   Follow that where it helps; don't narrate what the code already says.
-- Prettier formats everything it can (config in `.prettierrc.json`), `gofmt` the bridge and
-  `prisma format` the schema. Run `npm run format` at the repo root; the pre-commit hook does it for
+- Prettier formats everything it can (config in `.prettierrc.json`), and `prisma format` the
+  schema. Run `npm run format` at the repo root; the pre-commit hook does it for
   staged files.
 - oxlint is the linter for every TypeScript project (backend, frontend, extension).
 - The extension is TypeScript + SCSS built with esbuild, and its background has to run as a Chrome

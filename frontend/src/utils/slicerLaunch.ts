@@ -1,16 +1,3 @@
-// The Thingport Bridge helper app's protocol (see bridge/README.md).
-const BRIDGE_SCHEME = "thingport";
-
-// bambustudio:// and prusaslicer:// only open files from allowlisted domains, and Cura's cura://
-// registration is unreliable, so the Bridge downloads the file and launches them directly.
-// Anycubic Slicer Next registers OrcaSlicer's orcaslicer:// protocol, so with both installed only
-// one would get the link; the Bridge launches it by path instead.
-const BRIDGED_SLICERS = new Set(["bambustudio", "prusaslicer", "cura", "anycubicslicernext"]);
-
-export function isBridgedSlicer(slicerId: string): boolean {
-  return BRIDGED_SLICERS.has(slicerId);
-}
-
 // Elegoo Slicer and Snapmaker Orca launch directly like OrcaSlicer, but name the file after the
 // URL's last segment, so each gets the filename the way its handler reads it.
 function withFilenameHint(slicerId: string, fileUrl: string, filename: string): { fileUrl: string; extra: string } {
@@ -27,11 +14,6 @@ function withFilenameHint(slicerId: string, fileUrl: string, filename: string): 
 
 // Only for SLICER_OPTIONS ids that register a protocol; never "other".
 export function slicerLaunchUrl(slicerId: string, fileUrl: string, filename?: string): string {
-  if (BRIDGED_SLICERS.has(slicerId)) {
-    const params = new URLSearchParams({ url: fileUrl, slicer: slicerId });
-    if (filename) params.set("filename", filename);
-    return `${BRIDGE_SCHEME}://open?${params.toString()}`;
-  }
   const hinted = filename ? withFilenameHint(slicerId, fileUrl, filename) : { fileUrl, extra: "" };
   return `${slicerId}://open?file=${encodeURIComponent(hinted.fileUrl)}${hinted.extra}`;
 }

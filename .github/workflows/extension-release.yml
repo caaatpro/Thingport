@@ -1,9 +1,8 @@
 name: Extension release
 
 # Builds Thingport Grab on every change to extension/: checks, the extension-latest release's zips
-# and the self-signed Firefox .xpi. Store releases are extension-store-release.yml.
-# Publishes to the fixed "extension-latest" tag rather than GitHub's single repo-wide "latest"
-# release, which Bridge's download links rely on.
+# and the self-signed Firefox .xpi.
+# Publishes to the fixed "extension-latest" tag rather than GitHub's single repo-wide "latest" release.
 on:
   push:
     branches: [main]
@@ -135,18 +134,11 @@ jobs:
 
             See `extension/README.md` for install instructions:
 
-            - **Chrome / other Chromium browsers**: install it from the
-              [Chrome Web Store](https://chromewebstore.google.com/detail/nmblahmglpbplmfcggghdgohohlaeiee),
-              which keeps it up to date. `thingport-grab-chrome.zip` here is a build of this commit,
-              for loading by hand (`chrome://extensions` → **Developer mode** → **Load unpacked**).
-            - **Firefox**: install it from
-              [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/thingport-grab/), which keeps
-              it up to date. `thingport-grab-firefox.xpi` here is a Mozilla-signed build of this
-              commit, for installing by hand (open it directly, or drag it onto a Firefox window).
-            - **Edge**: install it from
-              [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/kahfidpmojfocohinlmglnfoaimocbol),
-              which keeps it up to date. `thingport-grab-edge.zip` here is the same build, for
-              loading by hand (`edge://extensions` → **Developer mode** → **Load unpacked**).
+            - **Chrome, Edge and other Chromium browsers**: `thingport-grab-chrome.zip` (or the identical
+              `thingport-grab-edge.zip`) is loaded by hand (`chrome://extensions` / `edge://extensions` →
+              **Developer mode** → **Load unpacked**).
+            - **Firefox**: `thingport-grab-firefox.xpi` is a Mozilla-signed build, installed by opening it
+              directly or dragging it onto a Firefox window.
           files: |
             dist/thingport-grab-chrome.zip
             dist/thingport-grab-edge.zip

@@ -91,10 +91,8 @@ model, and the model links listed on collection pages. It doesn't read any other
 ## Changes
 
 If this policy changes, the updated version is published here with a new effective date. Every
-past version is in the project's
-[git history](https://github.com/TautvydasDerzinskas/Thingport/commits/main/extension/PRIVACY.md).
+past version is in the repository's git history.
 
 ## Contact
 
-Questions about this policy or the extension:
-[open an issue on GitHub](https://github.com/TautvydasDerzinskas/Thingport/issues).
+Questions about this policy or the extension: ask the administrator of your Thingport instance.

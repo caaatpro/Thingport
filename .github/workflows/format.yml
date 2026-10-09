@@ -16,11 +16,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: web/.nvmrc
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: bridge/go.mod
+          node-version: 24
       - run: npm ci
       - run: npx prettier --check .
-      - name: gofmt
-        run: test -z "$(gofmt -l bridge)" || { gofmt -l bridge; exit 1; }

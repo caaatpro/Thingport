@@ -1,7 +1,6 @@
 import { prisma } from "../db";
 
-// Some route through the Thingport Bridge instead of their own protocol (see the frontend's
-// utils/slicerLaunch.ts). Anything else is "other".
+// The slicers a model can be opened in, by the URL scheme each registers. Anything else is "other".
 export const SLICER_IDS = [
   "bambustudio",
   "orcaslicer",

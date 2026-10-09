@@ -180,9 +180,7 @@
         "heading": "Slicer",
         "description": "Your preferred slicer, used by a model's \"Open in Slicer\" action to launch it directly via that slicer's own link (e.g. bambustudio://).",
         "label": "Slicer",
-        "failed": "Failed to save -- try again.",
-        "bridgeRequiredPrefix": "{{slicer}} needs the Thingport Bridge helper app installed to open files from here --",
-        "bridgeRequiredLink": "get it from the Download page."
+        "failed": "Failed to save -- try again."
       },
       "authorPreview": {
         "heading": "Author preview",
@@ -721,29 +719,6 @@
         "name": "Thingport Grab",
         "download": "Download (.zip)",
         "install": "To install: unzip it, open chrome://extensions, turn on Developer mode, click “Load unpacked” and pick the unzipped folder. To update, download it again, unzip over the old folder and click “Reload” on the extension."
-      },
-      "bridge": {
-        "heading": "Thingport Bridge",
-        "intro": "A small helper app that runs on your computer so \"Open in Slicer\" can hand a model straight to your slicer."
-      },
-      "modal": {
-        "startedNote": "Your download should start automatically. Follow these steps to finish installing:",
-        "windows": {
-          "heading": "Install on Windows",
-          "step1": "Double-click the downloaded .exe (or run it with no arguments from a terminal). It installs itself and registers the protocol automatically."
-        },
-        "linux": {
-          "heading": "Install on Linux",
-          "step1": "If your file manager blocks execution, mark the file as executable first.",
-          "step2": "Then run it once -- double-click, or from a terminal."
-        },
-        "macos": {
-          "heading": "Install on macOS",
-          "step1": "Make it executable.",
-          "step2": "Remove the Gatekeeper quarantine flag -- downloaded files are quarantined automatically.",
-          "step3": "Install it. This copies the app into ~/Applications and registers the thingport:// link.",
-          "note": "If macOS still refuses to run it, open System Settings -> Privacy & Security and allow it there instead."
-        }
       }
     }
   },

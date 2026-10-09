@@ -1,6 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -10,12 +9,10 @@ import InputLabel from "@mui/material/InputLabel";
 import Select, { type SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
-import Link from "@mui/material/Link";
 import { SLICER_OPTIONS } from "../../constants/settingsOptions";
 import { UnauthorizedError } from "../../api/client";
 import { settingsApi } from "../../api/settings";
 import { setCachedSlicerPreference } from "../../hooks/useSlicerPreference";
-import { isBridgedSlicer } from "../../utils/slicerLaunch";
 
 type Props = {
   onUnauthorized?: () => void;
@@ -119,23 +116,6 @@ export default function SlicerPicker({ onUnauthorized }: Props) {
           </FormControl>
           {saving && <CircularProgress size={16} />}
         </Stack>
-        {isBridgedSlicer(value) && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-              display: "block",
-              mt: 1,
-            }}
-          >
-            {t("profile.slicer.bridgeRequiredPrefix", {
-              slicer: SLICER_OPTIONS.find((opt) => opt.id === value)?.label ?? value,
-            })}{" "}
-            <Link component={RouterLink} to="/downloads">
-              {t("profile.slicer.bridgeRequiredLink")}
-            </Link>
-          </Typography>
-        )}
         {status && (
           <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
             {status}

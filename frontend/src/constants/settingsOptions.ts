@@ -1,8 +1,7 @@
 export type SlicerOption = { id: string; label: string };
 
 // Slicers that register a URL protocol. IDs must match the backend's SLICER_IDS and (except
-// "other") equal the scheme the slicer registers, e.g. "crealityprintlink". Some are launched via
-// the Bridge instead (see utils/slicerLaunch.ts).
+// "other") equal the scheme the slicer registers, e.g. "crealityprintlink".
 export const SLICER_OPTIONS: SlicerOption[] = [
   { id: "bambustudio", label: "Bambu Studio" },
   { id: "orcaslicer", label: "OrcaSlicer" },
