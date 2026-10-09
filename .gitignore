@@ -21,6 +21,7 @@ backend/prisma/dev.db*
 data/
 imports/
 !frontend/src/features/imports/
+!backend/src/modules/imports/
 backend/storage/
 
 # IDE, operating-system, and temporary files
