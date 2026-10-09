@@ -2,7 +2,7 @@ import type { Category, Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../db";
 import { badRequest, notFound } from "../../http/errors";
 import { normalizeTags } from "../../lib/tags";
-import { availableModelName, reorganizeManagedPrints } from "../../services/printService";
+import { availableModelName, reorganizeManagedPrints } from "../prints/index";
 import { DEFAULT_CATEGORIES, type DefaultCategoryNode } from "./defaultCategories";
 
 const SIBLING_ORDER: Prisma.CategoryOrderByWithRelationInput[] = [{ position: "asc" }, { name: "asc" }];

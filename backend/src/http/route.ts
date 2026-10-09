@@ -1,7 +1,7 @@
 import { Router, type NextFunction, type Request, type RequestHandler, type Response } from "express";
 import type { z } from "zod";
 import type { Role } from "../generated/prisma/client";
-import { requireAdmin, requireAuth, requireSession } from "../auth";
+import { requireAdmin, requireAuth, requireSession } from "./auth";
 import { parse } from "./validate";
 
 /**

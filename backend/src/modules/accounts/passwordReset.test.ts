@@ -17,7 +17,7 @@ vi.mock("./mailer", () => ({
 import { createApp } from "../../app";
 import { prisma } from "../../db";
 import { sendPasswordResetEmail } from "./mailer";
-import { getSmtpSettings, setSmtpSettings } from "../../services/settingsService";
+import { getSmtpSettings, setSmtpSettings } from "../system/index";
 
 const app = createApp();
 const sendReset = vi.mocked(sendPasswordResetEmail);

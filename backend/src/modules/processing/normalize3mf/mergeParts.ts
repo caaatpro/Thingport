@@ -31,7 +31,11 @@ function parseMeshGeometry(body: string): { vertices: number[][]; triangles: Tri
 
 /** Bakes an assembly's parts into one mesh, painting each part in its own filament so colors survive
  *  slicers that ignore per-volume extruders. */
-export function mergePartsToMesh(parts: Part[], materialsId: number, colors: unknown[]): { body: string; volumes: Volume[] } {
+export function mergePartsToMesh(
+  parts: Part[],
+  materialsId: number,
+  colors: unknown[],
+): { body: string; volumes: Volume[] } {
   const vertexLines: string[] = [];
   const triangleLines: string[] = [];
   const volumes: Volume[] = [];

@@ -3,18 +3,12 @@ import { PUBLIC_URL } from "../../config";
 import { prisma } from "../../db";
 import { conflict, unauthorized } from "../../http/errors";
 import { createRouter } from "../../http/route";
-import { authorLinkingSummary, currentAuthorLinkingRun, startAuthorLinking } from "../../services/authorLinkingService";
-import { INVITATION_TTL_DAYS, inviteUser } from "../../services/invitationService";
-import { enqueuePlate } from "../../services/processingQueue";
+import { authorLinkingSummary, currentAuthorLinkingRun, startAuthorLinking } from "../library/index";
+import { INVITATION_TTL_DAYS, inviteUser } from "../accounts/index";
+import { enqueuePlate } from "../processing/index";
 import { createLog } from "../system";
 import { toAdminUserOut, toLogOut } from "./dto";
-import {
-  createUserSchema,
-  inviteSchema,
-  logsQuerySchema,
-  signOutSchema,
-  updateUserSchema,
-} from "./schemas";
+import { createUserSchema, inviteSchema, logsQuerySchema, signOutSchema, updateUserSchema } from "./schemas";
 import { getAdminOverview, getStorageUsage, listLogs, listUsersWithPrintCounts } from "./service";
 import {
   createPasswordResetToken,

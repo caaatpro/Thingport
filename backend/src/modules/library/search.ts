@@ -1,5 +1,5 @@
 import { prisma } from "../../db";
-import { printOutsByIds } from "../../services/printLoader";
+import { printOutsByIds } from "../prints/index";
 import type { PrintOut } from "../prints/dto";
 
 // Models and collections rank via weighted generated tsvector columns (see schema.prisma). Tags are

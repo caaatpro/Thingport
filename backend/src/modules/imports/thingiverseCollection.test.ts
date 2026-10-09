@@ -5,8 +5,8 @@ import {
   fetchThingiverseCollectionThings,
   fetchThingiverseCollectionTitle,
   parseThingiverseCollectionUrl,
-} from "../../services/thingiverseApi";
-import { setThingiverseAccessToken } from "../../services/settingsService";
+} from "./providers/thingiverse";
+import { setThingiverseAccessToken } from "../system/index";
 import { prisma } from "../../db";
 
 const ACCESS_TOKEN = "test-access-token";

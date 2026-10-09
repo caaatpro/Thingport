@@ -1,8 +1,8 @@
 import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { modelUpload } from "../../uploadMiddleware";
-import { buildImportFilename, parseContentDisposition, sanitizeFilename } from "../../utils/fileUtils";
+import { modelUpload } from "../../http/upload";
+import { buildImportFilename, parseContentDisposition, sanitizeFilename } from "../../lib/files";
 
 // MakerWorld's CDN puts raw UTF-8 in the ISO-8859-1 `filename=` parameter; the repair must leave a
 // genuine Latin-1 name untouched.

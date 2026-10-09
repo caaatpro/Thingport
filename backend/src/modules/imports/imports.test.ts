@@ -9,7 +9,7 @@ import { checkImportStatus } from "./importedPrints";
 import { importPrintFromUrl } from "./importPrint";
 import { identifySourceModel } from "./sourceLinks";
 import { createJob, getActiveJob, updateJob } from "./jobService";
-import { createNotification, listNotifications, markAllRead } from "../../services/notificationService";
+import { createNotification, listNotifications, markAllRead } from "../system/index";
 
 const app = createApp();
 let token: string;

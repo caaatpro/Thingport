@@ -2,10 +2,10 @@ import type { Collection, CollectionRole, Prisma } from "../../generated/prisma/
 import { prisma } from "../../db";
 import { badRequest, conflict, notFound } from "../../http/errors";
 import { normalizeTags } from "../../lib/tags";
-import { collectionReadWhere, requireCollectionRole } from "../../services/access";
-import { createLog } from "../../services/auditLog";
-import { printOutsByIds } from "../../services/printLoader";
-import { relocatePrintsForToken } from "../../services/printService";
+import { collectionReadWhere, requireCollectionRole } from "../prints/index";
+import { createLog } from "../system/index";
+import { printOutsByIds } from "../prints/index";
+import { relocatePrintsForToken } from "../prints/index";
 import {
   toCollectionOut,
   toSystemCollectionOut,
@@ -17,7 +17,8 @@ import type { PrintOut } from "../prints/dto";
 import {
   addCollectionBookmark,
   isCollectionBookmarked,
-  listBookmarkedCollectionIdSet,   removeCollectionBookmark,
+  listBookmarkedCollectionIdSet,
+  removeCollectionBookmark,
 } from "./bookmarks";
 import type { SHARE_ROLES } from "./schemas";
 
@@ -185,7 +186,13 @@ export async function getCollection(userId: string, id: string): Promise<Collect
     shares: collection.shares,
     owner: { id: collection.user.id, display_name: collection.user.displayName },
   };
-  return toCollectionOut(collection, collection._count.items, [], await isCollectionBookmarked(userId, collection.id), access);
+  return toCollectionOut(
+    collection,
+    collection._count.items,
+    [],
+    await isCollectionBookmarked(userId, collection.id),
+    access,
+  );
 }
 
 export async function createCollection(userId: string, input: CollectionInput): Promise<CollectionOut> {
@@ -352,7 +359,8 @@ export async function setCollectionShares(
   const input = parseInput();
   const wanted = new Map<string, CollectionRole>();
   for (const uid of input.user_ids ?? []) wanted.set(uid, "VIEW");
-  for (const share of input.shares ?? []) wanted.set(share.user_id, share.role.toUpperCase() as (typeof SHARE_ROLES)[number]);
+  for (const share of input.shares ?? [])
+    wanted.set(share.user_id, share.role.toUpperCase() as (typeof SHARE_ROLES)[number]);
   wanted.delete(userId);
   const targetIds = [...wanted.keys()];
   if (targetIds.length) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cults3dMetaFromExtension, isCults3dHost, parseCults3dModelUrl } from "./cults3d";
-import { buildImportSourceUrl, identifySourceModel } from "../../../services/importService";
+import { buildImportSourceUrl, identifySourceModel } from "../sourceLinks";
 
 describe("Cults3D URLs", () => {
   it("parses model pages with or without a locale", () => {

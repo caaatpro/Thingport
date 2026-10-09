@@ -2,7 +2,7 @@ import { Prisma, type Author, type User } from "../../generated/prisma/client";
 import { prisma } from "../../db";
 import { conflict, notFound } from "../../http/errors";
 import { logger } from "../../lib/logger";
-import type { ImportedAuthorInfo } from "../../services/importResolvers";
+import type { ImportedAuthorInfo } from "../imports/index";
 import { toAuthorOut, type AuthorOut } from "./dto";
 
 export function buildAuthorId(provider: string, externalId: string): string {
@@ -85,7 +85,10 @@ export async function deleteAuthorIfOrphaned(authorId: string): Promise<void> {
 
 /** Authors are shared across users, so there's no ownership check. `is_linked` doesn't reveal who claimed it. */
 export async function getAuthorOut(authorId: string): Promise<AuthorOut> {
-  const author = await prisma.author.findUnique({ where: { id: authorId }, include: { link: { select: { id: true } } } });
+  const author = await prisma.author.findUnique({
+    where: { id: authorId },
+    include: { link: { select: { id: true } } },
+  });
   if (!author) throw notFound("Author not found");
   return toAuthorOut(author, Boolean(author.link));
 }

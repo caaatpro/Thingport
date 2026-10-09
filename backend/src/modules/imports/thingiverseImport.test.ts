@@ -2,7 +2,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../../app";
 import { importPrintFromUrl } from "./importPrint";
-import { setThingiverseAccessToken } from "../../services/settingsService";
+import { setThingiverseAccessToken } from "../system/index";
 import { prisma } from "../../db";
 
 // Thingiverse import end to end against the official API's response shapes, with fetch mocked.

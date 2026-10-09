@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import type { Prisma } from "../../generated/prisma/client";
-import { getLinkedAuthorIds } from "../../services/authorService";
-import { systemCollectionKeyForId } from "../../services/collectionService";
+import { getLinkedAuthorIds } from "../library/index";
+import { systemCollectionKeyForId } from "../library/index";
 import { collectionReadWhere, printReadWhere, sharedWithMeWhere, viewerRolesByPrint } from "./access";
 import type { PrintOut } from "./dto";
 import { groupByPrintId, printOutFromParts, printRowInclude } from "./printLoader";
@@ -131,7 +131,13 @@ export async function listPrints(userId: string, query: ListPrintsQuery): Promis
     };
   }
 
-  return { items: await loadPage(userId, paged.map((p) => p.id)), paging };
+  return {
+    items: await loadPage(
+      userId,
+      paged.map((p) => p.id),
+    ),
+    paging,
+  };
 }
 
 async function loadPage(userId: string, pageIds: string[]): Promise<PrintOut[]> {

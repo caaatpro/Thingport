@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import type { Role } from "../../generated/prisma/client";
 import { AUTH_ALGO, AUTH_SECRET } from "../../config";
 import { prisma } from "../../db";
-import { getAuthTokenTtl } from "../../services/settingsService";
+import { getAuthTokenTtl } from "../system/index";
 
 type TokenPayload = { sub: string; role: Role; sv?: number };
 

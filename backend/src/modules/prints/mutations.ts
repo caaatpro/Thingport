@@ -2,9 +2,9 @@ import fs from "node:fs/promises";
 import { prisma } from "../../db";
 import { forbidden, notFound, badRequest } from "../../http/errors";
 import type { Prisma } from "../../generated/prisma/client";
-import { normalizeTags } from "../../utils/tagNormalization";
-import { createLog } from "../../services/auditLog";
-import { deleteAuthorIfOrphaned } from "../../services/authorService";
+import { normalizeTags } from "../../lib/tags";
+import { createLog } from "../system/index";
+import { deleteAuthorIfOrphaned } from "../library/index";
 import { printWriteWhere } from "./access";
 import type { PrintOut } from "./dto";
 import { requireOwnedPrint, requireWritablePrint } from "./lookup";
@@ -126,7 +126,9 @@ export async function deletePrint(userId: string, printId: string): Promise<void
   // loadFullPrint authorizes shared readers too; deleting needs ownership or the DELETE role.
   const allowed = await prisma.print.count({ where: { id: printId, ...printWriteWhere(userId, "DELETE") } });
   if (!allowed) {
-    throw full.print.userId === userId ? notFound("You can't delete this model") : forbidden("You can't delete this model");
+    throw full.print.userId === userId
+      ? notFound("You can't delete this model")
+      : forbidden("You can't delete this model");
   }
   await deleteAllPrintFiles(printId);
   await deleteAllPreviewImages(printId);

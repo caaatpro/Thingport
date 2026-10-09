@@ -3,9 +3,9 @@ import { HttpError } from "../../http/errors";
 import { createRouter } from "../../http/route";
 import { prisma } from "../../db";
 import { logger } from "../../lib/logger";
-import { type MakerworldCookieCheck, verifyMakerworldCookie } from "../../services/makerworldCloudApi";
-import { getUserMakerworldCookie, setUserMakerworldCookie } from "../../services/makerworldCookieService";
-import { dropPreviewsAffectedBySimplification } from "../../services/modelPreviewCache";
+import { type MakerworldCookieCheck, verifyMakerworldCookie } from "../imports/providers/makerworld/cloudApi";
+import { getUserMakerworldCookie, setUserMakerworldCookie } from "../imports/providers/makerworld/cookie";
+import { dropPreviewsAffectedBySimplification } from "../processing/index";
 import {
   DEFAULT_STORAGE_TEMPLATE,
   STORAGE_TEMPLATE_TOKENS,
@@ -14,8 +14,8 @@ import {
   samplePlateStoragePaths,
   setStorageTemplate,
   validateStorageTemplate,
-} from "../../services/printService";
-import { verifyThingiverseAccessToken } from "../../services/thingiverseApi";
+} from "../prints/index";
+import { verifyThingiverseAccessToken } from "../imports/providers/thingiverse";
 import { getDatabaseInfo, testAndSwitchDatabase } from "./databaseSettings";
 import { toNotificationOut } from "./dto";
 import { listNotifications, markAllRead } from "./notifications";

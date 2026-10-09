@@ -4,10 +4,10 @@ import path from "node:path";
 import { prisma } from "../../db";
 import { STORAGE } from "../../config";
 import { badRequest } from "../../http/errors";
-import { sanitizeFilename, guessMimeFromPath } from "../../utils/fileUtils";
-import { normalizeTags } from "../../utils/tagNormalization";
-import { inspectPreparedPrint } from "../../services/preparedPrint";
-import { deleteNormalized3mf } from "../../services/normalized3mfCache";
+import { sanitizeFilename, guessMimeFromPath } from "../../lib/files";
+import { normalizeTags } from "../../lib/tags";
+import { inspectPreparedPrint } from "../processing/index";
+import { deleteNormalized3mf } from "../processing/index";
 import { Prisma } from "../../generated/prisma/client";
 import type { Plate, Print } from "../../generated/prisma/client";
 import { moveFile } from "./files";
@@ -122,7 +122,7 @@ async function createPlateAtPosition(
 
   // Thumbnail / preview / geometry run off-request in the durable processing queue. Dynamic import
   // avoids a static import cycle (processingQueue imports resolvePlateFilePath from here).
-  const { enqueuePlate } = await import("../../services/processingQueue.js");
+  const { enqueuePlate } = await import("../processing/index.js");
   await enqueuePlate(record.id);
   return { record, effectivePath };
 }

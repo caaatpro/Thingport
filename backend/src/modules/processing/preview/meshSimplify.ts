@@ -12,7 +12,10 @@ function meshTriangleCount(mesh: import("three").Mesh): number {
 
 /** Simplifies merged meshes in place when their total exceeds `budget` triangles; null when
  *  already within budget. */
-export async function simplifyGroupMeshes(root: import("three").Group, budget: number): Promise<SimplifiedSummary | null> {
+export async function simplifyGroupMeshes(
+  root: import("three").Group,
+  budget: number,
+): Promise<SimplifiedSummary | null> {
   const THREE = await import("three");
   const meshes: InstanceType<typeof THREE.Mesh>[] = [];
   root.traverse((obj) => {

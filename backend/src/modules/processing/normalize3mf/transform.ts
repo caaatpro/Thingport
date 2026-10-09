@@ -12,7 +12,6 @@ function parseTransform(str: string | null | undefined): number[] {
   return n.length !== 12 || n.some((x) => Number.isNaN(x)) ? identity : n;
 }
 
-
 // 3MF transforms are a row-major 3x3 plus translation; composes as out = A * B.
 export function multiplyTransform(aStr: string | null, bStr: string | null): number[] {
   const A = parseTransform(aStr);

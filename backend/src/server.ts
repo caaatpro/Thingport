@@ -2,7 +2,7 @@ import { createApp } from "./app";
 import { API_PORT } from "./config";
 import { prisma } from "./db"; // also ensures storage directories exist before we start serving
 import { logger } from "./lib/logger";
-import { recoverAndStart } from "./services/processingQueue";
+import { recoverAndStart } from "./modules/processing/index";
 
 const app = createApp();
 

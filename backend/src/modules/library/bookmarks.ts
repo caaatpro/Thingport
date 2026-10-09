@@ -25,7 +25,10 @@ export async function listBookmarkedCollectionIdSet(userId: string): Promise<Set
 }
 
 export async function isCollectionBookmarked(userId: string, collectionId: string): Promise<boolean> {
-  const row = await prisma.bookmark.findFirst({ where: { userId, type: "COLLECTION", collectionId }, select: { id: true } });
+  const row = await prisma.bookmark.findFirst({
+    where: { userId, type: "COLLECTION", collectionId },
+    select: { id: true },
+  });
   return Boolean(row);
 }
 

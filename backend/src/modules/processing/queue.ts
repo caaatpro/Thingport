@@ -1,14 +1,9 @@
 import path from "node:path";
 import { prisma } from "../../db";
 import { logger } from "../../lib/logger";
-import { resolvePlateFilePath } from "../../services/printCreation";
-import {
-  ensurePlateThumbnail,
-  extractFusionThumbnail,
-  renderPlateThumbnail,
-  saveThumbFromFile,
-} from "../../services/printService";
-import { getPreviewMode } from "../../services/settingsService";
+import { resolvePlateFilePath } from "../prints/index";
+import { ensurePlateThumbnail, extractFusionThumbnail, renderPlateThumbnail, saveThumbFromFile } from "../prints/index";
+import { getPreviewMode } from "../system/index";
 import { generateModelPreviewGlb } from "./preview/cache";
 
 // Durable, restart-safe post-upload processing (thumbnail / preview / geometry). Jobs are

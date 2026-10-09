@@ -2,8 +2,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../../app";
 import { createJob, getJob } from "./jobService";
-import { listNotifications } from "../../services/notificationService";
-import { HttpError } from "../../utils/fileUtils";
+import { listNotifications } from "../system/index";
+import { HttpError } from "../../http/errors";
 
 // Mock only importPrintFromUrl so this runs offline.
 vi.mock("./importPrint", async (importOriginal) => {
@@ -17,16 +17,16 @@ vi.mock("../../config", async (importOriginal) => {
   return { ...actual, IMPORT_COLLECTION_DELAY_MS: 0 };
 });
 
-vi.mock("../../services/thingiverseApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../services/thingiverseApi")>();
+vi.mock("./providers/thingiverse", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./providers/thingiverse")>();
   return { ...actual, fetchThingiverseCollectionTitle: vi.fn<typeof actual.fetchThingiverseCollectionTitle>() };
 });
 
 import { importPrintFromUrl } from "./importPrint";
 import { runCollectionImportJob } from "./makerworldCollectionJob";
 import { runThingiverseCollectionImportJob, runThingiverseLikesImportJob } from "./thingiverseJobs";
-import { fetchThingiverseCollectionTitle } from "../../services/thingiverseApi";
-import { setThingiverseAccessToken } from "../../services/settingsService";
+import { fetchThingiverseCollectionTitle } from "./providers/thingiverse";
+import { setThingiverseAccessToken } from "../system/index";
 import { prisma } from "../../db";
 
 const app = createApp();

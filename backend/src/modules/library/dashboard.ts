@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { prisma } from "../../db";
-import { plateThumbPath } from "../../services/printService";
+import { plateThumbPath } from "../prints/index";
 
 const TOP_MODELS_PREVIEW = 3;
 const TOP_MODELS_LIST_MAX = 50;

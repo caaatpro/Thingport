@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { PUBLIC_URL } from "../../config";
-import { getSmtpSettings } from "../../services/settingsService";
+import { getSmtpSettings } from "../system/index";
 
 /** Throws without a host rather than silently dropping the email. */
 async function sendMail(message: { to: string; subject: string; text: string; html: string }): Promise<void> {

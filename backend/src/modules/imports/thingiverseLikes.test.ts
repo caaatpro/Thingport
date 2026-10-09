@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
-import { createApp } from "../src/app";
-import { setThingiverseAccessToken } from "../src/services/settingsService";
-import { prisma } from "../src/db";
+import { createApp } from "../../app";
+import { setThingiverseAccessToken } from "../system";
+import { prisma } from "../../db";
 
 const ACCESS_TOKEN = "test-access-token";
 const USERNAME = "Derzinskas";

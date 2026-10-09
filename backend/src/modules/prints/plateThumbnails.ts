@@ -118,7 +118,7 @@ async function persistPlateMeasure(
 
 /** Server-side rendered thumbnail for mesh/CAD models (STL/OBJ/STEP); also persists dimensions. */
 export async function renderPlateThumbnail(plateId: string, srcPath: string): Promise<boolean> {
-  const { renderModelThumbnail } = await import("../../services/thumbnailRender.js");
+  const { renderModelThumbnail } = await import("../processing/index.js");
   const result = await renderModelThumbnail(srcPath);
   if (!result) return false;
   const ok = await saveThumbBuffer(plateId, result.png);

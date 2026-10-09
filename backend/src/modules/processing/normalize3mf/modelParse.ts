@@ -59,7 +59,6 @@ function extractComponents(body: string): Component[] {
   return comps;
 }
 
-
 export function extractObjects(xml: string): ModelObject[] {
   const objects: ModelObject[] = [];
   const re = /<object\b([^>]*)>([\s\S]*?)<\/object>/gi;
@@ -110,7 +109,11 @@ export type Resolved = {
   transform: string | null;
 };
 
-export function getObject(parsedModels: Record<string, ParsedModel>, filePath: string, objectId: string): ModelObject | null {
+export function getObject(
+  parsedModels: Record<string, ParsedModel>,
+  filePath: string,
+  objectId: string,
+): ModelObject | null {
   return parsedModels[pathKey(filePath)]?.objects.find((o) => String(o.id) === String(objectId)) ?? null;
 }
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
-import { createApp } from "../src/app";
-import { prisma } from "../src/db";
+import { createApp } from "../../app";
+import { prisma } from "../../db";
 
 // The live API pages with `limit: 30` and ends on an empty-string cursor, not null.
 

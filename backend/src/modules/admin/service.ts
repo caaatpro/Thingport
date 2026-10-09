@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
 import type { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../db";
-import { deleteAllPrintFiles } from "../../services/printFileService";
-import { deleteAllPreviewImages } from "../../services/previewImageService";
-import { deletePlateFiles } from "../../services/printCreation";
-import { plateThumbPath } from "../../services/printService";
-import { loadFullPrint } from "../../services/printLoader";
+import { deleteAllPrintFiles } from "../prints/index";
+import { deleteAllPreviewImages } from "../prints/index";
+import { deletePlateFiles } from "../prints/index";
+import { plateThumbPath } from "../prints/index";
+import { loadFullPrint } from "../prints/index";
 
 export type UserWithPrintCount = {
   id: string;

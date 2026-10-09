@@ -6,11 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createApp } from "../../../app";
 import { prisma } from "../../../db";
-import { writeZip } from "../../../utils/zipWriter";
+import { writeZip } from "../../../lib/zipWriter";
 import { modelPreviewGlbPath } from "./cachePaths";
 import { renderModelPreviewGlb } from "./render";
 import { dropPreviewsAffectedBySimplification } from "./simplification";
-import { getSimplifyPreviews, setSimplifyPreviews } from "../../../services/settingsService";
+import { getSimplifyPreviews, setSimplifyPreviews } from "../../system/index";
 
 const app = createApp();
 const stamp = Date.now();

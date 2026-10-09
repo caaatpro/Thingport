@@ -63,7 +63,12 @@ api.get("/tags", { query: printFiltersQuery }, ({ query, userId }) => listTagNam
 
 // Download filters combine with AND; /summary estimates count and size from stored columns without
 // touching the filesystem.
-function assertDownloadFilterGiven(body: { print_ids?: string[]; tag?: string; category_id?: string; collection_id?: string }) {
+function assertDownloadFilterGiven(body: {
+  print_ids?: string[];
+  tag?: string;
+  category_id?: string;
+  collection_id?: string;
+}) {
   if (!(body.print_ids?.length || body.tag || body.category_id || body.collection_id)) {
     throw badRequest("Provide print_ids, tag, category_id, or collection_id to download.");
   }

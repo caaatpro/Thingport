@@ -2,21 +2,21 @@ import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../db";
 import { IMPORT_COLLECTION_DELAY_MS, IMPORT_MAKERWORLD_CALL_DELAY_MS } from "../../config";
 import { logger } from "../../lib/logger";
-import { maybeSleep } from "../../utils/concurrency";
-import { createLog } from "../../services/auditLog";
-import { fetchMakerworldPageAuthor } from "../../services/importService";
-import type { ImportedAuthorInfo } from "../../services/importResolvers";
-import { getUserMakerworldCookie } from "../../services/makerworldCookieService";
+import { maybeSleep } from "../../lib/concurrency";
+import { createLog } from "../system/index";
+import { fetchMakerworldPageAuthor } from "../imports/index";
+import type { ImportedAuthorInfo } from "../imports/index";
+import { getUserMakerworldCookie } from "../imports/providers/makerworld/cookie";
+import { extractMakerworldBearerToken } from "../imports/providers/makerworld/urls";
+import { fetchMakerworldDesignAuthor } from "../imports/providers/makerworld/cloudApi";
 import {
-  extractMakerworldBearerToken,
-  fetchMakerworldDesignAuthor,
   makerworldCaptchaCooloffActive,
   MakerworldAuthError,
   MakerworldCaptchaError,
-} from "../../services/makerworldCloudApi";
-import { resolvePrintablesModel } from "../../services/printablesApi";
-import { getThingiverseAccessToken } from "../../services/settingsService";
-import { resolveThingiverseThing, ThingiverseAuthError } from "../../services/thingiverseApi";
+} from "../imports/providers/makerworld/captcha";
+import { resolvePrintablesModel } from "../imports/providers/printables";
+import { getThingiverseAccessToken } from "../system/index";
+import { resolveThingiverseThing, ThingiverseAuthError } from "../imports/providers/thingiverse";
 import { LINKABLE_PRINTS, linkUnattributedPrints, upsertAuthorFromImport } from "./authors";
 
 // Links models that only know their author by name: first by name matching, then by looking the

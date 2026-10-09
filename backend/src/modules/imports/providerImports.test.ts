@@ -18,9 +18,9 @@ vi.mock("node:dns/promises", () => ({
 
 const { createApp } = await import("../../app");
 const { prisma } = await import("../../db");
-const { writeZip } = await import("../../utils/zipWriter");
+const { writeZip } = await import("../../lib/zipWriter");
 const { getPreviewMode, setPreviewMode, getThingiverseAccessToken, setThingiverseAccessToken } =
-  await import("../../services/settingsService");
+  await import("../system/settingsService");
 
 const app = createApp();
 const stamp = Date.now();

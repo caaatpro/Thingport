@@ -16,7 +16,7 @@ vi.mock("node:dns/promises", () => ({
 
 import { createApp } from "../../app";
 import { prisma } from "../../db";
-import { selectMakerworldProfiles } from "../../services/makerworldCloudApi";
+import { selectMakerworldProfiles } from "./providers/makerworld/cloudApi";
 
 const app = createApp();
 const stamp = Date.now();

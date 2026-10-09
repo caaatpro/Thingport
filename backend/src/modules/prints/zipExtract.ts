@@ -4,12 +4,12 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { prisma } from "../../db";
 import { badRequest } from "../../http/errors";
-import { sanitizeFilename, guessMimeFromPath } from "../../utils/fileUtils";
+import { sanitizeFilename, guessMimeFromPath } from "../../lib/files";
 import { IMPORT_MAX_BYTES } from "../../config";
 import { logger } from "../../lib/logger";
 import { listZipEntries as listRawZipEntries, readZipEntry } from "../../lib/zipReader";
-import { validateParentCategory } from "../../services/categoryService";
-import { attachImportedPreviewImages } from "../../services/importService";
+import { validateParentCategory } from "../library/index";
+import { attachImportedPreviewImages } from "../imports/index";
 import type { Print, Plate, PreviewImage } from "../../generated/prisma/client";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 

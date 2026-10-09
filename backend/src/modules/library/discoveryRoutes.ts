@@ -11,7 +11,9 @@ discoveryApi.get("/search", { query: searchQuery }, ({ userId, query }) => searc
 // The routes below back each card's "see more" dialog.
 discoveryApi.get("/dashboard/summary", async ({ userId }) => toDashboardSummaryOut(await getDashboardSummary(userId)));
 
-discoveryApi.get("/dashboard/top-viewed", async ({ userId }) => (await getTopViewedList(userId)).map(toDashboardModelOut));
+discoveryApi.get("/dashboard/top-viewed", async ({ userId }) =>
+  (await getTopViewedList(userId)).map(toDashboardModelOut),
+);
 
 discoveryApi.get("/dashboard/top-printed", async ({ userId }) =>
   (await getTopPrintedList(userId)).map(toDashboardModelOut),

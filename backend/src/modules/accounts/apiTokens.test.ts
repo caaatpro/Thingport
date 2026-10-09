@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../../app";
 import { prisma } from "../../db";
 import { hashApiToken, isRequestAllowedForScope, MAX_TOKENS_PER_USER } from "./apiTokens";
-import { isMakerworldHost } from "../../utils/urlUtils";
+import { isMakerworldHost } from "../../lib/url";
 
 const app = createApp();
 const stamp = Date.now();

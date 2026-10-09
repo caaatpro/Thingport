@@ -9,7 +9,7 @@ import { prisma } from "../../db";
 import { badRequest, conflict, HttpError } from "../../http/errors";
 import { logger } from "../../lib/logger";
 import { sendInvitationEmail } from "./mailer";
-import { getAllowRegistrations, isSmtpConfigured } from "../../services/settingsService";
+import { getAllowRegistrations, isSmtpConfigured } from "../system/index";
 
 export const INVITATION_TTL_DAYS = 7;
 

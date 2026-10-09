@@ -10,7 +10,7 @@ vi.hoisted(() => {
   process.env.MODEL_PREVIEW_MAX_MEMORY_MB = "1";
 });
 
-const { writeZip } = await import("../../../utils/zipWriter");
+const { writeZip } = await import("../../../lib/zipWriter");
 const { generateModelPreviewGlb } = await import("./cache");
 const { modelPreviewGlbExists, modelPreviewGlbPath } = await import("./cachePaths");
 

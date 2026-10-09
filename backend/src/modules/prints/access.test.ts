@@ -31,7 +31,9 @@ describe("collection role ladder (pure)", () => {
   });
 
   it("builds where-clauses that name the user and (for writes) only roles at the level", () => {
-    expect(collectionReadWhere("u1")).toEqual({ OR: [{ userId: "u1" }, { shares: { some: { sharedWithUserId: "u1" } } }] });
+    expect(collectionReadWhere("u1")).toEqual({
+      OR: [{ userId: "u1" }, { shares: { some: { sharedWithUserId: "u1" } } }],
+    });
     expect(printReadWhere("u1")).toEqual({ OR: [{ userId: "u1" }, sharedWithMeWhere("u1")] });
     expect(printWriteWhere("u1", "EDIT")).toEqual({
       OR: [
@@ -119,7 +121,12 @@ describe("access rules against the database", () => {
 
   it("sharedWithMeWhere matches direct and collection shares, not owned or unrelated models", async () => {
     const found = async (userId: string) =>
-      (await prisma.print.findMany({ where: { id: { in: [privatePrint, directPrint, inCollectionPrint] }, ...sharedWithMeWhere(userId) }, select: { id: true } }))
+      (
+        await prisma.print.findMany({
+          where: { id: { in: [privatePrint, directPrint, inCollectionPrint] }, ...sharedWithMeWhere(userId) },
+          select: { id: true },
+        })
+      )
         .map((p) => p.id)
         .toSorted();
     expect(await found(directRecipient)).toEqual([directPrint]);
@@ -180,9 +187,15 @@ describe("access rules against the database", () => {
 
   it("requireCollectionRole: 404 when unreadable, 403 below the role, ok at or above it and for the owner", async () => {
     await expect(requireCollectionRole(stranger, collectionId, "VIEW")).rejects.toMatchObject({ status: 404 });
-    await expect(requireCollectionRole(sharedUsers.VIEW, collectionId, "UPLOAD")).rejects.toMatchObject({ status: 403 });
-    await expect(requireCollectionRole(sharedUsers.UPLOAD, collectionId, "EDIT")).rejects.toMatchObject({ status: 403 });
-    await expect(requireCollectionRole(sharedUsers.EDIT, collectionId, "DELETE")).rejects.toMatchObject({ status: 403 });
+    await expect(requireCollectionRole(sharedUsers.VIEW, collectionId, "UPLOAD")).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(requireCollectionRole(sharedUsers.UPLOAD, collectionId, "EDIT")).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(requireCollectionRole(sharedUsers.EDIT, collectionId, "DELETE")).rejects.toMatchObject({
+      status: 403,
+    });
     expect(await requireCollectionRole(sharedUsers.UPLOAD, collectionId, "UPLOAD")).toMatchObject({
       isOwner: false,
       role: "UPLOAD",

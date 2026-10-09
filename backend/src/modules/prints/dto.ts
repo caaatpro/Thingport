@@ -11,9 +11,9 @@ import type {
 import { accessRoleOf, type AccessRole } from "../../lib/access";
 import { plateThumbExists, plateThumbPath } from "./plateThumbnails";
 import { previewImageExists, previewImagePath } from "./previewImages";
-import { preparedFilename } from "../../services/preparedPrint";
-import { modelPreviewGlbExists, modelPreviewGlbPath } from "../../services/modelPreviewCache";
-import { buildImportSourceUrl } from "../../services/importService";
+import { preparedFilename } from "../processing/index";
+import { modelPreviewGlbExists, modelPreviewGlbPath } from "../processing/index";
+import { buildImportSourceUrl } from "../imports/index";
 import { toAuthorOut, type AuthorOut } from "../library/dto";
 
 export type PreparedPrintOut = {

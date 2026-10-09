@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { writeZip } from "../../../utils/zipWriter";
+import { writeZip } from "../../../lib/zipWriter";
 import { generateModelPreviewGlb, modelPreviewState } from "./cache";
 import { modelPreviewGlbExists, modelPreviewGlbPath } from "./cachePaths";
 

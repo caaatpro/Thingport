@@ -1,4 +1,4 @@
-import { listZipEntries, readZipEntry, walkZipEntries } from "../../../utils/zipReader";
+import { listZipEntries, readZipEntry, walkZipEntries } from "../../../lib/zipReader";
 import {
   COMPONENT_RE,
   ITEM_RE,

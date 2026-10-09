@@ -1,7 +1,7 @@
 import { createRouter } from "../../http/route";
 import { modelUpload, thumbnailUpload } from "../../http/upload";
 import { badRequest, notFound } from "../../http/errors";
-import { isNormalizable3mf, normalize3mfStatus, normalized3mfFor } from "../../services/normalized3mfCache";
+import { isNormalizable3mf, normalize3mfStatus, normalized3mfFor } from "../processing/index";
 import { IMMUTABLE_PRIVATE_CACHE, sendStoredFile } from "./fileResponse";
 import {
   addPlates,

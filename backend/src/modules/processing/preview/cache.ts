@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import { logger } from "../../../lib/logger";
-import { getSimplifyPreviews } from "../../../services/settingsService";
+import { getSimplifyPreviews } from "../../system/index";
 import {
   legacyModelPreviewErrorPath,
   legacyModelPreviewGlbPath,

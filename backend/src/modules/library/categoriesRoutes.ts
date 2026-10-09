@@ -1,5 +1,5 @@
 import { createRouter } from "../../http/route";
-import { sendPrintsZip } from "../../services/downloadZip";
+import { sendPrintsZip } from "../prints/index";
 import {
   createCategory,
   deleteCategory,

@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { badRequest } from "../../http/errors";
-import { createLog } from "../../services/auditLog";
+import { createLog } from "../system/index";
 import type { PrintOut } from "./dto";
 import { requireOwnedPrint } from "./lookup";
 import { printOutById } from "./printLoader";

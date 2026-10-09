@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../db";
 import { HttpError, conflict, notFound } from "../../http/errors";
-import { invalidateSession } from "../../auth";
+import { invalidateSession } from "../accounts/index";
 import { createLog } from "../system";
 import { deleteAllPrintsForUser, otherActiveAdminCount } from "./service";
 

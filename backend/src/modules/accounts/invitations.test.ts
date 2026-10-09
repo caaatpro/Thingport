@@ -14,12 +14,8 @@ vi.mock("./mailer", () => ({
 import { createApp } from "../../app";
 import { prisma } from "../../db";
 import { sendInvitationEmail, sendVerificationEmail } from "./mailer";
-import {
-  getAllowRegistrations,
-  getSmtpSettings,
-  setAllowRegistrations,
-  setSmtpSettings,
-} from "../../services/settingsService";
+import { getAllowRegistrations, getSmtpSettings, setSmtpSettings } from "../system/index";
+import { setAllowRegistrations } from "../system/settingsService";
 
 const app = createApp();
 const sendInvitation = vi.mocked(sendInvitationEmail);

@@ -3,9 +3,9 @@ import request from "supertest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { createApp } from "../src/app";
-import { prisma } from "../src/db";
-import { listZipEntries } from "../src/utils/zipReader";
+import { createApp } from "./app";
+import { prisma } from "./db";
+import { listZipEntries } from "./lib/zipReader";
 
 const app = createApp();
 
