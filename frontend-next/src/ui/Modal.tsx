@@ -14,13 +14,15 @@ type Props = {
   children?: ReactNode;
   /** Keep the dialog open on outside click/Escape (e.g. while a request is in flight). */
   locked?: boolean;
+  /** Omit the corner close button when the footer already offers a "Close" action. */
+  hideClose?: boolean;
   className?: string;
 };
 
 const SIZES = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" } as const;
 
 /** A centered dialog with a title, scrolling body and a pinned footer. Focus is trapped and restored. */
-export function Modal({ open, onOpenChange, title, description, footer, size = "md", children, locked, className }: Props) {
+export function Modal({ open, onOpenChange, title, description, footer, size = "md", children, locked, hideClose, className }: Props) {
   return (
     <Dialog.Root open={open} onOpenChange={(next) => (locked && !next ? undefined : onOpenChange(next))}>
       <Dialog.Portal>
@@ -40,6 +42,7 @@ export function Modal({ open, onOpenChange, title, description, footer, size = "
                 <Dialog.Description className="mt-1 text-sm text-muted">{description}</Dialog.Description>
               ) : null}
             </div>
+            {hideClose ? null : (
             <Dialog.Close
               aria-label="Close"
               disabled={locked}
@@ -47,6 +50,7 @@ export function Modal({ open, onOpenChange, title, description, footer, size = "
             >
               <X className="size-4" aria-hidden />
             </Dialog.Close>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5">{children}</div>
           {footer ? (

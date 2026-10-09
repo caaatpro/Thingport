@@ -56,7 +56,7 @@ test("a disabled account is told so, and can sign in again once re-enabled", asy
 test("signing out returns to the sign-in form", async ({ page }) => {
   await signInWith(page, ADMIN.email, ADMIN.password);
   await expect(page.getByRole("heading", { name: "Dashboard" }).first()).toBeVisible();
-  await page.locator("button:has(.MuiAvatar-root)").last().click();
+  await page.getByLabel("User actions").click();
   await page.getByRole("button", { name: "Log out" }).click();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });

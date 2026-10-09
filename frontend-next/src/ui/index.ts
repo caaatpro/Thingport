@@ -18,3 +18,4 @@ export { ToastProvider, useToast, type Toaster } from "./Toast";
 export { ConfirmProvider, useConfirm, type ConfirmOptions } from "./Confirm";
 export { PageHeader } from "./PageHeader";
 export { Kbd } from "./Kbd";
+export { TagInput } from "./TagInput";
